@@ -1,116 +1,208 @@
 .product-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  font-size: 0.95rem; /* Slightly larger */
+  height: 100%; /* Ensures all cards in a row match height */
 }
 
 .product-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(70, 53, 222, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -10px rgba(70, 53, 222, 0.15);
   border-color: var(--primary);
 }
 
-.card-image {
+/* --- IMAGE SECTION --- */
+.card-image-wrapper {
   background-color: #f8fafc;
-  /* REDUCED HEIGHT: Was 240px, now 160px */
-  height: 160px;
+  height: 200px; /* STRICT HEIGHT LIMIT */
   width: 100%;
+  padding: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
   position: relative;
+  overflow: hidden; /* Cuts off anything that spills out */
 }
 
-.card-image img {
-  max-height: 100%;
-  max-width: 100%;
-  object-fit: contain;
+.card-image-wrapper img {
+  height: 100%; /* Force image to respect container height */
+  width: 100%; /* Force image to respect container width */
+  object-fit: contain; /* Ensures image scales without stretching/cropping */
   mix-blend-mode: multiply;
+  filter: contrast(1.05);
 }
 
+/* --- NO IMAGE PLACEHOLDER --- */
+.no-image-placeholder {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.5;
+}
+
+/* --- BADGE --- */
 .status-badge-subtle {
-  /* ... keep pos/bg ... */
   position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(255, 255, 255, 0.9);
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600; /* Reduced */
-  color: #059669;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--clinical-teal);
   display: flex;
   align-items: center;
   gap: 6px;
   border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 10;
 }
 
 .status-dot {
   width: 6px;
   height: 6px;
-  background-color: #10b981;
+  background-color: var(--clinical-teal);
   border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
 }
 
+/* --- CONTENT --- */
 .card-content {
-  /* REDUCED PADDING: Was 24px, now 16px */
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   flex-grow: 1;
 }
 
 .card-header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px;
 }
 
 .product-name {
-  font-size: 0.95rem; /* Smaller title */
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--medical-navy);
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.4;
+}
+
+.science-meta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+/* --- SELECTORS & PRICE (UPDATED FOR WRAPPING) --- */
+.selector-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* Allows stacking if content is too wide */
+  gap: 12px; /* Adds space between price and pills when wrapping */
+  margin-top: auto;
 }
 
 .product-price {
-  font-size: 1.05rem;
-  font-weight: 600; /* Reduced from 700 */
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--primary);
-  white-space: nowrap;
-}
-.variant-select {
-  width: 100%;
-  padding: 8px; /* Smaller input */
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background-color: var(--bg-body);
-  font-size: 0.85rem;
-  cursor: pointer;
+  white-space: nowrap; /* Keeps price on one line */
 }
 
+.variant-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap; /* Allows pills to stack */
+  justify-content: flex-end;
+  max-width: 100%;
+}
+
+.variant-pill {
+  border: 1px solid var(--border);
+  background: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  /* Text handling for long names */
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+.variant-pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.variant-pill.active {
+  background-color: var(--science-blue);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* --- BUTTON --- */
 .buy-btn {
-  /* ... */
   width: 100%;
   padding: 12px;
-  background-color: #0f172a;
+  background-color: var(--medical-navy);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: 600; /* Reduced */
-  font-size: 0.95rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  margin-top: auto;
+  transition: background 0.2s;
 }
+
 .buy-btn:hover {
   background-color: var(--primary);
+}
+
+/* --- SKELETON SPECIFIC --- */
+.skeleton-card {
+  pointer-events: none;
+}
+.skeleton-img {
+  height: 200px;
+  width: 100%;
+  background: #e2e8f0;
+}
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+.skeleton-btn {
+  height: 44px;
+  margin-top: 16px;
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+.width-80 {
+  width: 80%;
+}
+.width-40 {
+  width: 40%;
 }
