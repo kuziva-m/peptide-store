@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useCart } from "../lib/CartContext"; // Import cart hook
 import "./ProductCard.css";
 
 export default function ProductCard({ product }) {
+  const { addToCart } = useCart(); // Get add function
   const sortedVariants =
     product.variants?.sort((a, b) => a.price - b.price) || [];
   const [selectedVariant, setSelectedVariant] = useState(sortedVariants[0]);
@@ -18,11 +20,15 @@ export default function ProductCard({ product }) {
   return (
     <div className="product-card">
       <div className="card-image">
-        <span className="status-badge">In Stock</span>
+        {/* Redesigned Subtle Badge */}
+        <div className="status-badge-subtle">
+          <span className="status-dot"></span> In Stock
+        </div>
+
         {product.image_url ? (
           <img src={product.image_url} alt={product.name} />
         ) : (
-          <span style={{ color: "#cbd5e1", fontWeight: 800 }}>NO IMAGE</span>
+          <span className="no-image">No Image</span>
         )}
       </div>
 
@@ -49,9 +55,10 @@ export default function ProductCard({ product }) {
           ))}
         </select>
 
+        {/* Updated Button to use Context */}
         <button
           className="buy-btn"
-          onClick={() => alert(`Added ${product.name} to cart!`)}
+          onClick={() => addToCart(product, selectedVariant)}
         >
           Add to Cart
         </button>
