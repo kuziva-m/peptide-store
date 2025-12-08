@@ -1,49 +1,63 @@
 /* src/components/Navbar.css */
 .navbar {
   background-color: #ffffff;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 100;
-  width: 100%; /* Force full width */
-  padding: 0; /* Remove padding here to let container handle it */
+  width: 100%; /* Forces full width */
 }
 
 .nav-container {
-  max-width: 1400px; /* Match your grid width */
-  width: 100%; /* CRITICAL: Forces the container to fill the bar */
-  margin: 0 auto; /* Centers the container */
-  padding: 1rem 20px; /* Adds breathing room on the sides */
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
   display: flex;
-  justify-content: space-between; /* Pushes Logo left, Links right */
+  justify-content: space-between; /* This pushes Logo left and Links right */
   align-items: center;
-  box-sizing: border-box; /* Ensures padding doesn't break width */
+  height: 80px; /* Taller, more premium feel */
+  box-sizing: border-box;
 }
 
 .nav-logo {
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1.8rem;
+  font-weight: 900;
   text-decoration: none;
-  color: var(--text-main);
+  color: #111;
   text-transform: uppercase;
-  letter-spacing: -0.5px;
-  /* Ensure logo doesn't shrink */
-  flex-shrink: 0;
+  letter-spacing: -1px;
+  display: flex;
+  align-items: center;
+}
+
+/* Make the logo look like the Lion icon + Text */
+.nav-logo::before {
+  content: "🦁"; /* Temporary Lion Icon */
+  font-size: 1.8rem;
+  margin-right: 10px;
 }
 
 .nav-links {
   display: flex;
+  gap: 30px; /* Space between links */
   align-items: center;
-  gap: 2.5rem; /* Increased gap between "Shop", "Contact", and "Cart" */
 }
 
-/* ... keep the rest of your button styles ... */
-.cart-icon-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 20px;
+.nav-links a {
+  text-decoration: none;
+  color: #444;
   font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.cart-icon-btn {
+  background: transparent;
+  color: #111;
+  border: 1px solid #ddd;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-weight: 700;
   cursor: pointer;
 }

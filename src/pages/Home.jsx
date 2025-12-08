@@ -11,65 +11,49 @@ export default function Home() {
   }, []);
 
   async function fetchProducts() {
-    // This query says: "Get all products, and join the variants table to them"
-    const { data, error } = await supabase.from("products").select(`
-        *,
-        variants (*)
-      `);
-
-    if (error) {
-      console.error("Error fetching products:", error);
-    } else {
-      setProducts(data);
-    }
+    const { data, error } = await supabase
+      .from("products")
+      .select(`*, variants (*)`);
+    if (!error) setProducts(data);
     setLoading(false);
   }
 
   return (
-    // 1. We added 'minHeight' so the footer doesn't float up
-    // 2. We kept 'margin: 0 auto' to center the whole block
-    <div
-      style={{
-        maxWidth: "1400px",
-        margin: "0 auto",
-        padding: "40px 20px",
-        minHeight: "100vh",
-        width: "100%",
-      }}
-    >
-      {/* Header Section */}
-      <header style={{ marginBottom: "50px", textAlign: "center" }}>
+    <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 20px" }}>
+      {/* 1. Header Section - Matches "SHOP" style */}
+      <header style={{ marginBottom: "60px", textAlign: "center" }}>
         <h1
           style={{
             color: "#111",
             fontSize: "2.5rem",
-            fontWeight: "800",
+            fontWeight: "900",
             textTransform: "uppercase",
-            marginBottom: "10px",
+            letterSpacing: "2px",
+            margin: "0",
           }}
         >
           Shop
         </h1>
-        {/* The Blue Line Under "SHOP" */}
+        {/* Blue Underline */}
         <div
           style={{
-            width: "80px",
+            width: "60px",
             height: "4px",
             background: "#0ea5e9",
-            margin: "0 auto" /* This centers the blue line */,
+            margin: "20px auto",
           }}
         ></div>
       </header>
 
-      {/* Product Grid */}
-      {/* Once you add 3 more products, this empty space will disappear! */}
+      {loading && <p style={{ textAlign: "center" }}>Loading inventory...</p>}
+
+      {/* 2. Grid - Centers items even if there is only one */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: "30px",
-          justifyContent:
-            "center" /* Optional: Centers the grid items if only a few exist */,
+          gap: "40px",
+          justifyContent: "center",
         }}
       >
         {products.map((product) => (
