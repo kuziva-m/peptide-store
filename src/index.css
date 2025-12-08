@@ -1,37 +1,40 @@
 :root {
-  /* YOUR BRAND COLOR */
+  /* Brand: Digital Purple & Clinical Greys */
   --primary: #4635de;
-  --primary-hover: #372bb5; /* Darker shade for hover */
+  --primary-hover: #372bb5;
+  --primary-light: #eef2ff; /* Very faint purple for backgrounds */
 
-  /* Professional Neutrals (Slate Grey tone) */
-  --bg-main: #f8fafc; /* Very subtle grey-blue tint, easier on eyes than pure white */
-  --bg-card: #ffffff;
-  --text-main: #0f172a; /* Deep dark navy/black */
-  --text-muted: #64748b; /* Professional grey */
-  --border: #e2e8f0; /* Subtle border */
+  --bg-body: #f8fafc; /* Slate 50 - Not harsh white */
+  --bg-surface: #ffffff; /* Pure white for cards */
 
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --text-main: #0f172a; /* Slate 900 */
+  --text-muted: #64748b; /* Slate 500 */
+
+  --border: #e2e8f0; /* Slate 200 */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
 }
 
 body {
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  background-color: var(--bg-main);
+  background-color: var(--bg-body);
   color: var(--text-main);
-  -webkit-font-smoothing: antialiased; /* Makes fonts look sharper */
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
-/* Global Reset */
-* {
-  box-sizing: border-box;
+button {
+  font-family: inherit;
 }

@@ -4,20 +4,16 @@ import "./Navbar.css";
 export default function Navbar() {
   return (
     <nav className="navbar">
-      <div className="nav-container">
-        {/* Logo */}
+      <div className="container nav-inner">
         <Link to="/" className="nav-logo">
-          Peptide<span className="logo-highlight">Store</span>
+          Peptide<span>Store</span>
         </Link>
 
-        {/* Links */}
         <div className="nav-links">
           <Link to="/">Shop</Link>
-          <a href="#">Contact</a>
-          <button
-            className="cart-icon-btn"
-            onClick={() => alert("Cart coming soon!")}
-          >
+          <Link to="#">Lab Results</Link>
+          <Link to="#">Support</Link>
+          <button className="cart-btn" onClick={() => alert("Cart opening...")}>
             Cart (0)
           </button>
         </div>

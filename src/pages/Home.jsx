@@ -19,46 +19,49 @@ export default function Home() {
   }
 
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 20px" }}>
-      {/* Header Section */}
-      <header style={{ marginBottom: "60px", textAlign: "center" }}>
-        <h1
-          style={{
-            color: "var(--text-main)" /* Uses new dark navy */,
-            fontSize: "2.5rem",
-            fontWeight: "800",
-            letterSpacing: "-1px",
-            margin: "0",
-          }}
-        >
-          Shop
-        </h1>
-        {/* Underline using Brand Color */}
-        <div
-          style={{
-            width: "60px",
-            height: "4px",
-            background: "var(--primary)",
-            margin: "20px auto",
-            borderRadius: "2px",
-          }}
-        ></div>
-      </header>
-
-      {loading && <p style={{ textAlign: "center" }}>Loading inventory...</p>}
-
-      {/* 2. Grid - Centers items even if there is only one */}
+    <div className="page-wrapper">
+      {/* HERO SECTION */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: "40px",
-          justifyContent: "center",
+          backgroundColor: "var(--text-main)",
+          color: "white",
+          padding: "80px 20px",
+          textAlign: "center",
+          marginBottom: "60px",
         }}
       >
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        <div className="container">
+          <h1
+            style={{
+              fontSize: "3rem",
+              fontWeight: "800",
+              margin: "0 0 10px 0",
+              letterSpacing: "-1px",
+            }}
+          >
+            Research Grade Peptides
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "1.2rem", margin: 0 }}>
+            Verified purity. Fast shipping. Laboratory tested.
+          </p>
+        </div>
+      </div>
+
+      {/* GRID SECTION */}
+      <div className="container" style={{ paddingBottom: "80px" }}>
+        {loading && <p style={{ textAlign: "center" }}>Loading inventory...</p>}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: "30px",
+          }}
+        >
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
       </div>
     </div>
   );
