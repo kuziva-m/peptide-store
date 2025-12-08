@@ -20,27 +20,27 @@ export default function Home() {
 
   return (
     <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 20px" }}>
-      {/* 1. Header Section - Matches "SHOP" style */}
+      {/* Header Section */}
       <header style={{ marginBottom: "60px", textAlign: "center" }}>
         <h1
           style={{
-            color: "#111",
+            color: "var(--text-main)" /* Uses new dark navy */,
             fontSize: "2.5rem",
-            fontWeight: "900",
-            textTransform: "uppercase",
-            letterSpacing: "2px",
+            fontWeight: "800",
+            letterSpacing: "-1px",
             margin: "0",
           }}
         >
           Shop
         </h1>
-        {/* Blue Underline */}
+        {/* Underline using Brand Color */}
         <div
           style={{
             width: "60px",
             height: "4px",
-            background: "#0ea5e9",
+            background: "var(--primary)",
             margin: "20px auto",
+            borderRadius: "2px",
           }}
         ></div>
       </header>

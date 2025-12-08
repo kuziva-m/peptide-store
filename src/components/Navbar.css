@@ -1,11 +1,11 @@
-/* src/components/Navbar.css */
 .navbar {
   background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
-  width: 100%; /* Forces full width */
+  width: 100%;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Subtle professional shadow */
 }
 
 .nav-container {
@@ -14,50 +14,69 @@
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
-  justify-content: space-between; /* This pushes Logo left and Links right */
+  justify-content: space-between;
   align-items: center;
-  height: 80px; /* Taller, more premium feel */
-  box-sizing: border-box;
+  height: 70px;
 }
 
 .nav-logo {
-  font-size: 1.8rem;
-  font-weight: 900;
+  font-size: 1.5rem;
+  font-weight: 800;
   text-decoration: none;
-  color: #111;
+  color: var(--primary); /* Uses your purple/blue brand color */
   text-transform: uppercase;
-  letter-spacing: -1px;
-  display: flex;
-  align-items: center;
+  letter-spacing: -0.5px;
 }
 
-/* Make the logo look like the Lion icon + Text */
-.nav-logo::before {
-  content: "🦁"; /* Temporary Lion Icon */
-  font-size: 1.8rem;
-  margin-right: 10px;
-}
+/* LION REMOVED HERE */
 
 .nav-links {
   display: flex;
-  gap: 30px; /* Space between links */
+  gap: 24px;
   align-items: center;
 }
 
 .nav-links a {
   text-decoration: none;
-  color: #444;
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-transform: uppercase;
+  color: var(--text-main);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: var(--primary);
 }
 
 .cart-icon-btn {
-  background: transparent;
-  color: #111;
-  border: 1px solid #ddd;
-  padding: 8px 15px;
-  border-radius: 4px;
-  font-weight: 700;
+  background: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cart-icon-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* MOBILE OPTIMIZATION */
+@media (max-width: 600px) {
+  .nav-container {
+    padding: 10px 20px;
+  }
+
+  .nav-links a {
+    display: none; /* Hides text links on small screens to save space */
+  }
+
+  /* We keep the cart visible */
+  .cart-icon-btn {
+    display: block;
+  }
 }

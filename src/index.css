@@ -1,12 +1,16 @@
 :root {
-  /* Brand Colors */
-  --primary: #0ea5e9;
-  --primary-hover: #0284c7;
-  --bg-main: #ffffff;
-  --text-main: #111827;
-  --border: #e5e7eb;
+  /* YOUR BRAND COLOR */
+  --primary: #4635de;
+  --primary-hover: #372bb5; /* Darker shade for hover */
 
-  font-family: system-ui, -apple-system, sans-serif;
+  /* Professional Neutrals (Slate Grey tone) */
+  --bg-main: #f8fafc; /* Very subtle grey-blue tint, easier on eyes than pure white */
+  --bg-card: #ffffff;
+  --text-main: #0f172a; /* Deep dark navy/black */
+  --text-muted: #64748b; /* Professional grey */
+  --border: #e2e8f0; /* Subtle border */
+
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 }
@@ -17,11 +21,17 @@ body {
   min-height: 100vh;
   background-color: var(--bg-main);
   color: var(--text-main);
-  /* REMOVED: display: flex, place-items: center */
+  -webkit-font-smoothing: antialiased; /* Makes fonts look sharper */
 }
 
-/* Ensure the app takes full width */
 #root {
   width: 100%;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Global Reset */
+* {
+  box-sizing: border-box;
 }
