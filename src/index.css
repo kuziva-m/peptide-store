@@ -1,20 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
-  /* Brand Colors */
+  /* Colors */
   --primary: #4635de;
   --primary-hover: #372bb5;
-
-  /* Neutrals */
   --bg-body: #f8fafc;
   --bg-surface: #ffffff;
-  --text-main: #1e293b; /* Slightly softer black for better reading */
+  --text-main: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
 
-  /* Typography updated to Inter with larger base size */
+  /* Typography: Bigger & Lighter */
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  font-size: 16px; /* Increased base size */
+  font-size: 17px; /* Increased from 16px */
   line-height: 1.6;
   color: var(--text-main);
 }
@@ -25,17 +23,34 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Better headings */
+/* Reduced boldness for headers */
 h1,
 h2,
 h3,
 h4 {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: #0f172a;
+  font-weight: 700; /* Was 800/900 */
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+/* Toast Animation */
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

@@ -5,20 +5,20 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
 
+  // NEW: State for the popup notification
+  const [notification, setNotification] = useState(null);
+
   const addToCart = (product, variant) => {
     setCartItems((prevItems) => {
-      // Check if this specific item+variant is already in cart
       const existingItemIndex = prevItems.findIndex(
         (item) => item.productId === product.id && item.variantId === variant.id
       );
 
       if (existingItemIndex > -1) {
-        // Item exists, increase quantity by 1 (simple version for now)
         const newItems = [...prevItems];
         newItems[existingItemIndex].quantity += 1;
         return newItems;
       } else {
-        // Add new item
         return [
           ...prevItems,
           {
@@ -33,15 +33,21 @@ export function CartProvider({ children }) {
       }
     });
 
-    // Optional visual feedback
-    alert(`Added ${product.name} (${variant.size_label}) to cart`);
+    // NEW: Show toast instead of alert
+    setNotification(`Added ${product.name} (${variant.size_label}) to cart`);
+
+    // Hide it automatically after 3 seconds
+    setTimeout(() => {
+      setNotification(null);
+    }, 3000);
   };
 
-  // Calculate total number of items
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, cartCount }}>
+    <CartContext.Provider
+      value={{ cartItems, addToCart, cartCount, notification }}
+    >
       {children}
     </CartContext.Provider>
   );

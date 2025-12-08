@@ -68,7 +68,6 @@ export default function Home() {
     setFilteredProducts(orderedGrouped);
   }, [products, searchQuery, activeCategory]);
 
-  // --- RENDER ---
   return (
     <div className="page-wrapper">
       {/* HERO SECTION */}
@@ -84,10 +83,11 @@ export default function Home() {
         <div className="container">
           <h1
             style={{
-              fontSize: "3.5rem",
-              fontWeight: "900",
+              fontSize: "3rem",
+              fontWeight: "700" /* Reduced from 900 */,
               margin: "0 0 16px 0",
-              letterSpacing: "-2px",
+              color: "white",
+              letterSpacing: "-1px",
             }}
           >
             Research Grade Peptides
@@ -95,10 +95,9 @@ export default function Home() {
           <p
             style={{
               color: "#cbd5e1",
-              fontSize: "1.25rem",
-              margin: 0,
+              fontSize: "1.2rem",
+              margin: "0 auto",
               maxWidth: "600px",
-              marginInline: "auto",
             }}
           >
             Verified purity. Third-party tested. Secure shipping.
@@ -114,16 +113,16 @@ export default function Home() {
             flexDirection: "column",
             gap: "24px",
             alignItems: "center",
-            maxWidth: "800px",
+            maxWidth: "100%" /* Ensure container is full width */,
             margin: "0 auto",
           }}
         >
-          {/* Search Input */}
+          {/* Search Input - Wider and Better Aligned */}
           <div
             style={{
               position: "relative",
               width: "100%",
-              maxWidth: "500px",
+              maxWidth: "600px" /* Wider search bar */,
             }}
           >
             <Search
@@ -131,7 +130,7 @@ export default function Home() {
               color="#64748b"
               style={{
                 position: "absolute",
-                left: "16px",
+                left: "20px",
                 top: "50%",
                 transform: "translateY(-50%)",
               }}
@@ -143,12 +142,13 @@ export default function Home() {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: "100%",
-                padding: "16px 16px 16px 48px",
-                borderRadius: "50px",
+                padding: "16px 16px 16px 52px",
+                borderRadius: "12px" /* Modern rounded corners, not pill */,
                 border: "1px solid #e2e8f0",
                 fontSize: "1rem",
                 outline: "none",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                transition: "border 0.2s",
               }}
             />
           </div>
@@ -157,7 +157,7 @@ export default function Home() {
           <div
             style={{
               display: "flex",
-              gap: "12px",
+              gap: "10px",
               flexWrap: "wrap",
               justifyContent: "center",
             }}
@@ -167,19 +167,19 @@ export default function Home() {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 style={{
-                  padding: "8px 24px",
-                  borderRadius: "50px",
+                  padding: "10px 24px",
+                  borderRadius: "8px" /* Matches search bar radius */,
                   border:
                     activeCategory === cat
-                      ? "2px solid var(--primary)"
+                      ? "1px solid var(--primary)"
                       : "1px solid #e2e8f0",
                   backgroundColor:
-                    activeCategory === cat ? "var(--primary-light)" : "white",
-                  color:
                     activeCategory === cat
                       ? "var(--primary)"
-                      : "var(--text-muted)",
-                  fontWeight: "600",
+                      : "white" /* Solid active state */,
+                  color: activeCategory === cat ? "white" : "var(--text-muted)",
+                  fontWeight: "500" /* Reduced bold */,
+                  fontSize: "0.95rem",
                   cursor: "pointer",
                   transition: "all 0.2s",
                 }}
@@ -232,8 +232,9 @@ export default function Home() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "32px",
+                  /* CHANGED: 280px -> 200px allows 5-6 items per row */
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                  gap: "24px",
                 }}
               >
                 {filteredProducts[categoryName].map((product) => (
