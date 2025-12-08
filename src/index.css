@@ -1,56 +1,67 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 :root {
-  /* Colors */
+  /* --- CORE PALETTE --- */
   --primary: #4635de;
   --primary-hover: #372bb5;
+
+  /* --- NEW SCIENTIFIC COLORS --- */
+  --medical-navy: #0f172a; /* Deep, authoritative background */
+  --clinical-teal: #0d9488; /* Trust/Safety accents */
+  --science-blue: #e0e7ff; /* Subtle highlight backgrounds */
+
+  /* --- NEUTRALS --- */
   --bg-body: #f8fafc;
   --bg-surface: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
 
-  /* Typography: Bigger & Lighter */
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
-  font-size: 17px; /* Increased from 16px */
-  line-height: 1.6;
-  color: var(--text-main);
+  /* --- TYPOGRAPHY --- */
+  --font-main: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
 
 body {
   margin: 0;
   background-color: var(--bg-body);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  font-size: 16px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Reduced boldness for headers */
+/* --- UTILITIES --- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
 h1,
 h2,
 h3,
 h4 {
-  letter-spacing: -0.01em;
-  color: #0f172a;
-  font-weight: 700; /* Was 800/900 */
+  color: var(--medical-navy);
+  letter-spacing: -0.02em;
+  margin: 0;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-/* Toast Animation */
-@keyframes slideIn {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
+/* --- SKELETON ANIMATIONS --- */
+@keyframes pulse {
+  0% {
+    background-color: #e2e8f0;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+  50% {
+    background-color: #f1f5f9;
   }
+  100% {
+    background-color: #e2e8f0;
+  }
+}
+
+.skeleton {
+  animation: pulse 1.5s infinite ease-in-out;
+  border-radius: 8px;
 }
