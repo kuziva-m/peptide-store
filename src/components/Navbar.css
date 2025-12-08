@@ -1,0 +1,49 @@
+/* src/components/Navbar.css */
+.navbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%; /* Force full width */
+  padding: 0; /* Remove padding here to let container handle it */
+}
+
+.nav-container {
+  max-width: 1400px; /* Match your grid width */
+  width: 100%; /* CRITICAL: Forces the container to fill the bar */
+  margin: 0 auto; /* Centers the container */
+  padding: 1rem 20px; /* Adds breathing room on the sides */
+  display: flex;
+  justify-content: space-between; /* Pushes Logo left, Links right */
+  align-items: center;
+  box-sizing: border-box; /* Ensures padding doesn't break width */
+}
+
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-decoration: none;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  /* Ensure logo doesn't shrink */
+  flex-shrink: 0;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem; /* Increased gap between "Shop", "Contact", and "Cart" */
+}
+
+/* ... keep the rest of your button styles ... */
+.cart-icon-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}

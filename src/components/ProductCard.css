@@ -1,92 +1,88 @@
+/* src/components/ProductCard.css */
 .product-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: white;
+  border: 1px solid #f0f0f0; /* Very subtle border */
+  border-radius: 4px;
   overflow: hidden;
-  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  text-align: center; /* Centers all text */
 }
 
 .product-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(70, 53, 222, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
 }
 
 .image-placeholder {
-  background-color: var(--primary-light);
-  height: 200px;
+  background-color: white; /* Changed from grey/pink to white */
+  height: 250px; /* Taller image area */
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
-  font-weight: 700;
-  font-size: 1.1rem;
-  overflow: hidden;
+  padding: 20px;
 }
 
 .image-placeholder img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain; /* Ensures bottle fits nicely without cropping */
 }
 
 .card-details {
-  padding: 1.25rem;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
 }
 
 .product-title {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase; /* MAKES TEXT LOOK LIKE THIS */
+  color: #333;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
 }
 
 .price {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary); /* Uses your brand blue */
+  margin-bottom: 15px;
 }
 
 .variant-selector {
-  margin-bottom: 1.25rem;
-}
-
-.variant-selector label {
-  display: block;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  margin-bottom: 15px;
 }
 
 .variant-selector select {
   width: 100%;
-  padding: 0.5rem;
+  padding: 8px;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  border: 1px solid var(--border);
-  background-color: white;
-  font-size: 0.95rem;
-  cursor: pointer;
+  text-align: center;
+  background: #fafafa;
 }
 
+/* The "Prime Peptides" Style Button */
 .add-btn {
-  margin-top: auto; /* Pushes button to bottom */
   width: 100%;
-  background-color: var(--primary);
+  background-color: #0ea5e9; /* A brighter "Medical" blue to match reference */
   color: white;
   border: none;
-  padding: 0.75rem;
-  border-radius: 4px;
+  padding: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: background-color 0.2s;
+  margin-top: auto;
+  transition: background 0.2s;
 }
 
 .add-btn:hover {
-  background-color: var(--primary-hover);
+  background-color: #0284c7;
 }

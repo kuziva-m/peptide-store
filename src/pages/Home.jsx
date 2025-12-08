@@ -26,30 +26,50 @@ export default function Home() {
   }
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
+    // 1. We added 'minHeight' so the footer doesn't float up
+    // 2. We kept 'margin: 0 auto' to center the whole block
+    <div
+      style={{
+        maxWidth: "1400px",
+        margin: "0 auto",
+        padding: "40px 20px",
+        minHeight: "100vh",
+        width: "100%",
+      }}
+    >
       {/* Header Section */}
-      <header style={{ marginBottom: "3rem", textAlign: "center" }}>
+      <header style={{ marginBottom: "50px", textAlign: "center" }}>
         <h1
           style={{
-            color: "var(--primary)",
+            color: "#111",
             fontSize: "2.5rem",
-            marginBottom: "0.5rem",
+            fontWeight: "800",
+            textTransform: "uppercase",
+            marginBottom: "10px",
           }}
         >
-          Peptide Store
+          Shop
         </h1>
-        <p style={{ color: "var(--text-muted)" }}>Premium Research Solutions</p>
+        {/* The Blue Line Under "SHOP" */}
+        <div
+          style={{
+            width: "80px",
+            height: "4px",
+            background: "#0ea5e9",
+            margin: "0 auto" /* This centers the blue line */,
+          }}
+        ></div>
       </header>
 
-      {/* Loading State */}
-      {loading && <p style={{ textAlign: "center" }}>Loading inventory...</p>}
-
       {/* Product Grid */}
+      {/* Once you add 3 more products, this empty space will disappear! */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: "2rem",
+          gap: "30px",
+          justifyContent:
+            "center" /* Optional: Centers the grid items if only a few exist */,
         }}
       >
         {products.map((product) => (
