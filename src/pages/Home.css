@@ -2,23 +2,23 @@
 .hero-section {
   background-color: var(--medical-navy);
   color: white;
-  padding: 80px 20px;
+  padding: 100px 20px; /* Increased Vertical Padding */
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 50px; /* Increased Margin */
 }
 
 .hero-title {
-  font-size: 3rem;
+  font-size: 3.2rem;
   font-weight: 700;
-  color: white; /* Override default dark header */
+  color: white;
   margin-bottom: 16px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em; /* Tighter letter spacing for high-end look */
 }
 
 .hero-subtitle {
   color: #cbd5e1;
-  font-size: 1.2rem;
-  max-width: 600px;
+  font-size: 1.3rem;
+  max-width: 700px;
   margin: 0 auto;
 }
 
@@ -27,14 +27,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  margin-bottom: 60px;
+  gap: 32px; /* Increased Gap */
+  margin-bottom: 70px; /* Increased Margin */
 }
 
 .search-wrapper {
   position: relative;
   width: 100%;
-  max-width: 600px;
+  max-width: 680px; /* Slightly wider search bar */
 }
 
 .search-icon {
@@ -47,30 +47,30 @@
 
 .search-input {
   width: 100%;
-  padding: 16px 16px 16px 52px;
+  padding: 18px 18px 18px 56px; /* Larger Padding */
   border-radius: 12px;
   border: 1px solid var(--border);
   font-size: 1rem;
   outline: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 10px -3px rgba(0, 0, 0, 0.08); /* More subtle shadow */
   transition: all 0.2s;
 }
 
 .search-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(70, 53, 222, 0.1);
+  box-shadow: 0 0 0 3px rgba(70, 53, 222, 0.2); /* Sharper focus ring */
 }
 
 /* CATEGORY TABS */
 .category-tabs {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .tab-btn {
-  padding: 10px 24px;
+  padding: 12px 28px; /* Larger clickable area */
   border-radius: 8px;
   border: 1px solid var(--border);
   background-color: white;
@@ -82,7 +82,8 @@
 }
 
 .tab-btn:hover {
-  background-color: var(--bg-body);
+  background-color: var(--science-blue); /* New hover state */
+  color: var(--primary);
 }
 
 .tab-btn.active {
@@ -97,26 +98,30 @@
 }
 
 .category-title {
-  font-size: 1.8rem;
+  font-size: 2rem; /* Slightly larger heading */
   margin-bottom: 32px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border); /* Thicker separator */
   padding-bottom: 16px;
   color: var(--medical-navy);
+  font-weight: 800;
 }
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(260px, 1fr)
+  ); /* Wider columns */
+  gap: 30px; /* Increased gap */
 }
 
 .empty-state {
   text-align: center;
   color: var(--text-muted);
   font-size: 1.2rem;
-  padding: 40px;
+  padding: 60px;
 }
 
 .content-grid {
-  padding-bottom: 80px;
+  padding-bottom: 100px; /* More space at the bottom */
 }

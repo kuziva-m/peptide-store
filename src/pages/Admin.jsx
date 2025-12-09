@@ -10,6 +10,7 @@ import {
   Search,
   Image as ImageIcon,
   Upload,
+  Loader,
 } from "lucide-react";
 
 const CATEGORIES = ["Peptides", "Peptide Blends", "Mixing Solution"];
@@ -322,19 +323,31 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Sync state if product prop updates (Critical for refresh)
+  // Sync local state when the product prop changes
   useEffect(() => {
-    setName(product.name);
-    setCategory(product.category);
-    setImage(product.image_url);
-    setVariants(product.variants || []);
-  }, [product]);
+    // Only re-sync if the component is NOT currently in an editing/uploading state
+    // and if the prop data is different.
+    if (!isUploading && !isSaving) {
+      setName(product.name);
+      setCategory(product.category);
+      setImage(product.image_url);
+      setVariants(product.variants || []);
+    }
+  }, [product, isUploading, isSaving]);
 
-  // --- CORE UPDATE FUNCTION (Product Details + Image URL) ---
+  // --- CORE UPDATE FUNCTION (Auto-Save on Blur) ---
   const handleUpdateProduct = async () => {
+    // Check if any fields were actually changed
+    if (
+      name === product.name &&
+      category === product.category &&
+      image === product.image_url
+    ) {
+      return;
+    }
+
     setIsSaving(true);
 
-    // Update name, category, AND image URL in one go.
     const { error } = await supabase
       .from("products")
       .update({ name, category, image_url: image })
@@ -346,7 +359,7 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
     setIsSaving(false);
   };
 
-  // --- FIXED: HANDLE FILE UPLOAD ---
+  // --- FIXED: HANDLE FILE UPLOAD (Automatic Save) ---
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -360,7 +373,7 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
         .from(STORAGE_BUCKET)
         .upload(fileName, file, {
           cacheControl: "3600",
-          upsert: false,
+          upsert: true, // Use upsert to handle case where we might upload an image with the same name
         });
 
       if (uploadError) throw uploadError;
@@ -372,23 +385,25 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
 
       const newImageUrl = publicUrlData.publicUrl;
 
-      // 3. Update the database record with the new URL
+      // 3. Update the database record with the new URL (Automatic Save)
       const { error: dbError } = await supabase
         .from("products")
-        .update({ image_url: newImageUrl })
+        .update({ image_url: newImageUrl }) // <-- This now passes RLS
         .eq("id", product.id);
 
       if (dbError) throw dbError;
 
-      // 4. Critical: Force parent Admin component to refetch and re-render everything
-      // The new image URL will arrive via the 'product' prop, correctly updating local state via useEffect.
+      // 4. Update local state for immediate preview/feedback (This should stop the visual flicker)
+      setImage(newImageUrl);
+
+      // 5. Force parent Admin component to refetch and re-render everything
       onRefresh();
     } catch (error) {
       alert("Image update failed: " + error.message);
       console.error("Image Upload/DB Update Error:", error);
     } finally {
       setIsUploading(false);
-      // Clear the file input element to allow re-selection without refreshing
+      // Clear the file input element
       event.target.value = null;
     }
   };
@@ -467,6 +482,8 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
                 style={styles.input}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={handleUpdateProduct}
+                disabled={isSaving}
               />
             </div>
             <div>
@@ -475,6 +492,8 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
                 style={styles.input}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                onBlur={handleUpdateProduct}
+                disabled={isSaving}
               >
                 {CATEGORIES.map((c) => (
                   <option key={c}>{c}</option>
@@ -486,13 +505,13 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={styles.label}>Image Source</label>
               <div style={styles.imageSourceRow}>
-                {/* File Upload Button */}
+                {/* File Upload Button (Auto-Saves) */}
                 <label
                   htmlFor={`file-upload-${product.id}`}
                   style={styles.uploadBtn}
                 >
                   {isUploading ? (
-                    <span style={styles.loader}>🔄</span>
+                    <Loader size={18} style={styles.loaderIcon} />
                   ) : (
                     <Upload size={18} />
                   )}
@@ -507,24 +526,15 @@ function ProductEditor({ product, isExpanded, onToggle, onRefresh, onDelete }) {
                   />
                 </label>
 
-                {/* Manual URL Input */}
+                {/* Manual URL Input (Auto-Saves on Blur) */}
                 <input
                   style={styles.input}
                   value={image}
                   onChange={(e) => setImage(e.target.value)}
+                  onBlur={handleUpdateProduct}
                   placeholder="...or paste URL"
+                  disabled={isUploading || isSaving}
                 />
-
-                {/* Save Button for URL/Details */}
-                <button
-                  onClick={handleUpdateProduct}
-                  style={styles.saveSmallBtn}
-                  disabled={
-                    isSaving || isUploading || image === product.image_url
-                  }
-                >
-                  {isSaving ? "..." : <Save size={18} />}
-                </button>
               </div>
             </div>
 
@@ -715,10 +725,9 @@ const styles = {
     flexShrink: 0,
     transition: "all 0.2s",
   },
-  loader: {
+  loaderIcon: {
     animation: "spin 1s linear infinite",
     display: "inline-block",
-    marginRight: "5px",
   },
   imageSourceRow: { display: "flex", gap: "10px", alignItems: "center" },
 

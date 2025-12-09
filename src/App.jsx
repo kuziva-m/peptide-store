@@ -1,24 +1,33 @@
+import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Footer from "./components/Footer"; // <-- New Import
+import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
-import Contact from "./pages/Contact"; // <-- New Import
-import Shipping from "./pages/Shipping"; // <-- New Import
-import Privacy from "./pages/Privacy"; // <-- New Import
-import Terms from "./pages/Terms"; // <-- New Import
-import FAQ from "./pages/FAQ"; // <-- New Import
+import Contact from "./pages/Contact";
+import Shipping from "./pages/Shipping";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import FAQ from "./pages/FAQ";
 import Toast from "./components/Toast";
 
 function App() {
+  // New State for global search query, managed here
+  const [searchQuery, setSearchQuery] = useState("");
+
   return (
     <div
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
     >
-      <Navbar />
+      <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       <div style={{ flex: 1 }}>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={
+              <Home searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+            }
+          />
           <Route path="/admin" element={<Admin />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/shipping" element={<Shipping />} />
@@ -28,7 +37,7 @@ function App() {
         </Routes>
       </div>
       <Toast />
-      <Footer /> {/* <-- Added Footer */}
+      <Footer />
     </div>
   );
 }

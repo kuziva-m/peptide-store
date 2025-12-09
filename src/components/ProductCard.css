@@ -7,34 +7,36 @@
   flex-direction: column;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  height: 100%; /* Ensures all cards in a row match height */
+  height: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle default shadow */
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px -10px rgba(70, 53, 222, 0.15);
-  border-color: var(--primary);
+  transform: translateY(-5px); /* More noticeable lift */
+  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1); /* Stronger overall shadow */
+  border-color: var(--primary); /* Highlight border color */
 }
 
 /* --- IMAGE SECTION --- */
 .card-image-wrapper {
   background-color: #f8fafc;
-  height: 200px; /* STRICT HEIGHT LIMIT */
+  height: 220px; /* Slightly taller image area */
   width: 100%;
-  padding: 20px;
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: hidden; /* Cuts off anything that spills out */
+  overflow: hidden;
+  border-bottom: 1px solid var(--border); /* Visual separation from content */
 }
 
 .card-image-wrapper img {
-  height: 100%; /* Force image to respect container height */
-  width: 100%; /* Force image to respect container width */
-  object-fit: contain; /* Ensures image scales without stretching/cropping */
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
   mix-blend-mode: multiply;
-  filter: contrast(1.05);
+  filter: contrast(1.1); /* Enhanced contrast */
 }
 
 /* --- NO IMAGE PLACEHOLDER --- */
@@ -48,36 +50,35 @@
 /* --- BADGE --- */
 .status-badge-subtle {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.7rem;
+  top: 15px;
+  left: 15px;
+  background: rgba(255, 255, 255, 1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--clinical-teal);
   display: flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  gap: 8px;
+  border: 1px solid var(--clinical-teal); /* Teal Border for contrast */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   z-index: 10;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   background-color: var(--clinical-teal);
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
 }
 
 /* --- CONTENT --- */
 .card-content {
-  padding: 20px;
+  padding: 24px; /* Increased Padding */
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   flex-grow: 1;
 }
 
@@ -85,11 +86,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 6px;
 }
 
 .product-name {
-  font-size: 1rem;
+  font-size: 1.1rem; /* Slightly more prominent name */
   font-weight: 700;
   color: var(--medical-navy);
   margin: 0;
@@ -101,49 +102,49 @@
   font-size: 0.75rem;
   color: var(--text-muted);
   display: flex;
-  gap: 12px;
-  opacity: 0.8;
+  gap: 16px;
+  opacity: 0.9;
   margin-top: 4px;
 }
 
-/* --- SELECTORS & PRICE (UPDATED FOR WRAPPING) --- */
+/* --- SELECTORS & PRICE --- */
 .selector-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap; /* Allows stacking if content is too wide */
-  gap: 12px; /* Adds space between price and pills when wrapping */
+  flex-wrap: wrap;
+  gap: 16px;
   margin-top: auto;
+  padding-top: 10px; /* Space above variants */
 }
 
 .product-price {
   font-family: var(--font-mono);
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.2rem; /* More prominent price */
+  font-weight: 700; /* Bolder price */
   color: var(--primary);
-  white-space: nowrap; /* Keeps price on one line */
+  white-space: nowrap;
 }
 
 .variant-pills {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap; /* Allows pills to stack */
+  gap: 8px; /* Slightly wider gap */
+  flex-wrap: wrap;
   justify-content: flex-end;
   max-width: 100%;
 }
 
 .variant-pill {
-  border: 1px solid var(--border);
+  border: 1px solid #c2c9d2; /* Slightly darker default border */
   background: white;
-  padding: 6px 10px;
+  padding: 8px 14px; /* More substantial pill size */
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
 
-  /* Text handling for long names */
   max-width: 100%;
   white-space: normal;
   text-align: center;
@@ -152,39 +153,43 @@
 .variant-pill:hover {
   border-color: var(--primary);
   color: var(--primary);
+  background-color: var(--science-blue);
 }
 
 .variant-pill.active {
-  background-color: var(--science-blue);
+  background-color: var(--primary); /* Solid color for active state */
   border-color: var(--primary);
-  color: var(--primary);
+  color: white;
   font-weight: 600;
+  box-shadow: 0 2px 4px rgba(70, 53, 222, 0.3); /* Pop the active pill */
 }
 
 /* --- BUTTON --- */
 .buy-btn {
   width: 100%;
-  padding: 12px;
+  padding: 16px; /* Bigger button */
   background-color: var(--medical-navy);
   color: white;
   border: none;
   border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700; /* Bolder text */
+  font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
 }
 
 .buy-btn:hover {
-  background-color: var(--primary);
+  background-color: var(--primary); /* Primary hover effect */
+  transform: translateY(-1px);
 }
 
-/* --- SKELETON SPECIFIC --- */
+/* --- SKELETON SPECIFIC (No changes needed, but included for completeness) --- */
 .skeleton-card {
   pointer-events: none;
 }
 .skeleton-img {
-  height: 200px;
+  height: 220px;
   width: 100%;
   background: #e2e8f0;
 }
@@ -195,7 +200,7 @@
   border-radius: 4px;
 }
 .skeleton-btn {
-  height: 44px;
+  height: 48px;
   margin-top: 16px;
   background: #e2e8f0;
   border-radius: 10px;

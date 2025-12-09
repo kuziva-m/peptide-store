@@ -1,14 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
-import { Search } from "lucide-react";
-import "./Home.css"; // We will assume you create this or put it in index.css
+import "./Home.css";
 
-export default function Home() {
+// Note: searchQuery and setSearchQuery are now received from App.jsx
+export default function Home({ searchQuery, setSearchQuery }) {
   // --- STATE ---
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+
+  // Only category filter remains local
   const [activeCategory, setActiveCategory] = useState("All");
 
   const categories = ["All", "Peptides", "Peptide Blends", "Mixing Solution"];
@@ -34,7 +35,7 @@ export default function Home() {
     }
   }
 
-  // --- MEMOIZED FILTERING (The Fix) ---
+  // --- MEMOIZED FILTERING (Now uses passed searchQuery) ---
   const filteredGroupedProducts = useMemo(() => {
     // 1. Filter
     let result = products;
@@ -73,7 +74,7 @@ export default function Home() {
     });
 
     return orderedGrouped;
-  }, [products, searchQuery, activeCategory]);
+  }, [products, searchQuery, activeCategory]); // Dependency on searchQuery is essential
 
   return (
     <div className="page-wrapper">
@@ -87,19 +88,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FILTER BAR */}
-      <div className="container search-container">
-        <div className="search-wrapper">
-          <Search className="search-icon" size={20} />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search catalog (e.g. BPC-157)..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
+      {/* CATEGORY FILTER BAR (Removed Search Input) */}
+      <div
+        className="container search-container"
+        style={{ paddingTop: "0", marginBottom: "70px" }}
+      >
+        {/* Category Tabs */}
         <div className="category-tabs">
           {categories.map((cat) => (
             <button
