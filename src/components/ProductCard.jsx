@@ -1,12 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useCart } from "../lib/CartContext";
 import "./ProductCard.css";
 
 export default function ProductCard({ product, loading }) {
   const { addToCart } = useCart();
 
+  // Logic to handle variants
+  const sortedVariants =
+    product?.variants?.sort((a, b) => a.price - b.price) || [];
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  // Initialize selected variant when product loads
+  useEffect(() => {
+    if (sortedVariants.length > 0) {
+      setSelectedVariant(sortedVariants[0]);
+    }
+  }, [product]);
+
   // SKELETON STATE
-  if (loading) {
+  if (loading || !product) {
     return (
       <div className="product-card skeleton-card">
         <div className="skeleton skeleton-img"></div>
@@ -19,13 +32,11 @@ export default function ProductCard({ product, loading }) {
     );
   }
 
-  // LOGIC
-  const sortedVariants =
-    product.variants?.sort((a, b) => a.price - b.price) || [];
-  const [selectedVariant, setSelectedVariant] = useState(sortedVariants[0]);
-
-  // Fallback if no variants exist
-  if (!selectedVariant) return null;
+  // Determine Image to Show: Variant Image > Product Default > Fallback
+  const displayImage =
+    selectedVariant?.image_url ||
+    product.image_url ||
+    "https://via.placeholder.com/400";
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-US", {
@@ -36,23 +47,28 @@ export default function ProductCard({ product, loading }) {
 
   return (
     <div className="product-card">
-      <div className="card-image-wrapper">
+      {/* LINK WRAPPER */}
+      <Link to={`/product/${product.id}`} className="card-image-wrapper">
         <div className="status-badge-subtle">
           <span className="status-dot"></span> In Stock
         </div>
 
-        {product.image_url ? (
-          <img src={product.image_url} alt={product.name} loading="lazy" />
-        ) : (
-          <div className="no-image-placeholder">No Image</div>
-        )}
-      </div>
+        <img
+          src={displayImage}
+          alt={`${product.name} - ${selectedVariant?.size_label || ""}`}
+          loading="lazy"
+        />
+      </Link>
 
       <div className="card-content">
         <div className="card-header">
-          <h3 className="product-name">{product.name}</h3>
+          <Link
+            to={`/product/${product.id}`}
+            style={{ textDecoration: "none" }}
+          >
+            <h3 className="product-name">{product.name}</h3>
+          </Link>
 
-          {/* Scientific Metadata - Updated to use standard font in CSS */}
           <div className="science-meta">
             <span>PURITY: &gt;99%</span>
             <span>CAS: 123-45-X</span>
@@ -63,7 +79,9 @@ export default function ProductCard({ product, loading }) {
         <div className="selector-row">
           <div className="price-container">
             <span className="product-price">
-              {formatPrice(selectedVariant.price)}
+              {selectedVariant
+                ? formatPrice(selectedVariant.price)
+                : "Unavailable"}
             </span>
           </div>
 
@@ -72,9 +90,12 @@ export default function ProductCard({ product, loading }) {
               <button
                 key={v.id}
                 className={`variant-pill ${
-                  selectedVariant.id === v.id ? "active" : ""
+                  selectedVariant?.id === v.id ? "active" : ""
                 }`}
-                onClick={() => setSelectedVariant(v)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedVariant(v);
+                }}
               >
                 {v.size_label}
               </button>
@@ -84,7 +105,10 @@ export default function ProductCard({ product, loading }) {
 
         <button
           className="buy-btn"
-          onClick={() => addToCart(product, selectedVariant)}
+          onClick={(e) => {
+            e.preventDefault();
+            if (selectedVariant) addToCart(product, selectedVariant);
+          }}
         >
           Add to Cart
         </button>

@@ -1,7 +1,7 @@
 .product-card {
   background: var(--bg-surface);
-  border: 1px solid transparent; /* Removed visible border for cleaner shadow look */
-  border-radius: 12px; /* Professional curve */
+  border: 1px solid transparent;
+  border-radius: 16px; /* Slightly rounder for a premium feel */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -12,60 +12,70 @@
 }
 
 .product-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-8px);
   box-shadow: var(--shadow-hover);
-  border-color: transparent;
 }
 
-/* --- IMAGE SECTION --- */
+/* --- IMAGE SECTION (The Studio Stage) --- */
 .card-image-wrapper {
-  background-color: #ffffff;
-  height: 240px;
+  /* Studio Light Gradient: White center, very subtle grey edges */
+  background: radial-gradient(circle at center, #ffffff 50%, #f1f5f9 100%);
+  height: 280px; /* Taller to accommodate vials beautifully */
   width: 100%;
-  padding: 30px;
+  padding: 40px; /* Generous padding lets the product breathe */
+
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+
+  text-decoration: none;
+  color: inherit;
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .card-image-wrapper img {
   height: 100%;
   width: 100%;
   object-fit: contain;
-  transition: transform 0.4s ease;
+  transition: all 0.4s ease-out;
+  display: block;
+  position: relative;
+  z-index: 1;
+
+  /* REALISTIC GLASS SHADOW */
+  /* This puts a shadow around the shape of the bottle, not the box */
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
 }
 
 .product-card:hover .card-image-wrapper img {
-  transform: scale(1.05); /* Subtle zoom on hover */
+  transform: scale(1.08) translateY(-5px); /* Lift and zoom */
+  /* Sharpen shadow on lift to simulate height */
+  filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.15));
 }
 
-/* --- NO IMAGE PLACEHOLDER --- */
-.no-image-placeholder {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  opacity: 0.6;
-}
-
-/* --- BADGE --- */
+/* --- BADGE (Updated to float cleanly) --- */
 .status-badge-subtle {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  background: var(--bg-surface);
-  padding: 6px 12px;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  padding: 6px 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--clinical-teal);
   display: flex;
   align-items: center;
-  gap: 6px;
-  box-shadow: var(--shadow-md);
+  gap: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(13, 148, 136, 0.2);
   z-index: 10;
-  letter-spacing: 0.02em;
+  pointer-events: none;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .status-dot {
@@ -73,7 +83,6 @@
   height: 6px;
   background-color: var(--clinical-teal);
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
 }
 
 /* --- CONTENT --- */
@@ -81,65 +90,68 @@
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   flex-grow: 1;
+  background-color: #fff;
 }
 
 .card-header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
 }
 
 .product-name {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--medical-navy);
   margin: 0;
   line-height: 1.4;
+  min-height: 2.8em; /* Ensures 2 lines of text align nicely across cards */
 }
 
-/* --- META DATA (Fixed: No Calculator Font) --- */
+/* --- META DATA --- */
 .science-meta {
-  font-family: var(--font-main); /* Ensure Poppins */
-  font-size: 0.8rem;
+  font-family: var(--font-main);
+  font-size: 0.75rem;
   color: var(--text-muted);
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
   font-weight: 500;
+  opacity: 0.8;
 }
 
 .science-meta span {
-  background-color: #f1f5f9;
-  padding: 4px 8px;
+  background-color: #f8fafc;
+  padding: 3px 8px;
   border-radius: 4px;
-  color: var(--text-muted);
+  border: 1px solid #e2e8f0;
 }
 
 /* --- SELECTORS & PRICE --- */
 .selector-row {
   display: flex;
-  flex-direction: column; /* Stacked for cleaner look */
+  flex-direction: column;
   gap: 12px;
   margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .price-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 }
 
 .product-price {
-  font-family: var(--font-main); /* Ensure Poppins */
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--medical-navy);
-  letter-spacing: -0.02em;
+  font-family: var(--font-main);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.03em;
 }
 
 .variant-pills {
@@ -152,36 +164,37 @@
 .variant-pill {
   border: 1px solid var(--border);
   background: white;
-  padding: 8px 16px;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
-  flex: 1; /* Equal width pills */
+  flex: 1;
   text-align: center;
+  min-width: 60px;
 }
 
 .variant-pill:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background-color: #f8fafc;
+  background-color: #f0f4ff;
 }
 
 .variant-pill.active {
-  background-color: var(--medical-navy); /* Solid Navy */
+  background-color: var(--medical-navy);
   border-color: var(--medical-navy);
   color: white;
   font-weight: 600;
-  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
 }
 
 /* --- BUTTON --- */
 .buy-btn {
   width: 100%;
   padding: 14px;
-  background-color: var(--primary); /* Solid Primary */
+  background-color: var(--primary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -189,17 +202,28 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 6px rgba(70, 53, 222, 0.2);
+  box-shadow: 0 4px 6px rgba(70, 53, 222, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .buy-btn:hover {
   background-color: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(70, 53, 222, 0.3);
+  box-shadow: 0 8px 15px rgba(70, 53, 222, 0.25);
 }
 
 .buy-btn:active {
   transform: translateY(0);
+}
+
+.no-image-placeholder {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.6;
 }
 
 /* --- SKELETON SPECIFIC --- */
@@ -208,7 +232,7 @@
   border: 1px solid var(--border);
 }
 .skeleton-img {
-  height: 240px;
+  height: 280px;
   width: 100%;
   background: #f1f5f9;
 }

@@ -9,6 +9,7 @@ import Shipping from "./pages/Shipping";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
+import Product from "./pages/Product"; // <--- IMPORT ADDED
 import Toast from "./components/Toast";
 
 function App() {
@@ -27,6 +28,9 @@ function App() {
               <Home searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
             }
           />
+          {/* PRODUCT DETAILS ROUTE ADDED BELOW */}
+          <Route path="/product/:id" element={<Product />} />
+
           <Route path="/admin" element={<Admin />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/shipping" element={<Shipping />} />
