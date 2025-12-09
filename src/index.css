@@ -1,25 +1,33 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
 :root {
-  /* --- CORE PALETTE --- */
+  /* --- CORE PALETTE (Preserved) --- */
   --primary: #4635de;
   --primary-hover: #372bb5;
 
-  /* --- NEW SCIENTIFIC COLORS --- */
-  --medical-navy: #0f172a; /* Deep, authoritative background */
-  --clinical-teal: #0d9488; /* Trust/Safety accents */
-  --science-blue: #e0e7ff; /* Subtle highlight backgrounds */
+  /* --- SCIENTIFIC COLORS (Preserved) --- */
+  --medical-navy: #0f172a;
+  --clinical-teal: #0d9488;
+  --science-blue: #e0e7ff;
 
   /* --- NEUTRALS --- */
-  --bg-body: #f8fafc;
+  --bg-body: #f4f6f8; /* Slightly darker than white for contrast with cards */
   --bg-surface: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
 
-  /* --- TYPOGRAPHY --- */
-  --font-main: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  /* --- TYPOGRAPHY (Updated to Poppins) --- */
+  --font-main: "Poppins", sans-serif;
+
+  /* --- SHADOWS (New Professional Depth) --- */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 body {
@@ -30,11 +38,12 @@ body {
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* --- UTILITIES --- */
 .container {
-  max-width: 1200px;
+  max-width: 1240px; /* Slightly wider for modern feel */
   margin: 0 auto;
   padding: 0 24px;
 }
@@ -44,8 +53,13 @@ h2,
 h3,
 h4 {
   color: var(--medical-navy);
+  font-weight: 600;
   letter-spacing: -0.02em;
   margin: 0;
+}
+
+button {
+  font-family: var(--font-main);
 }
 
 /* --- SKELETON ANIMATIONS --- */
@@ -63,5 +77,5 @@ h4 {
 
 .skeleton {
   animation: pulse 1.5s infinite ease-in-out;
-  border-radius: 8px;
+  border-radius: 6px;
 }

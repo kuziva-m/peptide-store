@@ -9,51 +9,48 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
   return (
     <nav className="navbar">
       <div className="container nav-top-bar">
-        {" "}
-        {/* New Top Bar */}
         {/* Logo */}
         <Link to="/" className="nav-logo">
           PEPTIDE<span style={{ color: "var(--medical-navy)" }}>STORE</span>
         </Link>
-        {/* Search Input (New Location) */}
+
+        {/* Search Input */}
         <div className="search-widget">
           <Search size={18} className="search-icon" />
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search for peptides..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input-header"
           />
         </div>
-        {/* Cart & Login Placeholder */}
+
+        {/* Actions */}
         <div className="nav-actions">
-          {/* Cart Button */}
           <button
             className="cart-btn"
             onClick={() => alert("Checkout feature coming soon!")}
           >
-            <ShoppingCart size={20} strokeWidth={2.5} />
+            <ShoppingCart size={18} strokeWidth={2.5} />
             <span className="cart-count-badge">{cartCount}</span>
           </button>
         </div>
       </div>
 
       <div className="nav-bottom-bar">
-        {" "}
-        {/* New Bottom Bar for Links */}
         <div className="container nav-links-container">
           <Link to="/" className="nav-link">
             Home
           </Link>
           <Link to="/" className="nav-link">
-            Shop
+            Shop All
           </Link>
           <Link to="/shipping" className="nav-link">
             Shipping & Returns
           </Link>
           <Link to="/contact" className="nav-link">
-            Contact Us
+            Contact
           </Link>
           <Link to="/faq" className="nav-link">
             FAQ

@@ -1,84 +1,87 @@
 .product-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: 1px solid transparent; /* Removed visible border for cleaner shadow look */
+  border-radius: 12px; /* Professional curve */
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
   height: 100%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle default shadow */
+  box-shadow: var(--shadow-sm);
 }
 
 .product-card:hover {
-  transform: translateY(-5px); /* More noticeable lift */
-  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1); /* Stronger overall shadow */
-  border-color: var(--primary); /* Highlight border color */
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+  border-color: transparent;
 }
 
 /* --- IMAGE SECTION --- */
 .card-image-wrapper {
-  background-color: #f8fafc;
-  height: 220px; /* Slightly taller image area */
+  background-color: #ffffff;
+  height: 240px;
   width: 100%;
-  padding: 24px;
+  padding: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: hidden;
-  border-bottom: 1px solid var(--border); /* Visual separation from content */
+  border-bottom: 1px solid var(--border);
 }
 
 .card-image-wrapper img {
   height: 100%;
   width: 100%;
   object-fit: contain;
-  mix-blend-mode: multiply;
-  filter: contrast(1.1); /* Enhanced contrast */
+  transition: transform 0.4s ease;
+}
+
+.product-card:hover .card-image-wrapper img {
+  transform: scale(1.05); /* Subtle zoom on hover */
 }
 
 /* --- NO IMAGE PLACEHOLDER --- */
 .no-image-placeholder {
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 /* --- BADGE --- */
 .status-badge-subtle {
   position: absolute;
-  top: 15px;
-  left: 15px;
-  background: rgba(255, 255, 255, 1);
+  top: 16px;
+  left: 16px;
+  background: var(--bg-surface);
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--clinical-teal);
   display: flex;
   align-items: center;
-  gap: 8px;
-  border: 1px solid var(--clinical-teal); /* Teal Border for contrast */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  gap: 6px;
+  box-shadow: var(--shadow-md);
   z-index: 10;
+  letter-spacing: 0.02em;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   background-color: var(--clinical-teal);
   border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
 }
 
 /* --- CONTENT --- */
 .card-content {
-  padding: 24px; /* Increased Padding */
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   flex-grow: 1;
 }
 
@@ -86,124 +89,140 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
 }
 
 .product-name {
-  font-size: 1.1rem; /* Slightly more prominent name */
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 600;
   color: var(--medical-navy);
   margin: 0;
   line-height: 1.4;
 }
 
+/* --- META DATA (Fixed: No Calculator Font) --- */
 .science-meta {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-family: var(--font-main); /* Ensure Poppins */
+  font-size: 0.8rem;
   color: var(--text-muted);
   display: flex;
-  gap: 16px;
-  opacity: 0.9;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.science-meta span {
+  background-color: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-muted);
 }
 
 /* --- SELECTORS & PRICE --- */
 .selector-row {
   display: flex;
+  flex-direction: column; /* Stacked for cleaner look */
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.price-container {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: auto;
-  padding-top: 10px; /* Space above variants */
 }
 
 .product-price {
-  font-family: var(--font-mono);
-  font-size: 1.2rem; /* More prominent price */
-  font-weight: 700; /* Bolder price */
-  color: var(--primary);
-  white-space: nowrap;
+  font-family: var(--font-main); /* Ensure Poppins */
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--medical-navy);
+  letter-spacing: -0.02em;
 }
 
 .variant-pills {
   display: flex;
-  gap: 8px; /* Slightly wider gap */
+  gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  max-width: 100%;
+  width: 100%;
 }
 
 .variant-pill {
-  border: 1px solid #c2c9d2; /* Slightly darker default border */
+  border: 1px solid var(--border);
   background: white;
-  padding: 8px 14px; /* More substantial pill size */
+  padding: 8px 16px;
   border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s;
-
-  max-width: 100%;
-  white-space: normal;
+  transition: all 0.2s ease;
+  flex: 1; /* Equal width pills */
   text-align: center;
 }
 
 .variant-pill:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background-color: var(--science-blue);
+  background-color: #f8fafc;
 }
 
 .variant-pill.active {
-  background-color: var(--primary); /* Solid color for active state */
-  border-color: var(--primary);
+  background-color: var(--medical-navy); /* Solid Navy */
+  border-color: var(--medical-navy);
   color: white;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(70, 53, 222, 0.3); /* Pop the active pill */
+  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.2);
 }
 
 /* --- BUTTON --- */
 .buy-btn {
   width: 100%;
-  padding: 16px; /* Bigger button */
-  background-color: var(--medical-navy);
+  padding: 14px;
+  background-color: var(--primary); /* Solid Primary */
   color: white;
   border: none;
-  border-radius: 10px;
-  font-weight: 700; /* Bolder text */
-  font-size: 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(70, 53, 222, 0.2);
 }
 
 .buy-btn:hover {
-  background-color: var(--primary); /* Primary hover effect */
-  transform: translateY(-1px);
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(70, 53, 222, 0.3);
 }
 
-/* --- SKELETON SPECIFIC (No changes needed, but included for completeness) --- */
+.buy-btn:active {
+  transform: translateY(0);
+}
+
+/* --- SKELETON SPECIFIC --- */
 .skeleton-card {
   pointer-events: none;
+  border: 1px solid var(--border);
 }
 .skeleton-img {
-  height: 220px;
+  height: 240px;
   width: 100%;
-  background: #e2e8f0;
+  background: #f1f5f9;
 }
 .skeleton-text {
   height: 16px;
   margin-bottom: 8px;
-  background: #e2e8f0;
+  background: #f1f5f9;
   border-radius: 4px;
 }
 .skeleton-btn {
   height: 48px;
   margin-top: 16px;
-  background: #e2e8f0;
-  border-radius: 10px;
+  background: #f1f5f9;
+  border-radius: 8px;
 }
 .width-80 {
   width: 80%;

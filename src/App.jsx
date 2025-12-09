@@ -12,7 +12,6 @@ import FAQ from "./pages/FAQ";
 import Toast from "./components/Toast";
 
 function App() {
-  // New State for global search query, managed here
   const [searchQuery, setSearchQuery] = useState("");
 
   return (

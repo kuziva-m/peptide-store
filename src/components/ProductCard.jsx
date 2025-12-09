@@ -52,7 +52,7 @@ export default function ProductCard({ product, loading }) {
         <div className="card-header">
           <h3 className="product-name">{product.name}</h3>
 
-          {/* Scientific Metadata - The "Trust" Factor */}
+          {/* Scientific Metadata - Updated to use standard font in CSS */}
           <div className="science-meta">
             <span>PURITY: &gt;99%</span>
             <span>CAS: 123-45-X</span>
@@ -61,9 +61,11 @@ export default function ProductCard({ product, loading }) {
 
         {/* PRICE & SELECTOR ROW */}
         <div className="selector-row">
-          <span className="product-price">
-            {formatPrice(selectedVariant.price)}
-          </span>
+          <div className="price-container">
+            <span className="product-price">
+              {formatPrice(selectedVariant.price)}
+            </span>
+          </div>
 
           <div className="variant-pills">
             {sortedVariants.map((v) => (
