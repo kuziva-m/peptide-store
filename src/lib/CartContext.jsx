@@ -4,9 +4,14 @@ const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
-
-  // NEW: State for the popup notification
   const [notification, setNotification] = useState(null);
+
+  // NEW: Control the Cart Drawer visibility
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const toggleCart = () => setIsCartOpen(!isCartOpen);
+  const openCart = () => setIsCartOpen(true);
+  const closeCart = () => setIsCartOpen(false);
 
   const addToCart = (product, variant) => {
     setCartItems((prevItems) => {
@@ -28,25 +33,55 @@ export function CartProvider({ children }) {
             size: variant.size_label,
             price: variant.price,
             quantity: 1,
+            image: variant.image_url || product.image_url, // Store image for drawer
           },
         ];
       }
     });
 
-    // NEW: Show toast instead of alert
-    setNotification(`Added ${product.name} (${variant.size_label}) to cart`);
+    setNotification(`Added ${product.name} to cart`);
+    setTimeout(() => setNotification(null), 3000);
 
-    // Hide it automatically after 3 seconds
-    setTimeout(() => {
-      setNotification(null);
-    }, 3000);
+    // Optional: Auto-open cart on add
+    setIsCartOpen(true);
+  };
+
+  const removeFromCart = (variantId) => {
+    setCartItems((prev) => prev.filter((item) => item.variantId !== variantId));
+  };
+
+  const updateQuantity = (variantId, delta) => {
+    setCartItems((prev) =>
+      prev.map((item) => {
+        if (item.variantId === variantId) {
+          return { ...item, quantity: Math.max(1, item.quantity + delta) };
+        }
+        return item;
+      })
+    );
   };
 
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+  const cartTotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   return (
     <CartContext.Provider
-      value={{ cartItems, addToCart, cartCount, notification }}
+      value={{
+        cartItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        cartCount,
+        cartTotal,
+        notification,
+        isCartOpen,
+        toggleCart,
+        openCart,
+        closeCart,
+      }}
     >
       {children}
     </CartContext.Provider>

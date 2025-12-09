@@ -4,7 +4,7 @@ import { useCart } from "../lib/CartContext";
 import "./Navbar.css";
 
 export default function Navbar({ searchQuery, setSearchQuery }) {
-  const { cartCount } = useCart();
+  const { cartCount, toggleCart } = useCart(); // Use toggleCart from context
 
   return (
     <nav className="navbar">
@@ -30,7 +30,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
         <div className="nav-actions">
           <button
             className="cart-btn"
-            onClick={() => alert("Checkout feature coming soon!")}
+            onClick={toggleCart} // NOW OPENS DRAWER
           >
             <ShoppingCart size={18} strokeWidth={2.5} />
             <span className="cart-count-badge">{cartCount}</span>
