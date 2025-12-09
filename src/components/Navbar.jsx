@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import { ShoppingCart } from "lucide-react"; // Import icon
-import { useCart } from "../lib/CartContext"; // Import cart hook
+import { ShoppingCart } from "lucide-react";
+import { useCart } from "../lib/CartContext";
 import "./Navbar.css";
 
 export default function Navbar() {
-  const { cartCount } = useCart(); // Get the live count
+  const { cartCount } = useCart();
 
   return (
     <nav className="navbar">
@@ -14,10 +14,10 @@ export default function Navbar() {
         </Link>
 
         <div className="nav-links">
+          <Link to="/">Home</Link>
           <Link to="/">Shop</Link>
-          <Link to="#">Contact</Link>
+          <Link to="/contact">Contact Us</Link>
 
-          {/* Updated Cart Button with Icon */}
           <button
             className="cart-btn"
             onClick={() => alert("Checkout feature coming soon!")}
