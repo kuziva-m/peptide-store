@@ -1,6 +1,12 @@
-import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { useState } from "react";
+import { X, Minus, Plus, Trash2, ShoppingBag, Loader } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
 import { useCart } from "../lib/CartContext";
+import { supabase } from "../lib/supabase";
 import "./CartDrawer.css";
+
+// Initialize Stripe (Ensure you added VITE_STRIPE_PUBLISHABLE_KEY to .env)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export default function CartDrawer() {
   const {
@@ -11,6 +17,32 @@ export default function CartDrawer() {
     removeFromCart,
     cartTotal,
   } = useCart();
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCheckout = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Call your Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke("checkout", {
+        body: { items: cartItems },
+      });
+
+      if (error) throw error;
+
+      // 2. Redirect to the Stripe Checkout URL returned by the server
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Error: No checkout URL returned.");
+      }
+    } catch (error) {
+      console.error("Checkout Error:", error);
+      alert("Failed to initiate checkout. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!isCartOpen) return null;
 
@@ -91,9 +123,19 @@ export default function CartDrawer() {
             <p className="shipping-note">Shipping calculated at checkout.</p>
             <button
               className="checkout-btn"
-              onClick={() => alert("Proceeding to checkout...")}
+              onClick={handleCheckout}
+              disabled={isLoading}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "10px",
+                opacity: isLoading ? 0.7 : 1,
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
             >
-              Checkout Securely
+              {isLoading && <Loader size={20} className="spin-anim" />}
+              {isLoading ? "Processing..." : "Checkout Securely"}
             </button>
           </div>
         )}

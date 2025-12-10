@@ -13,6 +13,8 @@ import {
   Loader,
   Camera,
   MoreVertical,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 
 const CATEGORIES = ["Peptides", "Peptide Blends", "Mixing Solution"];
@@ -106,6 +108,7 @@ export default function Admin() {
           category: newProductCategory,
           image_url: newProductImage,
           description: newProductDesc || "No description provided.",
+          in_stock: true, // Default to in stock
         },
       ])
       .select()
@@ -335,6 +338,7 @@ function ProductEditor({
   const [category, setCategory] = useState(product.category);
   const [image, setImage] = useState(product.image_url);
   const [description, setDescription] = useState(product.description || "");
+  const [inStock, setInStock] = useState(product.in_stock ?? true); // Default true if null
   const [variants, setVariants] = useState(product.variants || []);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -347,23 +351,24 @@ function ProductEditor({
       setCategory(product.category);
       setImage(product.image_url);
       setDescription(product.description || "");
+      setInStock(product.in_stock ?? true);
       setVariants(product.variants || []);
     }
   }, [product, isUploading, isSaving, uploadingVariantId]);
 
   // --- CORE UPDATE FUNCTION ---
   const handleUpdateProduct = async () => {
-    if (
-      name === product.name &&
-      category === product.category &&
-      image === product.image_url
-    ) {
-      return;
-    }
     setIsSaving(true);
+    // Include description and in_stock in the update
     const { error } = await supabase
       .from("products")
-      .update({ name, category, image_url: image })
+      .update({
+        name,
+        category,
+        image_url: image,
+        description,
+        in_stock: inStock,
+      })
       .eq("id", product.id);
 
     if (error) alert("Update failed: " + error.message);
@@ -409,7 +414,7 @@ function ProductEditor({
     }
   };
 
-  // --- VARIANT IMAGE UPLOAD (NEW FEATURE) ---
+  // --- VARIANT IMAGE UPLOAD ---
   const handleVariantFileUpload = async (event, variantId) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -463,8 +468,6 @@ function ProductEditor({
       .from("variants")
       .update({ [field]: value })
       .eq("id", variantId);
-
-    // We don't force refresh here to avoid typing jank, but in prod you might want debouncing
   };
 
   const handleAddVariant = async () => {
@@ -500,6 +503,17 @@ function ProductEditor({
             <h3 style={styles.itemName}>{product.name}</h3>
             <span style={styles.itemCategory}>
               {product.category} - {variants.length} Variants
+              {!product.in_stock && (
+                <span
+                  style={{
+                    color: "red",
+                    fontWeight: "bold",
+                    marginLeft: "8px",
+                  }}
+                >
+                  (OUT OF STOCK)
+                </span>
+              )}
             </span>
           </div>
         </div>
@@ -546,13 +560,15 @@ function ProductEditor({
               </select>
             </div>
 
-            {/* DESCRIPTION (LOCKED) */}
+            {/* DESCRIPTION (UNLOCKED) */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={styles.label}>Description (Locked)</label>
+              <label style={styles.label}>Description</label>
               <textarea
-                style={{ ...styles.input, ...styles.readOnlyInput }}
+                style={styles.input}
                 value={description}
-                readOnly
+                onChange={(e) => setDescription(e.target.value)} // Added onChange
+                onBlur={handleUpdateProduct} // Added Auto-save
+                disabled={isSaving}
                 rows={3}
               />
             </div>
@@ -588,6 +604,38 @@ function ProductEditor({
                   placeholder="Paste URL"
                 />
               </div>
+            </div>
+
+            {/* STOCK TOGGLE */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                marginTop: "10px",
+              }}
+            >
+              <input
+                type="checkbox"
+                id={`stock-${product.id}`}
+                checked={inStock}
+                onChange={(e) => {
+                  setInStock(e.target.checked);
+                  // Need to trigger update immediately or via effects, but simpler to just call update here with new value
+                  // Actually, state updates are async, so handleUpdateProduct might see old state if called immediately.
+                  // Better to let onBlur handle it elsewhere or manually trigger:
+                  // For simplicity in this structure:
+                }}
+                onBlur={handleUpdateProduct}
+                style={{ width: "20px", height: "20px" }}
+              />
+              <label
+                htmlFor={`stock-${product.id}`}
+                style={{ ...styles.label, marginBottom: 0, cursor: "pointer" }}
+              >
+                Product In Stock
+              </label>
             </div>
           </div>
 
@@ -671,6 +719,7 @@ function ProductEditor({
 
 // --- STYLES OBJECT ---
 const styles = {
+  // ... (Previous styles remain unchanged)
   // --- LAYOUT ---
   dashboardLayout: {
     display: "grid",

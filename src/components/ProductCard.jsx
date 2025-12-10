@@ -45,13 +45,21 @@ export default function ProductCard({ product, loading }) {
     }).format(amount);
   };
 
+  const isInStock = product.in_stock !== false; // Default to true if undefined
+
   return (
     <div className="product-card">
       {/* LINK WRAPPER */}
       <Link to={`/product/${product.id}`} className="card-image-wrapper">
-        <div className="status-badge-subtle">
-          <span className="status-dot"></span> In Stock
-        </div>
+        {isInStock ? (
+          <div className="status-badge-subtle">
+            <span className="status-dot"></span> In Stock
+          </div>
+        ) : (
+          <div className="status-badge-subtle out-of-stock">
+            <span className="status-dot"></span> Out of Stock
+          </div>
+        )}
 
         <img
           src={displayImage}
@@ -105,12 +113,14 @@ export default function ProductCard({ product, loading }) {
 
         <button
           className="buy-btn"
+          disabled={!isInStock}
           onClick={(e) => {
             e.preventDefault();
-            if (selectedVariant) addToCart(product, selectedVariant);
+            if (isInStock && selectedVariant)
+              addToCart(product, selectedVariant);
           }}
         >
-          Add to Cart
+          {isInStock ? "Add to Cart" : "Out of Stock"}
         </button>
       </div>
     </div>

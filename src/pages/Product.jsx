@@ -59,6 +59,8 @@ export default function Product() {
     product.image_url ||
     "https://via.placeholder.com/600";
 
+  const isInStock = product.in_stock !== false; // Default to true if undefined
+
   return (
     <div className="container product-page">
       <Link to="/" className="back-link">
@@ -208,22 +210,28 @@ export default function Product() {
             onClick={() =>
               selectedVariant && addToCart(product, selectedVariant)
             }
-            disabled={!selectedVariant}
+            disabled={!selectedVariant || !isInStock}
             style={{
               width: "100%",
               padding: "18px",
-              backgroundColor: "#4635de",
+              backgroundColor: isInStock ? "#4635de" : "#94a3b8",
               color: "white",
               border: "none",
               borderRadius: "10px",
               fontSize: "1.1rem",
               fontWeight: "bold",
-              cursor: "pointer",
+              cursor: isInStock ? "pointer" : "not-allowed",
               marginBottom: "30px",
-              boxShadow: "0 4px 10px rgba(70, 53, 222, 0.2)",
+              boxShadow: isInStock
+                ? "0 4px 10px rgba(70, 53, 222, 0.2)"
+                : "none",
             }}
           >
-            {selectedVariant ? "Add to Cart" : "Out of Stock"}
+            {isInStock
+              ? selectedVariant
+                ? "Add to Cart"
+                : "Select a Variant"
+              : "Out of Stock"}
           </button>
 
           {/* SCIENTIFIC DESCRIPTION */}

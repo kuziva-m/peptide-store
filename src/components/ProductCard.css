@@ -21,7 +21,7 @@
   background: radial-gradient(circle at center, #ffffff 50%, #f1f5f9 100%);
   height: 280px;
   width: 100%;
-  padding: 30px; /* Add padding back */
+  padding: 30px;
 
   display: flex;
   align-items: center;
@@ -35,14 +35,14 @@
 }
 
 .card-image-wrapper img {
-  max-height: 100%; /* Changed from fixed 200px */
-  max-width: 100%; /* Changed from fixed 200px */
+  max-height: 100%;
+  max-width: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
   transition: all 0.4s ease-out;
   display: block;
-  margin: 0 auto; /* Ensure centering */
+  margin: 0 auto;
 
   filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
 }
@@ -80,6 +80,16 @@
   height: 6px;
   background-color: var(--clinical-teal);
   border-radius: 50%;
+}
+
+/* --- OUT OF STOCK BADGE VARIANT --- */
+.status-badge-subtle.out-of-stock {
+  color: #ef4444; /* Red */
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-badge-subtle.out-of-stock .status-dot {
+  background-color: #ef4444;
 }
 
 /* --- CONTENT --- */
@@ -213,6 +223,13 @@
 
 .buy-btn:active {
   transform: translateY(0);
+}
+
+.buy-btn:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .no-image-placeholder {
