@@ -125,3 +125,44 @@
 .content-grid {
   padding-bottom: 100px; /* More space at the bottom */
 }
+
+/* --- MOBILE OPTIMIZATIONS (Max Width 768px) --- */
+@media (max-width: 768px) {
+  /* 1. Tame the "Screaming" Hero Text */
+  .hero-section {
+    padding: 60px 20px; /* Shrink vertical padding */
+  }
+
+  .hero-title {
+    font-size: 2rem; /* Reduced from 3.2rem */
+    line-height: 1.2;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  /* 2. Fix the Search Bar spacing */
+  .search-container {
+    margin-bottom: 40px;
+    padding: 0 16px;
+  }
+
+  .search-input {
+    padding: 14px 14px 14px 48px; /* Slightly smaller */
+  }
+
+  /* 3. The "Gold Standard" 2-Column Grid */
+  .products-grid {
+    display: grid;
+    /* Force exactly 2 columns, with a smaller gap so they fit */
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Adjust card internals for small space */
+  .category-title {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+}
