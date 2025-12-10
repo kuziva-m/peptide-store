@@ -58,10 +58,12 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             Home
           </Link>
           <Link
-            to="/"
+            to="/shop"
             className="nav-link"
             onClick={() => setIsMobileMenuOpen(false)}
           >
+            {" "}
+            {/* <-- Updated */}
             Shop All
           </Link>
           <Link

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import CartDrawer from "./components/CartDrawer"; // <--- NEW COMPONENT
+import CartDrawer from "./components/CartDrawer";
 import Home from "./pages/Home";
+import Shop from "./pages/Shop"; // <-- Import
 import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
 import Shipping from "./pages/Shipping";
@@ -21,18 +22,15 @@ function App() {
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
     >
       <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-
-      {/* DRAWER IS ALWAYS MOUNTED BUT HIDDEN VIA CSS/STATE */}
       <CartDrawer />
-
       <div style={{ flex: 1 }}>
         <Routes>
+          <Route path="/" element={<Home />} /> {/* New Landing */}
           <Route
-            path="/"
-            element={
-              <Home searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-            }
-          />
+            path="/shop"
+            element={<Shop searchQuery={searchQuery} />}
+          />{" "}
+          {/* New Shop */}
           <Route path="/product/:id" element={<Product />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/contact" element={<Contact />} />

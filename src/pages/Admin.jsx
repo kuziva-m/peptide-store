@@ -15,10 +15,10 @@ import {
   MoreVertical,
   CheckSquare,
   Square,
+  FileText, // <-- Ensure this is imported
 } from "lucide-react";
 
 const CATEGORIES = ["Peptides", "Peptide Blends", "Mixing Solution"];
-// NOTE: Set your Supabase Storage Bucket name here
 const STORAGE_BUCKET = "product-images";
 
 export default function Admin() {
@@ -108,7 +108,7 @@ export default function Admin() {
           category: newProductCategory,
           image_url: newProductImage,
           description: newProductDesc || "No description provided.",
-          in_stock: true, // Default to in stock
+          in_stock: true,
         },
       ])
       .select()
@@ -144,8 +144,6 @@ export default function Admin() {
     else fetchProducts();
   };
 
-  // --- RENDER ---
-
   if (!isAuthenticated) {
     return (
       <div style={styles.authContainer}>
@@ -174,12 +172,10 @@ export default function Admin() {
       className="container"
       style={isMobile ? styles.dashboardLayoutMobile : styles.dashboardLayout}
     >
-      {/* SIDEBAR / MOBILE FILTERS */}
       <div style={isMobile ? styles.mobileFilterBar : styles.sidebar}>
         <h3 style={isMobile ? { display: "none" } : styles.sidebarTitle}>
           Admin Filters
         </h3>
-
         <div style={isMobile ? styles.mobileFilterScroll : styles.filterGroup}>
           {!isMobile && <h4>Category</h4>}
           <div style={isMobile ? styles.mobileFilterList : styles.filterList}>
@@ -199,9 +195,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
       <div style={styles.mainContent}>
-        {/* DASHBOARD HEADER & SEARCH */}
         <div
           style={isMobile ? styles.contentHeaderMobile : styles.contentHeader}
         >
@@ -228,7 +222,6 @@ export default function Admin() {
           </button>
         </div>
 
-        {/* ADD NEW FORM */}
         {isAddingNew && (
           <div style={styles.addFormCard}>
             <h3>New Product Details</h3>
@@ -289,7 +282,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* PRODUCT LIST */}
         {loading && !isAddingNew ? (
           <div style={{ textAlign: "center", padding: "40px" }}>
             <Loader style={styles.loaderIcon} /> Loading Inventory...
@@ -324,8 +316,6 @@ export default function Admin() {
   );
 }
 
-// --- SUB-COMPONENT: INDIVIDUAL PRODUCT EDITOR ---
-
 function ProductEditor({
   product,
   isExpanded,
@@ -338,28 +328,38 @@ function ProductEditor({
   const [category, setCategory] = useState(product.category);
   const [image, setImage] = useState(product.image_url);
   const [description, setDescription] = useState(product.description || "");
-  const [inStock, setInStock] = useState(product.in_stock ?? true); // Default true if null
+  const [inStock, setInStock] = useState(product.in_stock ?? true);
+  const [labResultUrl, setLabResultUrl] = useState(
+    product.lab_result_url || ""
+  );
   const [variants, setVariants] = useState(product.variants || []);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadingVariantId, setUploadingVariantId] = useState(null);
+  const [isUploadingLab, setIsUploadingLab] = useState(false);
+  const [uploadingVariantId, setUploadingVariantId] = useState(null); // 'img' | 'lab'
+  const [uploadingVariantType, setUploadingVariantType] = useState(null);
 
   useEffect(() => {
-    if (!isUploading && !isSaving && uploadingVariantId === null) {
+    if (
+      !isUploading &&
+      !isSaving &&
+      uploadingVariantId === null &&
+      !isUploadingLab
+    ) {
       setName(product.name);
       setCategory(product.category);
       setImage(product.image_url);
       setDescription(product.description || "");
       setInStock(product.in_stock ?? true);
+      setLabResultUrl(product.lab_result_url || "");
       setVariants(product.variants || []);
     }
-  }, [product, isUploading, isSaving, uploadingVariantId]);
+  }, [product, isUploading, isSaving, uploadingVariantId, isUploadingLab]);
 
-  // --- CORE UPDATE FUNCTION ---
+  // --- CORE UPDATE ---
   const handleUpdateProduct = async () => {
     setIsSaving(true);
-    // Include description and in_stock in the update
     const { error } = await supabase
       .from("products")
       .update({
@@ -368,6 +368,7 @@ function ProductEditor({
         image_url: image,
         description,
         in_stock: inStock,
+        lab_result_url: labResultUrl,
       })
       .eq("id", product.id);
 
@@ -380,90 +381,108 @@ function ProductEditor({
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     setIsUploading(true);
     const fileName = `main_${product.id}_${Date.now()}`;
-
     try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from(STORAGE_BUCKET)
         .upload(fileName, file, { cacheControl: "3600", upsert: true });
-
-      if (uploadError) throw uploadError;
-
+      if (error) throw error;
       const { data: publicUrlData } = supabase.storage
         .from(STORAGE_BUCKET)
-        .getPublicUrl(uploadData.path);
-
+        .getPublicUrl(data.path);
       const newImageUrl = publicUrlData.publicUrl;
-
-      const { error: dbError } = await supabase
+      await supabase
         .from("products")
         .update({ image_url: newImageUrl })
         .eq("id", product.id);
-
-      if (dbError) throw dbError;
-
       setImage(newImageUrl);
       onRefresh();
     } catch (error) {
-      alert("Image upload failed: " + error.message);
+      alert("Upload failed: " + error.message);
     } finally {
       setIsUploading(false);
       event.target.value = null;
     }
   };
 
-  // --- VARIANT IMAGE UPLOAD ---
-  const handleVariantFileUpload = async (event, variantId) => {
+  // --- PRODUCT LAB UPLOAD ---
+  const handleLabFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    setIsUploadingLab(true);
+    const fileName = `lab_${product.id}_${Date.now()}`;
+    try {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+      if (error) throw error;
+      const { data: publicUrlData } = supabase.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(data.path);
+      const newLabUrl = publicUrlData.publicUrl;
+      await supabase
+        .from("products")
+        .update({ lab_result_url: newLabUrl })
+        .eq("id", product.id);
+      setLabResultUrl(newLabUrl);
+      onRefresh();
+    } catch (error) {
+      alert("Upload failed: " + error.message);
+    } finally {
+      setIsUploadingLab(false);
+      event.target.value = null;
+    }
+  };
+
+  // --- VARIANT UPLOADS (Image OR Lab) ---
+  const handleVariantUpload = async (event, variantId, type) => {
     const file = event.target.files[0];
     if (!file) return;
 
     setUploadingVariantId(variantId);
-    const fileName = `var_${variantId}_${Date.now()}`;
+    setUploadingVariantType(type); // 'image_url' or 'lab_result_url'
+
+    const prefix = type === "image_url" ? "var" : "varlab";
+    const fileName = `${prefix}_${variantId}_${Date.now()}`;
 
     try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from(STORAGE_BUCKET)
         .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (error) throw error;
 
       const { data: publicUrlData } = supabase.storage
         .from(STORAGE_BUCKET)
-        .getPublicUrl(uploadData.path);
+        .getPublicUrl(data.path);
 
-      const newImageUrl = publicUrlData.publicUrl;
+      const newUrl = publicUrlData.publicUrl;
 
       // Update Variant in DB
-      const { error: dbError } = await supabase
+      await supabase
         .from("variants")
-        .update({ image_url: newImageUrl })
+        .update({ [type]: newUrl })
         .eq("id", variantId);
 
-      if (dbError) throw dbError;
-
       // Local state update
-      const updatedVariants = variants.map((v) =>
-        v.id === variantId ? { ...v, image_url: newImageUrl } : v
+      setVariants((prev) =>
+        prev.map((v) => (v.id === variantId ? { ...v, [type]: newUrl } : v))
       );
-      setVariants(updatedVariants);
-
-      onRefresh(); // Sync global
+      onRefresh();
     } catch (error) {
-      alert("Variant upload failed: " + error.message);
+      alert("Upload failed: " + error.message);
     } finally {
       setUploadingVariantId(null);
+      setUploadingVariantType(null);
       event.target.value = null;
     }
   };
 
   const handleUpdateVariant = async (variantId, field, value) => {
-    const updatedVariants = variants.map((v) =>
-      v.id === variantId ? { ...v, [field]: value } : v
+    setVariants((prev) =>
+      prev.map((v) => (v.id === variantId ? { ...v, [field]: value } : v))
     );
-    setVariants(updatedVariants);
-
     await supabase
       .from("variants")
       .update({ [field]: value })
@@ -476,7 +495,6 @@ function ProductEditor({
       .insert([{ product_id: product.id, size_label: "New Size", price: 0 }])
       .select()
       .single();
-
     if (data) setVariants([...variants, data]);
   };
 
@@ -489,7 +507,6 @@ function ProductEditor({
 
   return (
     <div style={styles.itemCard}>
-      {/* CARD HEADER */}
       <div style={styles.itemHeader}>
         <div style={styles.itemInfo}>
           <div style={styles.imgThumb}>
@@ -517,7 +534,6 @@ function ProductEditor({
             </span>
           </div>
         </div>
-
         <div style={styles.actions}>
           <button onClick={onToggle} style={styles.iconBtn}>
             {isExpanded ? <ChevronUp size={20} /> : <Edit2 size={20} />}
@@ -531,7 +547,6 @@ function ProductEditor({
         </div>
       </div>
 
-      {/* EXPANDED EDITING AREA */}
       {isExpanded && (
         <div style={styles.editorBody}>
           <div style={isMobile ? styles.formGridMobile : styles.formGrid}>
@@ -559,54 +574,94 @@ function ProductEditor({
                 ))}
               </select>
             </div>
-
-            {/* DESCRIPTION (UNLOCKED) */}
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={styles.label}>Description</label>
               <textarea
                 style={styles.input}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)} // Added onChange
-                onBlur={handleUpdateProduct} // Added Auto-save
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={handleUpdateProduct}
                 disabled={isSaving}
                 rows={3}
               />
             </div>
-
-            {/* PRODUCT IMAGE */}
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={styles.label}>Main Image</label>
-              <div style={styles.imageSourceRow}>
-                <label
-                  htmlFor={`file-upload-${product.id}`}
-                  style={styles.uploadBtn}
-                >
-                  {isUploading ? (
-                    <Loader size={16} style={styles.loaderIcon} />
-                  ) : (
-                    <Upload size={16} />
-                  )}
-                  {isUploading ? "..." : "Upload"}
+            {/* MAIN IMAGE & MAIN LAB RESULT */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "20px",
+              }}
+            >
+              <div>
+                <label style={styles.label}>Main Image</label>
+                <div style={styles.imageSourceRow}>
+                  <label
+                    htmlFor={`file-upload-${product.id}`}
+                    style={styles.uploadBtn}
+                  >
+                    {isUploading ? (
+                      <Loader size={16} style={styles.loaderIcon} />
+                    ) : (
+                      <Upload size={16} />
+                    )}
+                    {isUploading ? "..." : "Upload"}
+                    <input
+                      id={`file-upload-${product.id}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      style={{ display: "none" }}
+                      disabled={isUploading}
+                    />
+                  </label>
                   <input
-                    id={`file-upload-${product.id}`}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    style={{ display: "none" }}
-                    disabled={isUploading}
+                    style={styles.input}
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    onBlur={handleUpdateProduct}
+                    placeholder="URL"
                   />
-                </label>
-                <input
-                  style={styles.input}
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  onBlur={handleUpdateProduct}
-                  placeholder="Paste URL"
-                />
+                </div>
+              </div>
+              <div>
+                <label style={styles.label}>Default Lab Result</label>
+                <div style={styles.imageSourceRow}>
+                  <label
+                    htmlFor={`lab-upload-${product.id}`}
+                    style={{
+                      ...styles.uploadBtn,
+                      borderColor: "#0d9488",
+                      color: "#0d9488",
+                      background: "#f0fdfa",
+                    }}
+                  >
+                    {isUploadingLab ? (
+                      <Loader size={16} style={styles.loaderIcon} />
+                    ) : (
+                      <FileText size={16} />
+                    )}
+                    {isUploadingLab ? "..." : "Upload"}
+                    <input
+                      id={`lab-upload-${product.id}`}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={handleLabFileUpload}
+                      style={{ display: "none" }}
+                      disabled={isUploadingLab}
+                    />
+                  </label>
+                  <input
+                    style={styles.input}
+                    value={labResultUrl}
+                    readOnly
+                    placeholder="Uploaded URL"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* STOCK TOGGLE */}
             <div
               style={{
                 gridColumn: "1 / -1",
@@ -620,13 +675,7 @@ function ProductEditor({
                 type="checkbox"
                 id={`stock-${product.id}`}
                 checked={inStock}
-                onChange={(e) => {
-                  setInStock(e.target.checked);
-                  // Need to trigger update immediately or via effects, but simpler to just call update here with new value
-                  // Actually, state updates are async, so handleUpdateProduct might see old state if called immediately.
-                  // Better to let onBlur handle it elsewhere or manually trigger:
-                  // For simplicity in this structure:
-                }}
+                onChange={(e) => setInStock(e.target.checked)}
                 onBlur={handleUpdateProduct}
                 style={{ width: "20px", height: "20px" }}
               />
@@ -639,19 +688,21 @@ function ProductEditor({
             </div>
           </div>
 
-          <h4 style={styles.variantsTitle}>VARIANTS (Images, Size & Price)</h4>
-
-          {/* VARIANTS LIST */}
+          <h4 style={styles.variantsTitle}>
+            VARIANTS (Images, Lab Results, Size & Price)
+          </h4>
           <div style={styles.variantList}>
             {variants.map((v) => (
               <div key={v.id} style={styles.variantRow}>
-                {/* 1. Variant Image Upload */}
+                {/* Variant Image */}
                 <div style={styles.variantImgCol}>
-                  {uploadingVariantId === v.id ? (
+                  {uploadingVariantId === v.id &&
+                  uploadingVariantType === "image_url" ? (
                     <Loader size={16} style={styles.loaderIcon} />
                   ) : (
                     <label
                       htmlFor={`var-upload-${v.id}`}
+                      title="Upload Variant Image"
                       style={{
                         cursor: "pointer",
                         display: "flex",
@@ -670,13 +721,58 @@ function ProductEditor({
                         type="file"
                         accept="image/*"
                         style={{ display: "none" }}
-                        onChange={(e) => handleVariantFileUpload(e, v.id)}
+                        onChange={(e) =>
+                          handleVariantUpload(e, v.id, "image_url")
+                        }
                       />
                     </label>
                   )}
                 </div>
 
-                {/* 2. Size Label */}
+                {/* Variant Lab Result (NEW) */}
+                <div style={styles.variantImgCol}>
+                  {uploadingVariantId === v.id &&
+                  uploadingVariantType === "lab_result_url" ? (
+                    <Loader
+                      size={16}
+                      style={{ ...styles.loaderIcon, color: "#0d9488" }}
+                    />
+                  ) : (
+                    <label
+                      htmlFor={`var-lab-upload-${v.id}`}
+                      title="Upload Specific Lab Result"
+                      style={{
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {v.lab_result_url ? (
+                        <FileText size={20} color="#0d9488" fill="#f0fdfa" />
+                      ) : (
+                        <div
+                          style={{
+                            ...styles.variantThumbPlaceholder,
+                            borderColor: "#0d9488",
+                            color: "#0d9488",
+                          }}
+                        >
+                          <FileText size={14} />
+                        </div>
+                      )}
+                      <input
+                        id={`var-lab-upload-${v.id}`}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        style={{ display: "none" }}
+                        onChange={(e) =>
+                          handleVariantUpload(e, v.id, "lab_result_url")
+                        }
+                      />
+                    </label>
+                  )}
+                </div>
+
                 <input
                   style={styles.variantInput}
                   value={v.size_label}
@@ -685,8 +781,6 @@ function ProductEditor({
                   }
                   placeholder="Size"
                 />
-
-                {/* 3. Price */}
                 <input
                   type="number"
                   style={styles.variantInput}
@@ -696,8 +790,6 @@ function ProductEditor({
                   }
                   placeholder="$"
                 />
-
-                {/* 4. Delete */}
                 <button
                   onClick={() => handleDeleteVariant(v.id)}
                   style={styles.variantDeleteBtn}
@@ -706,7 +798,6 @@ function ProductEditor({
                 </button>
               </div>
             ))}
-
             <button onClick={handleAddVariant} style={styles.addVariantBtn}>
               <Plus size={16} /> Add Size Variant
             </button>
@@ -717,10 +808,8 @@ function ProductEditor({
   );
 }
 
-// --- STYLES OBJECT ---
 const styles = {
-  // ... (Previous styles remain unchanged)
-  // --- LAYOUT ---
+  // ... (Existing styles unchanged) ...
   dashboardLayout: {
     display: "grid",
     gridTemplateColumns: "250px 1fr",
@@ -756,8 +845,6 @@ const styles = {
     flexDirection: "column",
     gap: "24px",
   },
-
-  // --- AUTH ---
   authContainer: {
     display: "flex",
     justifyContent: "center",
@@ -771,8 +858,6 @@ const styles = {
     boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
     textAlign: "center",
   },
-
-  // --- HEADER ---
   contentHeader: {
     display: "flex",
     justifyContent: "space-between",
@@ -808,8 +893,6 @@ const styles = {
     fontSize: "0.95rem",
     fontFamily: "inherit",
   },
-
-  // --- BUTTONS ---
   primaryBtn: {
     display: "flex",
     alignItems: "center",
@@ -861,9 +944,12 @@ const styles = {
     animation: "spin 1s linear infinite",
     display: "inline-block",
   },
-  imageSourceRow: { display: "flex", gap: "10px", alignItems: "center" },
-
-  // --- FILTERS ---
+  imageSourceRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    flex: 1,
+  },
   sidebarTitle: {
     color: "var(--medical-navy)",
     marginBottom: "30px",
@@ -894,8 +980,6 @@ const styles = {
     color: "white",
     borderColor: "var(--primary)",
   },
-
-  // --- FORMS & LISTS ---
   addFormCard: {
     background: "white",
     padding: "24px",
@@ -924,7 +1008,6 @@ const styles = {
     color: "#94a3b8",
     cursor: "not-allowed",
   },
-
   listContainer: { display: "flex", flexDirection: "column", gap: "16px" },
   itemCard: {
     background: "white",
@@ -957,7 +1040,6 @@ const styles = {
     color: "var(--medical-navy)",
   },
   itemCategory: { fontSize: "0.85rem", color: "#64748b" },
-
   actions: { display: "flex", gap: "8px" },
   iconBtn: {
     background: "transparent",
@@ -967,7 +1049,6 @@ const styles = {
     borderRadius: "6px",
     color: "#64748b",
   },
-
   editorBody: { background: "#f8fafc", padding: "24px" },
   variantsTitle: {
     marginTop: "24px",
@@ -977,11 +1058,11 @@ const styles = {
     borderTop: "1px solid #e2e8f0",
     paddingTop: "20px",
   },
-
   variantList: { display: "flex", flexDirection: "column", gap: "10px" },
+  // Updated grid to allow space for 2 icons (image + file)
   variantRow: {
     display: "grid",
-    gridTemplateColumns: "50px 1fr 1fr 40px",
+    gridTemplateColumns: "40px 40px 1fr 1fr 40px",
     gap: "10px",
     alignItems: "center",
   },
@@ -1035,5 +1116,6 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     color: "#64748b",
+    border: "1px solid transparent",
   },
 };

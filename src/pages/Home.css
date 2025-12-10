@@ -1,10 +1,34 @@
-/* HERO SECTION */
+/* --- GLOBAL UTILITIES --- */
+.section-container {
+  padding: 80px 0;
+}
+.bg-grey {
+  background-color: #f8fafc;
+}
+.bg-navy {
+  background-color: var(--medical-navy);
+}
+.text-center {
+  text-align: center;
+}
+.mb-50 {
+  margin-bottom: 50px;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--medical-navy);
+  margin-bottom: 10px;
+}
+
+/* --- HERO SECTION --- */
 .hero-section {
   background-color: var(--medical-navy);
   color: white;
-  padding: 100px 20px; /* Increased Vertical Padding */
+  padding: 100px 20px;
   text-align: center;
-  margin-bottom: 50px; /* Increased Margin */
+  margin-bottom: 0; /* Removed margin to flow into next section */
 }
 
 .hero-title {
@@ -12,7 +36,8 @@
   font-weight: 700;
   color: white;
   margin-bottom: 16px;
-  letter-spacing: -0.04em; /* Tighter letter spacing for high-end look */
+  letter-spacing: -0.04em;
+  line-height: 1.1;
 }
 
 .hero-subtitle {
@@ -22,147 +47,316 @@
   margin: 0 auto;
 }
 
-/* SEARCH & FILTER AREA */
-.search-container {
+.hero-actions {
+  margin-top: 32px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px; /* Increased Gap */
-  margin-bottom: 70px; /* Increased Margin */
-}
-
-.search-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 680px; /* Slightly wider search bar */
-}
-
-.search-icon {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-}
-
-.search-input {
-  width: 100%;
-  padding: 18px 18px 18px 56px; /* Larger Padding */
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  font-size: 1rem;
-  outline: none;
-  box-shadow: 0 4px 10px -3px rgba(0, 0, 0, 0.08); /* More subtle shadow */
-  transition: all 0.2s;
-}
-
-.search-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(70, 53, 222, 0.2); /* Sharper focus ring */
-}
-
-/* CATEGORY TABS */
-.category-tabs {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 16px;
   justify-content: center;
 }
 
-.tab-btn {
-  padding: 12px 28px; /* Larger clickable area */
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background-color: white;
-  color: var(--text-muted);
-  font-weight: 500;
-  font-size: 0.95rem;
-  cursor: pointer;
+.hero-btn {
+  padding: 14px 32px;
+  border-radius: 50px; /* Modern Pill Shape */
+  font-weight: 600;
+  text-decoration: none;
   transition: all 0.2s;
+  font-size: 1rem;
+  display: inline-block;
 }
 
-.tab-btn:hover {
-  background-color: var(--science-blue); /* New hover state */
-  color: var(--primary);
+.hero-btn.primary {
+  background: white;
+  color: var(--medical-navy);
 }
 
-.tab-btn.active {
-  background-color: var(--primary);
-  border-color: var(--primary);
+.hero-btn.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.4);
   color: white;
 }
 
-/* PRODUCT GRID */
-.category-section {
-  margin-bottom: 80px;
+.hero-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.category-title {
-  font-size: 2rem; /* Slightly larger heading */
-  margin-bottom: 32px;
-  border-bottom: 2px solid var(--border); /* Thicker separator */
-  padding-bottom: 16px;
-  color: var(--medical-navy);
-  font-weight: 800;
+/* --- SECTION HEADER --- */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
 }
 
+.view-all-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- PRODUCTS GRID (Reused for Bestsellers) --- */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(260px, 1fr)
-  ); /* Wider columns */
-  gap: 30px; /* Increased gap */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 30px;
 }
 
-.empty-state {
+/* --- CATEGORIES --- */
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.cat-card {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
   text-align: center;
-  color: var(--text-muted);
-  font-size: 1.2rem;
-  padding: 60px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+  box-shadow: var(--shadow-sm);
+  display: block;
 }
 
-.content-grid {
-  padding-bottom: 100px; /* More space at the bottom */
+.cat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--primary);
+}
+
+.cat-icon {
+  width: 64px;
+  height: 64px;
+  background: #f0fdfa;
+  color: var(--clinical-teal);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.cat-card h3 {
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+}
+
+.cat-card p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* --- TRUST SECTION --- */
+.trust-section {
+  background-color: white;
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.trust-list {
+  list-style: none;
+  padding: 0;
+  margin: 30px 0;
+}
+
+.trust-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.t-icon {
+  color: var(--clinical-teal);
+}
+
+.trust-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--medical-navy);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.trust-btn:hover {
+  background-color: var(--primary);
+}
+
+.trust-image-placeholder {
+  height: 400px;
+  background: #f8fafc;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-weight: 600;
+  border: 2px dashed #e2e8f0;
+}
+
+/* --- BLOG --- */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.blog-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: transform 0.2s;
+}
+
+.blog-card:hover {
+  transform: translateY(-4px);
+}
+
+.blog-img {
+  height: 200px;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+}
+
+.blog-txt {
+  padding: 24px;
+}
+
+.blog-txt h4 {
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  color: var(--medical-navy);
+}
+
+.blog-txt p {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+.read-more {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* --- REVIEWS (NEW STYLES) --- */
+.reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.review-card {
+  /* High contrast: White card on Dark Blue background */
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-avatar {
+  width: 48px;
+  height: 48px;
+  background: #f0fdfa; /* Light Teal */
+  color: var(--clinical-teal);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.review-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewer-name {
+  font-weight: 700;
+  color: var(--medical-navy);
+  font-size: 1rem;
+}
+
+.verified-badge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.review-text {
+  font-style: italic;
+  line-height: 1.6;
+  color: #334155; /* Dark grey text for readability */
+  margin: 0;
 }
 
 /* --- MOBILE OPTIMIZATIONS (Max Width 768px) --- */
 @media (max-width: 768px) {
-  /* 1. Tame the "Screaming" Hero Text */
+  /* Hero */
   .hero-section {
-    padding: 60px 20px; /* Shrink vertical padding */
+    padding: 60px 20px;
   }
-
   .hero-title {
-    font-size: 2rem; /* Reduced from 3.2rem */
+    font-size: 2rem;
     line-height: 1.2;
   }
-
-  .hero-subtitle {
-    font-size: 1rem;
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .hero-btn {
+    width: 100%;
+    text-align: center;
   }
 
-  /* 2. Fix the Search Bar spacing */
-  .search-container {
-    margin-bottom: 40px;
-    padding: 0 16px;
-  }
-
-  .search-input {
-    padding: 14px 14px 14px 48px; /* Slightly smaller */
-  }
-
-  /* 3. The "Gold Standard" 2-Column Grid */
+  /* Grid Adjustments */
   .products-grid {
-    display: grid;
-    /* Force exactly 2 columns, with a smaller gap so they fit */
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr; /* 2 columns for products */
     gap: 16px;
   }
+  .trust-grid {
+    grid-template-columns: 1fr; /* Stack trust section */
+  }
+  .trust-image-placeholder {
+    height: 250px;
+    order: -1; /* Show image first on mobile? Optional */
+  }
 
-  /* Adjust card internals for small space */
-  .category-title {
+  /* Text Sizing */
+  .section-title {
     font-size: 1.5rem;
-    margin-bottom: 20px;
   }
 }

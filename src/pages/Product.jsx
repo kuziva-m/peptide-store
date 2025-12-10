@@ -2,8 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useCart } from "../lib/CartContext";
-import { ChevronLeft, ShieldCheck, Truck, AlertTriangle } from "lucide-react";
-import "./Product.css"; // Ensure you have this file created
+import {
+  ChevronLeft,
+  ShieldCheck,
+  Truck,
+  AlertTriangle,
+  ChevronDown,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
+import "./Product.css";
 
 export default function Product() {
   const { id } = useParams();
@@ -53,13 +61,17 @@ export default function Product() {
     }).format(amount);
   };
 
-  // IMAGE LOGIC: Variant > Product > Placeholder
   const displayImage =
     selectedVariant?.image_url ||
     product.image_url ||
     "https://via.placeholder.com/600";
+  const isInStock = product.in_stock !== false;
 
-  const isInStock = product.in_stock !== false; // Default to true if undefined
+  // --- SMART LAB RESULT FALLBACK LOGIC ---
+  // 1. Check if the *selected variant* has a specific test.
+  // 2. If not, use the main *product* test.
+  const activeLabUrl =
+    selectedVariant?.lab_result_url || product.lab_result_url;
 
   return (
     <div className="container product-page">
@@ -68,7 +80,6 @@ export default function Product() {
       </Link>
 
       <div className="product-layout">
-        {/* LEFT: IMAGE */}
         <div className="product-gallery">
           <div
             className="main-image-frame"
@@ -95,7 +106,6 @@ export default function Product() {
           </div>
         </div>
 
-        {/* RIGHT: DETAILS */}
         <div className="product-info">
           <h1
             className="p-title"
@@ -107,7 +117,6 @@ export default function Product() {
           >
             {product.name}
           </h1>
-
           <div
             className="p-meta"
             style={{ display: "flex", gap: "15px", marginBottom: "20px" }}
@@ -162,7 +171,6 @@ export default function Product() {
             </span>
           </div>
 
-          {/* VARIANT SELECTOR */}
           <div className="p-variants" style={{ marginBottom: "25px" }}>
             <label
               style={{
@@ -234,7 +242,60 @@ export default function Product() {
               : "Out of Stock"}
           </button>
 
-          {/* SCIENTIFIC DESCRIPTION */}
+          {/* DYNAMIC LAB RESULTS ACCORDION */}
+          {activeLabUrl && (
+            <details className="lab-accordion" open={false}>
+              <summary className="lab-summary">
+                Lab Results & COA{" "}
+                {selectedVariant?.lab_result_url
+                  ? `(${selectedVariant.size_label} Specific)`
+                  : ""}
+                <ChevronDown size={20} />
+              </summary>
+              <div className="lab-content">
+                {activeLabUrl.toLowerCase().endsWith(".pdf") ? (
+                  <a
+                    href={activeLabUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="view-pdf-btn"
+                  >
+                    <FileText size={18} /> View PDF Report
+                  </a>
+                ) : (
+                  <div
+                    className="lab-preview-container"
+                    onClick={() => window.open(activeLabUrl, "_blank")}
+                  >
+                    <img
+                      src={activeLabUrl}
+                      alt="Lab Result"
+                      className="lab-preview-img"
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "10px",
+                        right: "10px",
+                        background: "rgba(0,0,0,0.6)",
+                        padding: "6px",
+                        borderRadius: "6px",
+                        color: "white",
+                        display: "flex",
+                        gap: "6px",
+                        alignItems: "center",
+                        fontSize: "0.8rem",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <ExternalLink size={14} /> Tap to zoom
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
+
           <div
             className="p-description"
             style={{ lineHeight: "1.7", color: "#334155" }}
@@ -245,7 +306,6 @@ export default function Product() {
             <p>{product.description}</p>
           </div>
 
-          {/* TRUST BADGES */}
           <div
             className="p-trust"
             style={{
