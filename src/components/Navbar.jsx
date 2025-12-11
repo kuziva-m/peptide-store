@@ -19,7 +19,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* 2. IMAGE LOGO (Replaced Text) */}
+        {/* 2. IMAGE LOGO (Updated to .jpg) */}
         <Link to="/" className="nav-logo-wrapper">
           <img
             src="/logo.png"

@@ -14,7 +14,7 @@ export default function FAQ() {
     },
     {
       q: "What payment methods do you accept?",
-      a: "We accept major credit cards and select cryptocurrencies for secure transactions.",
+      a: "We accept all major credit and debit cards via our secure Stripe payment gateway.",
     },
   ];
 

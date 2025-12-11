@@ -98,7 +98,7 @@ export default function CartDrawer() {
                         </button>
                       </div>
                       <span className="item-price">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ${(item.price * item.quantity).toFixed(2)} AUD
                       </span>
                     </div>
                   </div>
@@ -117,7 +117,7 @@ export default function CartDrawer() {
         {cartItems.length > 0 && (
           <div className="cart-footer">
             <div className="total-row">
-              <span>Subtotal</span>
+              <span>Subtotal (AUD)</span>
               <span className="total-amount">${cartTotal.toFixed(2)}</span>
             </div>
             <p className="shipping-note">Shipping calculated at checkout.</p>

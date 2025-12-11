@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Column 1: Brand */}
         <div className="footer-col">
           <h3 className="footer-logo">
-            Peptide<span>Store</span>
+            Melbourne<span>Peptides</span>
           </h3>
           <p className="footer-text">
             Premium research-grade peptides for laboratory use. Third-party
@@ -48,8 +48,8 @@ export default function Footer() {
 
       <div className="footer-bottom container">
         <p>
-          &copy; {new Date().getFullYear()} PeptideStore. Research Use Only. Not
-          for human consumption.
+          &copy; {new Date().getFullYear()} Melbourne Peptides. Research Use
+          Only. Not for human consumption.
         </p>
       </div>
     </footer>

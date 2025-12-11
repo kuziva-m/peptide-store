@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
-import "./Home.css"; // Reuse existing grid styles
+import "./Home.css";
+import "./Shop.css";
 
 export default function Shop({ searchQuery }) {
   const [products, setProducts] = useState([]);

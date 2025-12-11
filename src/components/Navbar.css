@@ -1,5 +1,6 @@
+/* --- MAIN NAVBAR --- */
 .navbar {
-  background-color: rgba(255, 255, 255, 0.98);
+  background-color: rgba(255, 255, 255, 0.98); /* Back to White */
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -10,24 +11,25 @@
 
 /* --- TOP BAR --- */
 .nav-top-bar {
-  height: 90px; /* Increased slightly to fit logo */
+  height: 90px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
 }
 
-/* LOGO STYLES */
+/* LOGO WRAPPER */
 .nav-logo-wrapper {
   display: flex;
   align-items: center;
   height: 100%;
   text-decoration: none;
   flex-shrink: 0;
+  max-width: 250px;
 }
 
 .nav-logo-img {
-  height: 70px; /* Adjust based on your logo's aspect ratio */
+  height: 70px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -46,7 +48,7 @@
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-muted);
+  color: var(--text-muted); /* Grey icon */
   pointer-events: none;
 }
 
@@ -58,8 +60,9 @@
   font-size: 0.95rem;
   outline: none;
   transition: all 0.2s;
-  background-color: #f8fafc;
+  background-color: #f8fafc; /* Light grey bg */
   font-family: var(--font-main);
+  color: var(--text-main);
 }
 
 .search-input-header:focus {
@@ -78,7 +81,7 @@
 
 .cart-btn {
   background: white;
-  color: var(--medical-navy);
+  color: var(--medical-navy); /* Dark Text */
   border: 1px solid var(--border);
   padding: 10px 16px;
   border-radius: 50px;
@@ -104,18 +107,17 @@
   border-radius: 12px;
 }
 
-/* HIDDEN BY DEFAULT (Desktop) */
+/* MOBILE HAMBURGER */
 .mobile-menu-btn {
   display: none;
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--medical-navy);
+  color: var(--medical-navy); /* Dark Icon */
   padding: 0;
-  margin-right: 12px;
 }
 
-/* --- BOTTOM BAR (NAV LINKS) --- */
+/* --- BOTTOM BAR (LINKS) --- */
 .nav-bottom-bar {
   background-color: white;
   border-top: 1px solid #f1f5f9;
@@ -130,7 +132,7 @@
 
 .nav-link {
   text-decoration: none;
-  color: var(--text-main);
+  color: var(--text-main); /* Dark Text */
   font-weight: 500;
   font-size: 0.95rem;
   padding: 16px 0;
@@ -147,38 +149,72 @@
    MOBILE STYLING (Max 900px)
    --------------------------------- */
 @media (max-width: 900px) {
+  /* 1. THE GRID FIX (Kept from previous improvement) */
   .nav-top-bar {
     padding: 0 16px;
     height: 70px;
-    justify-content: space-between; /* Space out hamburger and logo */
-  }
-
-  .nav-logo-wrapper {
-    flex-grow: 1;
-    justify-content: center; /* Center logo on mobile */
-    margin-right: 40px; /* Offset the hamburger width to truly center */
-  }
-
-  .nav-logo-img {
-    height: 50px; /* Smaller on mobile */
-  }
-
-  .nav-actions {
-    gap: 8px;
-    position: absolute; /* Position cart absolute right */
-    right: 16px;
+    display: grid;
+    grid-template-columns: 50px 1fr 50px;
+    align-items: center;
+    gap: 0;
   }
 
   .mobile-menu-btn {
-    display: block;
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .nav-logo-wrapper {
+    justify-content: center;
+    width: 100%;
+    margin: 0;
+    max-width: none;
+  }
+
+  .nav-logo-img {
+    height: 50px;
+  }
+
+  .nav-actions {
+    justify-content: flex-end;
+    width: 100%;
+    position: static;
+    gap: 0;
+  }
+
+  .cart-btn {
+    padding: 8px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    background: white;
+    border: 1px solid var(--border);
+    color: var(--medical-navy);
+  }
+
+  .cart-btn span {
+    display: none;
+  }
+
+  .cart-btn {
     position: relative;
-    z-index: 10;
+  }
+
+  .cart-count-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 0.7rem;
+    padding: 2px 6px;
   }
 
   .search-widget {
     display: none;
   }
 
+  /* DRAWER */
   .nav-bottom-bar {
     position: fixed;
     top: 70px;
@@ -210,5 +246,6 @@
     border-bottom: 1px solid #f1f5f9;
     width: 100%;
     font-size: 1rem;
+    color: var(--text-main);
   }
 }

@@ -38,10 +38,11 @@ export default function ProductCard({ product, loading }) {
     product.image_url ||
     "https://via.placeholder.com/400";
 
+  // Find the formatPrice function and update:
   const formatPrice = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-AU", {
       style: "currency",
-      currency: "USD",
+      currency: "AUD",
     }).format(amount);
   };
 

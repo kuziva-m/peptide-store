@@ -32,7 +32,7 @@ export default function Home() {
       <section className="hero-banner-wrapper">
         <div className="container" style={{ padding: 0, maxWidth: "100%" }}>
           <img
-            src="/hero-banner.jpg"
+            src="/hero-banner.jpeg"
             alt="Welcome to Melbourne Peptides"
             className="hero-banner-img"
           />
@@ -134,7 +134,42 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. REVIEWS */}
+      {/* 5. EDUCATIONAL */}
+      <section className="section-container">
+        <div className="container">
+          <h2 className="section-title text-center mb-50">
+            Research & Education
+          </h2>
+          <div className="blog-grid">
+            <div className="blog-card">
+              <div className="blog-img"></div>
+              <div className="blog-txt">
+                <h4>Handling & Storage Guide</h4>
+                <p>Best practices for storing lyophilized peptides.</p>
+                <span className="read-more">Read Article</span>
+              </div>
+            </div>
+            <div className="blog-card">
+              <div className="blog-img"></div>
+              <div className="blog-txt">
+                <h4>Understanding COAs</h4>
+                <p>How to read HPLC and Mass Spec reports.</p>
+                <span className="read-more">Read Article</span>
+              </div>
+            </div>
+            <div className="blog-card">
+              <div className="blog-img"></div>
+              <div className="blog-txt">
+                <h4>Reconstitution 101</h4>
+                <p>Proper mixing techniques for research.</p>
+                <span className="read-more">Read Article</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. REVIEWS */}
       <section className="section-container bg-navy">
         <div className="container">
           <h2
