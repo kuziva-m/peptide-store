@@ -9,14 +9,12 @@ import {
   Beaker,
   ArrowRight,
   Star,
-  User,
 } from "lucide-react";
 import "./Home.css";
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
 
-  // Fetch only 4 random/top products for the "Bestsellers" section
   useEffect(() => {
     async function fetchFeatured() {
       const { data } = await supabase
@@ -30,22 +28,18 @@ export default function Home() {
 
   return (
     <div className="home-page">
-      {/* 1. HERO BANNER */}
-      <section className="hero-section">
-        <div className="container">
-          <h1 className="hero-title">
-            Premium Research Peptides <br /> Australia Wide
-          </h1>
-          <p className="hero-subtitle">
-            Independently lab-tested. Fast, discreet shipping. Melbourne pickup
-            available.
-          </p>
-          <div className="hero-actions">
-            <Link to="/shop" className="hero-btn primary">
-              Shop Now
-            </Link>
-            <Link to="/shop" className="hero-btn secondary">
-              View Catalog
+      {/* 1. IMAGE HERO SECTION */}
+      <section className="hero-banner-wrapper">
+        <div className="container" style={{ padding: 0, maxWidth: "100%" }}>
+          <img
+            src="/hero-banner.jpg"
+            alt="Welcome to Melbourne Peptides"
+            className="hero-banner-img"
+          />
+          {/* FLOATING CTA for Mobile/Desktop to override the 'DM for Prices' text */}
+          <div className="hero-overlay-actions">
+            <Link to="/shop" className="hero-cta-btn">
+              Shop Online Now
             </Link>
           </div>
         </div>
@@ -132,7 +126,6 @@ export default function Home() {
                 Shipping Information
               </Link>
             </div>
-            {/* Placeholder for Trust Image - Replace with real image later */}
             <div className="trust-image-placeholder">
               <Shield size={64} opacity={0.2} />
               <span>Lab Certified</span>
@@ -141,42 +134,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. EDUCATIONAL */}
-      <section className="section-container">
-        <div className="container">
-          <h2 className="section-title text-center mb-50">
-            Research & Education
-          </h2>
-          <div className="blog-grid">
-            <div className="blog-card">
-              <div className="blog-img"></div>
-              <div className="blog-txt">
-                <h4>Handling & Storage Guide</h4>
-                <p>Best practices for storing lyophilized peptides.</p>
-                <span className="read-more">Read Article</span>
-              </div>
-            </div>
-            <div className="blog-card">
-              <div className="blog-img"></div>
-              <div className="blog-txt">
-                <h4>Understanding COAs</h4>
-                <p>How to read HPLC and Mass Spec reports.</p>
-                <span className="read-more">Read Article</span>
-              </div>
-            </div>
-            <div className="blog-card">
-              <div className="blog-img"></div>
-              <div className="blog-txt">
-                <h4>Reconstitution 101</h4>
-                <p>Proper mixing techniques for research.</p>
-                <span className="read-more">Read Article</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. REVIEWS (FIXED) */}
+      {/* 5. REVIEWS */}
       <section className="section-container bg-navy">
         <div className="container">
           <h2
@@ -186,7 +144,6 @@ export default function Home() {
             Trusted by Researchers
           </h2>
           <div className="reviews-grid">
-            {/* Review 1 */}
             <div className="review-card">
               <div className="review-header">
                 <div className="review-avatar">AM</div>
@@ -205,8 +162,6 @@ export default function Home() {
                 well packaged. COAs matched perfectly with my own tests."
               </p>
             </div>
-
-            {/* Review 2 (4 Stars for realism) */}
             <div className="review-card">
               <div className="review-header">
                 <div
@@ -231,8 +186,6 @@ export default function Home() {
                 Only giving 4 stars because stock runs out fast!"
               </p>
             </div>
-
-            {/* Review 3 */}
             <div className="review-card">
               <div className="review-header">
                 <div

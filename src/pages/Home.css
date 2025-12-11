@@ -22,61 +22,50 @@
   margin-bottom: 10px;
 }
 
-/* --- HERO SECTION --- */
-.hero-section {
-  background-color: var(--medical-navy);
-  color: white;
-  padding: 100px 20px;
-  text-align: center;
-  margin-bottom: 0; /* Removed margin to flow into next section */
-}
-
-.hero-title {
-  font-size: 3.2rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 16px;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
-
-.hero-subtitle {
-  color: #cbd5e1;
-  font-size: 1.3rem;
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-.hero-actions {
-  margin-top: 32px;
+/* --- HERO BANNER (NEW) --- */
+.hero-banner-wrapper {
+  width: 100%;
+  background-color: white; /* Matches banner background */
+  position: relative;
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-banner-img {
+  width: 100%;
+  height: auto;
+  max-width: 1400px; /* Prevent it from getting excessively large on giant monitors */
+  display: block;
+}
+
+/* Floating CTA Button */
+.hero-overlay-actions {
+  padding: 20px;
+  width: 100%;
+  display: flex;
   justify-content: center;
+  background: white; /* On Mobile, sits below image */
 }
 
-.hero-btn {
-  padding: 14px 32px;
-  border-radius: 50px; /* Modern Pill Shape */
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.2s;
-  font-size: 1rem;
-  display: inline-block;
-}
-
-.hero-btn.primary {
-  background: white;
-  color: var(--medical-navy);
-}
-
-.hero-btn.secondary {
-  border: 1px solid rgba(255, 255, 255, 0.4);
+.hero-cta-btn {
+  background-color: var(--primary);
   color: white;
+  padding: 16px 40px;
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(70, 53, 222, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.hero-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+.hero-cta-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(70, 53, 222, 0.4);
+  background-color: var(--primary-hover);
 }
 
 /* --- SECTION HEADER --- */
@@ -259,7 +248,7 @@
   cursor: pointer;
 }
 
-/* --- REVIEWS (NEW STYLES) --- */
+/* --- REVIEWS --- */
 .reviews-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -267,7 +256,6 @@
 }
 
 .review-card {
-  /* High contrast: White card on Dark Blue background */
   background: white;
   padding: 30px;
   border-radius: 16px;
@@ -286,7 +274,7 @@
 .review-avatar {
   width: 48px;
   height: 48px;
-  background: #f0fdfa; /* Light Teal */
+  background: #f0fdfa;
   color: var(--clinical-teal);
   border-radius: 50%;
   display: flex;
@@ -319,27 +307,28 @@
 .review-text {
   font-style: italic;
   line-height: 1.6;
-  color: #334155; /* Dark grey text for readability */
+  color: #334155;
   margin: 0;
 }
 
 /* --- MOBILE OPTIMIZATIONS (Max Width 768px) --- */
 @media (max-width: 768px) {
   /* Hero */
-  .hero-section {
-    padding: 60px 20px;
+  .hero-banner-wrapper {
+    margin-bottom: 20px;
   }
-  .hero-title {
-    font-size: 2rem;
-    line-height: 1.2;
+
+  .hero-overlay-actions {
+    position: relative;
+    padding-top: 0;
+    margin-top: -20px; /* Slight overlap for style */
+    background: transparent;
   }
-  .hero-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  .hero-btn {
-    width: 100%;
+
+  .hero-cta-btn {
+    width: 90%;
     text-align: center;
+    box-shadow: 0 10px 30px rgba(70, 53, 222, 0.4);
   }
 
   /* Grid Adjustments */
@@ -352,7 +341,7 @@
   }
   .trust-image-placeholder {
     height: 250px;
-    order: -1; /* Show image first on mobile? Optional */
+    order: -1;
   }
 
   /* Text Sizing */

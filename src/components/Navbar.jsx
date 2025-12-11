@@ -11,7 +11,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
   return (
     <nav className="navbar">
       <div className="container nav-top-bar">
-        {/* 1. MOBILE MENU TOGGLE (Visible only on mobile via CSS) */}
+        {/* 1. MOBILE MENU TOGGLE */}
         <button
           className="mobile-menu-btn"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -19,12 +19,16 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Logo */}
-        <Link to="/" className="nav-logo">
-          PEPTIDE<span style={{ color: "var(--medical-navy)" }}>STORE</span>
+        {/* 2. IMAGE LOGO (Replaced Text) */}
+        <Link to="/" className="nav-logo-wrapper">
+          <img
+            src="/logo.png"
+            alt="Melbourne Peptides"
+            className="nav-logo-img"
+          />
         </Link>
 
-        {/* Search Input (Hidden on mobile via CSS) */}
+        {/* Search Input */}
         <div className="search-widget">
           <Search size={18} className="search-icon" />
           <input
@@ -45,7 +49,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
         </div>
       </div>
 
-      {/* 2. DYNAMIC LINKS CONTAINER */}
+      {/* DYNAMIC LINKS CONTAINER */}
       <div
         className={`nav-bottom-bar ${isMobileMenuOpen ? "mobile-open" : ""}`}
       >
@@ -62,8 +66,6 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             className="nav-link"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            {" "}
-            {/* <-- Updated */}
             Shop All
           </Link>
           <Link
