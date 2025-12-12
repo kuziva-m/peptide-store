@@ -3,6 +3,11 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
+import ScrollToTop from "./components/ScrollToTop";
+import WhatsAppButton from "./components/WhatsAppButton";
+import DiscountPopup from "./components/DiscountPopup"; 
+
+// Pages
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import Admin from "./pages/Admin";
@@ -13,29 +18,28 @@ import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
 import Product from "./pages/Product";
 import Success from "./pages/Success";
-import Toast from "./components/Toast";
+import Calculator from "./pages/Calculator"; // <--- RESTORED IMPORT
 
-// --- NEW IMPORTS ---
-import ScrollToTop from "./components/ScrollToTop";
-import WhatsAppButton from "./components/WhatsAppButton";
-import DiscountPopup from "./components/DiscountPopup";
+import Toast from "./components/Toast";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
-    >
-      {/* 1. Reset Scroll on Route Change */}
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <ScrollToTop />
       <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       <CartDrawer />
+      
       <div style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop searchQuery={searchQuery} />} />
           <Route path="/product/:id" element={<Product />} />
+          
+          {/* RESTORED ROUTE */}
+          <Route path="/calculator" element={<Calculator />} /> 
+          
           <Route path="/admin" element={<Admin />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/shipping" element={<Shipping />} />
@@ -45,10 +49,10 @@ function App() {
           <Route path="/success" element={<Success />} />
         </Routes>
       </div>
-      {/* 2. Global Overlay Components */}
+
       <Toast />
       <WhatsAppButton />
-      <DiscountPopup /> {/* <--- This makes the popup appear */}
+      <DiscountPopup />
       <Footer />
     </div>
   );
