@@ -1,30 +1,32 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 :root {
-  /* --- CORE PALETTE (Preserved) --- */
+  /* --- CORE PALETTE --- */
   --primary: #4635de;
   --primary-hover: #372bb5;
 
-  /* --- SCIENTIFIC COLORS (Preserved) --- */
+  /* --- SCIENTIFIC COLORS --- */
   --medical-navy: #0f172a;
   --clinical-teal: #0d9488;
   --science-blue: #e0e7ff;
 
   /* --- NEUTRALS --- */
-  --bg-body: #f4f6f8; /* Slightly darker than white for contrast with cards */
+  --bg-body: #f4f6f8;
   --bg-surface: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
 
-  /* --- TYPOGRAPHY (Updated to Poppins) --- */
+  /* --- TYPOGRAPHY --- */
   --font-main: "Poppins", sans-serif;
 
-  /* --- SHADOWS (New Professional Depth) --- */
+  /* --- SHADOWS --- */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -47,7 +49,7 @@ body {
 
 /* --- UTILITIES --- */
 .container {
-  max-width: 1240px; /* Slightly wider for modern feel */
+  max-width: 1240px;
   margin: 0 auto;
   padding: 0 24px;
 }
@@ -64,6 +66,20 @@ h4 {
 
 button {
   font-family: var(--font-main);
+}
+
+/* --- ANIMATIONS (NEW) --- */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-anim {
+  animation: spin 1s linear infinite;
 }
 
 /* --- SKELETON ANIMATIONS --- */

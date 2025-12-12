@@ -76,6 +76,13 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             Shipping & Returns
           </Link>
           <Link
+            to="/calculator"
+            className="nav-link"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Peptide Calc
+          </Link>
+          <Link
             to="/contact"
             className="nav-link"
             onClick={() => setIsMobileMenuOpen(false)}

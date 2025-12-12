@@ -1,4 +1,20 @@
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+
 export default function Privacy() {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "privacy_policy")
+      .single()
+      .then(({ data }) => {
+        if (data) setText(data.value.text);
+      });
+  }, []);
+
   return (
     <div
       className="container"
@@ -13,23 +29,10 @@ export default function Privacy() {
           marginTop: "40px",
           color: "var(--text-muted)",
           lineHeight: "1.8",
+          whiteSpace: "pre-wrap",
         }}
       >
-        <p>
-          At PeptideStore, we take your privacy seriously. We collect minimal
-          data required to process your order.
-        </p>
-        <p>
-          We do not sell, trade, or otherwise transfer your personally
-          identifiable information to outside parties. This does not include
-          trusted third parties who assist us in operating our website or
-          servicing you, as long as those parties agree to keep this information
-          confidential.
-        </p>
-        <p>
-          All transactions are processed through a gateway provider and are not
-          stored or processed on our servers.
-        </p>
+        {text || "Loading policy..."}
       </div>
     </div>
   );

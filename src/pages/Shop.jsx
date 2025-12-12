@@ -34,6 +34,7 @@ export default function Shop({ searchQuery }) {
   const filteredGroupedProducts = useMemo(() => {
     let result = products;
 
+    // 1. Filter by Search
     if (searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter((product) =>
@@ -41,10 +42,12 @@ export default function Shop({ searchQuery }) {
       );
     }
 
+    // 2. Filter by Category Tab
     if (activeCategory !== "All") {
       result = result.filter((product) => product.category === activeCategory);
     }
 
+    // 3. Group Items by Category
     const grouped = result.reduce((acc, product) => {
       const cat = product.category || "Other";
       if (!acc[cat]) acc[cat] = [];
@@ -52,7 +55,29 @@ export default function Shop({ searchQuery }) {
       return acc;
     }, {});
 
-    return grouped;
+    // 4. Sort the Categories (Custom Order)
+    // Desired Order: Peptides -> Peptide Blends -> Mixing Solution -> Others
+    const sortOrder = ["Peptides", "Peptide Blends", "Mixing Solution"];
+
+    const sortedGrouped = Object.entries(grouped).sort(([catA], [catB]) => {
+      const indexA = sortOrder.indexOf(catA);
+      const indexB = sortOrder.indexOf(catB);
+
+      // If both are in our priority list, sort by that order
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+
+      // If only A is in the list, it goes first
+      if (indexA !== -1) return -1;
+
+      // If only B is in the list, it goes first
+      if (indexB !== -1) return 1;
+
+      // Otherwise, sort alphabetically
+      return catA.localeCompare(catB);
+    });
+
+    // Convert back to object (or array of entries) for rendering
+    return sortedGrouped;
   }, [products, searchQuery, activeCategory]);
 
   return (
@@ -99,28 +124,44 @@ export default function Shop({ searchQuery }) {
           </div>
         ) : (
           <div className="content-grid">
-            {Object.keys(filteredGroupedProducts).length === 0 && (
-              <div className="empty-state">
+            {filteredGroupedProducts.length === 0 && (
+              <div
+                className="empty-state"
+                style={{ textAlign: "center", color: "var(--text-muted)" }}
+              >
                 <p>No products found matching "{searchQuery}"</p>
               </div>
             )}
 
-            {Object.entries(filteredGroupedProducts).map(
-              ([category, items]) => (
-                <section key={category} className="category-section">
-                  <h2 className="category-title">{category}</h2>
-                  <div className="products-grid">
-                    {items.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        loading={false}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )
-            )}
+            {/* Note: filteredGroupedProducts is now an array of [category, items] */}
+            {filteredGroupedProducts.map(([category, items]) => (
+              <section
+                key={category}
+                className="category-section"
+                style={{ marginBottom: "40px" }}
+              >
+                <h2
+                  className="category-title"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    paddingBottom: "10px",
+                    marginBottom: "20px",
+                    color: "var(--primary)",
+                  }}
+                >
+                  {category}
+                </h2>
+                <div className="products-grid">
+                  {items.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      loading={false}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </div>

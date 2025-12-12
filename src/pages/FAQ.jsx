@@ -1,22 +1,21 @@
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
 export default function FAQ() {
-  const faqs = [
-    {
-      q: "Are your products for human consumption?",
-      a: "No. All products listed on this site are for Research Use Only (RUO). They are not intended for use in diagnostic or therapeutic procedures for humans or animals.",
-    },
-    {
-      q: "How should I store my peptides?",
-      a: "Lyophilized peptides should be stored at -20°C. Once reconstituted with bacteriostatic water, they must be kept refrigerated at 4°C and used within 30 days.",
-    },
-    {
-      q: "Do you provide purity testing?",
-      a: "Yes. Every batch is HPLC and MS tested to ensure >99% purity. COAs are available upon request.",
-    },
-    {
-      q: "What payment methods do you accept?",
-      a: "We accept all major credit and debit cards via our secure Stripe payment gateway.",
-    },
-  ];
+  const [faqs, setFaqs] = useState([]);
+  const [openIndex, setOpenIndex] = useState(null);
+
+  useEffect(() => {
+    supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "faq_list")
+      .single()
+      .then(({ data }) => {
+        if (data) setFaqs(data.value || []);
+      });
+  }, []);
 
   return (
     <div
@@ -24,13 +23,12 @@ export default function FAQ() {
       style={{ padding: "80px 24px", maxWidth: "800px" }}
     >
       <h1>Frequently Asked Questions</h1>
-
       <div
         style={{
           marginTop: "40px",
           display: "flex",
           flexDirection: "column",
-          gap: "24px",
+          gap: "16px",
         }}
       >
         {faqs.map((item, index) => (
@@ -39,14 +37,45 @@ export default function FAQ() {
             style={{
               border: "1px solid var(--border)",
               borderRadius: "12px",
-              padding: "24px",
               background: "white",
+              overflow: "hidden",
             }}
           >
-            <h3 style={{ fontSize: "1.1rem", marginBottom: "8px" }}>
+            <button
+              onClick={() => setOpenIndex(openIndex === index ? null : index)}
+              style={{
+                width: "100%",
+                padding: "20px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                fontWeight: "600",
+                fontSize: "1rem",
+                color: "var(--medical-navy)",
+              }}
+            >
               {item.q}
-            </h3>
-            <p style={{ color: "var(--text-muted)", margin: 0 }}>{item.a}</p>
+              {openIndex === index ? (
+                <ChevronUp size={20} />
+              ) : (
+                <ChevronDown size={20} />
+              )}
+            </button>
+            {openIndex === index && (
+              <div
+                style={{
+                  padding: "0 20px 20px 20px",
+                  color: "var(--text-muted)",
+                  lineHeight: "1.6",
+                }}
+              >
+                {item.a}
+              </div>
+            )}
           </div>
         ))}
       </div>
