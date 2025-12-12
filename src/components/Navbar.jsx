@@ -80,7 +80,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             className="nav-link"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            Peptide Calc
+            Peptide Calculator
           </Link>
           <Link
             to="/contact"
