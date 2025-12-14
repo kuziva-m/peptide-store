@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { Package, FileText, LogOut, Lock } from "lucide-react";
+import { Package, FileText, LogOut, Lock, ShoppingBag } from "lucide-react";
 import ProductManager from "../components/admin/ProductManager";
 import ContentEditor from "../components/admin/ContentEditor";
+import OrderManager from "../components/admin/OrderManager";
 
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("products"); // 'products' or 'content'
+  const [activeTab, setActiveTab] = useState("orders"); // Default to Orders for quick access
 
   // Login State
   const [email, setEmail] = useState("");
@@ -172,13 +173,20 @@ export default function Admin() {
           gap: "20px",
           marginBottom: "30px",
           borderBottom: "1px solid #e2e8f0",
+          overflowX: "auto",
         }}
       >
+        <TabButton
+          active={activeTab === "orders"}
+          onClick={() => setActiveTab("orders")}
+          icon={<ShoppingBag size={18} />}
+          label="Orders"
+        />
         <TabButton
           active={activeTab === "products"}
           onClick={() => setActiveTab("products")}
           icon={<Package size={18} />}
-          label="Inventory Manager"
+          label="Inventory"
         />
         <TabButton
           active={activeTab === "content"}
@@ -190,7 +198,9 @@ export default function Admin() {
 
       {/* CONTENT AREA */}
       <div>
-        {activeTab === "products" ? <ProductManager /> : <ContentEditor />}
+        {activeTab === "orders" && <OrderManager />}
+        {activeTab === "products" && <ProductManager />}
+        {activeTab === "content" && <ContentEditor />}
       </div>
     </div>
   );
@@ -214,6 +224,7 @@ function TabButton({ active, onClick, icon, label }) {
         fontWeight: active ? "700" : "500",
         cursor: "pointer",
         fontSize: "1rem",
+        whiteSpace: "nowrap",
       }}
     >
       {icon} {label}

@@ -14,8 +14,6 @@ export default function Success() {
   const { cartItems, removeFromCart } = useCart();
   useEffect(() => {
     if (cartItems.length > 0) {
-      // Optional: Clear global cart state here if you have a clearCart function
-      // or just rely on the user starting fresh.
       cartItems.forEach((i) => removeFromCart(i.variantId));
     }
   }, []);
@@ -28,11 +26,35 @@ export default function Success() {
 
     async function fetchOrder() {
       try {
+        // 1. Retrieve session from Stripe via our Edge Function
         const { data, error } = await supabase.functions.invoke("checkout", {
           body: { action: "retrieve", session_id: sessionId },
         });
+
         if (error) throw error;
-        setOrder(data.session);
+
+        const session = data.session;
+        setOrder(session);
+
+        // 2. SAVE ORDER TO SUPABASE (If it doesn't exist yet)
+        if (session) {
+          const { error: insertError } = await supabase.from("orders").upsert(
+            {
+              stripe_session_id: session.id,
+              customer_email: session.customer_details?.email,
+              customer_name: session.customer_details?.name,
+              total_amount: session.amount_total / 100, // Convert cents to dollars
+              status: "pending",
+              shipping_address: session.shipping_details?.address,
+              items: session.line_items?.data || [], // Store items JSON if available
+            },
+            { onConflict: "stripe_session_id" }
+          ); // Prevent duplicates on refresh
+
+          if (insertError) {
+            console.error("Failed to save order to DB:", insertError);
+          }
+        }
       } catch (err) {
         console.error("Error fetching order:", err);
       } finally {
@@ -93,6 +115,18 @@ export default function Success() {
           Thank you, {order.customer_details?.name}. Your order has been
           received.
         </p>
+        <div style={{ marginTop: "15px" }}>
+          <Link
+            to="/track"
+            style={{
+              color: "var(--primary)",
+              fontWeight: "600",
+              textDecoration: "underline",
+            }}
+          >
+            Track your order status here
+          </Link>
+        </div>
       </div>
 
       <div
