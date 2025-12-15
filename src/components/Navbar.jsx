@@ -19,7 +19,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* 2. IMAGE LOGO (Updated to .jpg) */}
+        {/* 2. IMAGE LOGO */}
         <Link to="/" className="nav-logo-wrapper">
           <img
             src="/logo.png"
@@ -68,13 +68,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           >
             Shop All
           </Link>
-          <Link
-            to="/shipping"
-            className="nav-link"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Shipping & Returns
-          </Link>
+          {/* REMOVED Shipping & Returns from here */}
           <Link
             to="/calculator"
             className="nav-link"

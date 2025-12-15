@@ -1,16 +1,23 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { Package, FileText, LogOut, Lock, ShoppingBag } from "lucide-react";
+import {
+  Package,
+  FileText,
+  LogOut,
+  Lock,
+  ShoppingBag,
+  MessageSquare,
+} from "lucide-react"; // Added MessageSquare icon
 import ProductManager from "../components/admin/ProductManager";
 import ContentEditor from "../components/admin/ContentEditor";
 import OrderManager from "../components/admin/OrderManager";
+import ReviewManager from "../components/admin/ReviewManager"; // Import the new component
 
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("orders"); // Default to Orders for quick access
+  const [activeTab, setActiveTab] = useState("orders");
 
-  // Login State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -188,6 +195,13 @@ export default function Admin() {
           icon={<Package size={18} />}
           label="Inventory"
         />
+        {/* NEW TAB */}
+        <TabButton
+          active={activeTab === "reviews"}
+          onClick={() => setActiveTab("reviews")}
+          icon={<MessageSquare size={18} />}
+          label="Reviews"
+        />
         <TabButton
           active={activeTab === "content"}
           onClick={() => setActiveTab("content")}
@@ -200,6 +214,7 @@ export default function Admin() {
       <div>
         {activeTab === "orders" && <OrderManager />}
         {activeTab === "products" && <ProductManager />}
+        {activeTab === "reviews" && <ReviewManager />}
         {activeTab === "content" && <ContentEditor />}
       </div>
     </div>

@@ -28,7 +28,7 @@ export default function Contact() {
           />
           <input
             type="email"
-            placeholder="Melbournepeptides1@gmail.com"
+            placeholder="Email"
             style={{
               padding: "12px",
               border: "1px solid var(--border)",

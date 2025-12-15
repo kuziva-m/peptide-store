@@ -1,15 +1,29 @@
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom"; // <-- Import this
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
 import "./Home.css";
 import "./Shop.css";
 
 export default function Shop({ searchQuery }) {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("All");
+
+  // Initialize category from URL or default to "All"
+  const [activeCategory, setActiveCategory] = useState(
+    searchParams.get("category") || "All"
+  );
 
   const categories = ["All", "Peptides", "Peptide Blends", "Mixing Solution"];
+
+  // Update active category if URL changes (e.g. clicking links in Navbar/Home while already on Shop)
+  useEffect(() => {
+    const catFromUrl = searchParams.get("category");
+    if (catFromUrl) {
+      setActiveCategory(catFromUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchProducts();
@@ -55,28 +69,19 @@ export default function Shop({ searchQuery }) {
       return acc;
     }, {});
 
-    // 4. Sort the Categories (Custom Order)
-    // Desired Order: Peptides -> Peptide Blends -> Mixing Solution -> Others
+    // 4. Sort the Categories
     const sortOrder = ["Peptides", "Peptide Blends", "Mixing Solution"];
 
     const sortedGrouped = Object.entries(grouped).sort(([catA], [catB]) => {
       const indexA = sortOrder.indexOf(catA);
       const indexB = sortOrder.indexOf(catB);
 
-      // If both are in our priority list, sort by that order
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-
-      // If only A is in the list, it goes first
       if (indexA !== -1) return -1;
-
-      // If only B is in the list, it goes first
       if (indexB !== -1) return 1;
-
-      // Otherwise, sort alphabetically
       return catA.localeCompare(catB);
     });
 
-    // Convert back to object (or array of entries) for rendering
     return sortedGrouped;
   }, [products, searchQuery, activeCategory]);
 
@@ -133,7 +138,6 @@ export default function Shop({ searchQuery }) {
               </div>
             )}
 
-            {/* Note: filteredGroupedProducts is now an array of [category, items] */}
             {filteredGroupedProducts.map(([category, items]) => (
               <section
                 key={category}

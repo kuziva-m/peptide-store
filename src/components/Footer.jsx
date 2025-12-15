@@ -21,9 +21,6 @@ export default function Footer() {
           <h4>Support</h4>
           <ul className="footer-links">
             <li>
-              <Link to="/shipping">Shipping & Returns</Link>
-            </li>
-            <li>
               <Link to="/contact">Contact Us</Link>
             </li>
             <li>
@@ -36,6 +33,10 @@ export default function Footer() {
         <div className="footer-col">
           <h4>Legal</h4>
           <ul className="footer-links">
+            {/* MOVED HERE */}
+            <li>
+              <Link to="/shipping">Shipping & Returns</Link>
+            </li>
             <li>
               <Link to="/privacy">Privacy Policy</Link>
             </li>
