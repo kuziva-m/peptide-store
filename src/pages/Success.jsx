@@ -26,7 +26,6 @@ export default function Success() {
 
     async function fetchOrder() {
       try {
-        // 1. Retrieve session from Stripe via our Edge Function
         const { data, error } = await supabase.functions.invoke("checkout", {
           body: { action: "retrieve", session_id: sessionId },
         });
@@ -36,24 +35,20 @@ export default function Success() {
         const session = data.session;
         setOrder(session);
 
-        // 2. SAVE ORDER TO SUPABASE (If it doesn't exist yet)
+        // Save order to DB if needed
         if (session) {
-          const { error: insertError } = await supabase.from("orders").upsert(
+          await supabase.from("orders").upsert(
             {
               stripe_session_id: session.id,
               customer_email: session.customer_details?.email,
               customer_name: session.customer_details?.name,
-              total_amount: session.amount_total / 100, // Convert cents to dollars
+              total_amount: session.amount_total / 100,
               status: "pending",
               shipping_address: session.shipping_details?.address,
-              items: session.line_items?.data || [], // Store items JSON if available
+              items: session.line_items?.data || [],
             },
             { onConflict: "stripe_session_id" }
-          ); // Prevent duplicates on refresh
-
-          if (insertError) {
-            console.error("Failed to save order to DB:", insertError);
-          }
+          );
         }
       } catch (err) {
         console.error("Error fetching order:", err);
@@ -96,6 +91,11 @@ export default function Success() {
       </div>
     );
   }
+
+  // Calculate Shipping Cost from Stripe Data
+  const shippingCost = order.total_details?.amount_shipping
+    ? order.total_details.amount_shipping / 100
+    : 0;
 
   return (
     <div
@@ -219,21 +219,41 @@ export default function Success() {
             borderTop: "1px solid #f1f5f9",
             paddingTop: "20px",
             marginTop: "20px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
           }}
         >
-          <span style={{ fontWeight: "600" }}>Total Paid</span>
-          <span
+          {/* NEW: SHIPPING ROW */}
+          <div
             style={{
-              fontSize: "1.5rem",
-              fontWeight: "700",
-              color: "var(--primary)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "10px",
+              color: "#64748b",
             }}
           >
-            ${(order.amount_total / 100).toFixed(2)} AUD
-          </span>
+            <span>Shipping</span>
+            <span>${shippingCost.toFixed(2)} AUD</span>
+          </div>
+
+          {/* TOTAL ROW */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontWeight: "600" }}>Total Paid</span>
+            <span
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "700",
+                color: "var(--primary)",
+              }}
+            >
+              ${(order.amount_total / 100).toFixed(2)} AUD
+            </span>
+          </div>
         </div>
       </div>
 
