@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Mail, Phone, MapPin, Send, Loader, CheckCircle } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Send,
+  Loader,
+  CheckCircle,
+  MessageCircle,
+} from "lucide-react";
 
 export default function Contact() {
   const [loading, setLoading] = useState(false);
@@ -36,174 +44,143 @@ export default function Contact() {
   return (
     <div
       className="container"
-      style={{ padding: "80px 24px", maxWidth: "900px" }}
+      style={{ padding: "80px 24px", maxWidth: "1100px" }}
     >
-      <h1
-        style={{
-          fontSize: "2.5rem",
-          marginBottom: "20px",
-          color: "var(--medical-navy)",
-          textAlign: "center",
-        }}
-      >
-        Contact Us
-      </h1>
-      <p
-        style={{
-          color: "var(--text-muted)",
-          marginBottom: "50px",
-          textAlign: "center",
-          fontSize: "1.1rem",
-        }}
-      >
-        For research inquiries, bulk orders, or technical support.
-      </p>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1.5fr",
-          gap: "50px",
-          alignItems: "start",
-        }}
-      >
-        {/* Left: Info */}
-        <div
+      {/* HEADER */}
+      <div style={{ textAlign: "center", marginBottom: "60px" }}>
+        <h1
           style={{
-            background: "white",
-            padding: "30px",
-            borderRadius: "16px",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-sm)",
+            fontSize: "2.5rem",
+            marginBottom: "16px",
+            color: "var(--medical-navy)",
           }}
         >
-          <h3 style={{ marginBottom: "20px", color: "var(--medical-navy)" }}>
-            Get in Touch
-          </h3>
+          Contact Support
+        </h1>
+        <p
+          style={{
+            color: "var(--text-muted)",
+            fontSize: "1.1rem",
+            maxWidth: "600px",
+            margin: "0 auto",
+          }}
+        >
+          Our research specialists are available to assist with product
+          specifications, bulk orders, and shipping inquiries.
+        </p>
+      </div>
 
+      {/* RESPONSIVE LAYOUT CONTAINER */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "40px",
+          alignItems: "flex-start",
+        }}
+      >
+        {/* LEFT COLUMN: INFO CARDS */}
+        <div style={{ flex: "1 1 350px" }}>
           <div
             style={{ display: "flex", flexDirection: "column", gap: "20px" }}
           >
-            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-              <div
-                style={{
-                  background: "#eff6ff",
-                  padding: "10px",
-                  borderRadius: "50%",
-                }}
-              >
-                <Mail size={20} color="#3b82f6" />
+            {/* Card 1: Email */}
+            <div style={infoCardStyle}>
+              <div style={iconBoxStyle}>
+                <Mail size={24} color="var(--medical-navy)" />
               </div>
               <div>
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: "0.9rem",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Email
-                </strong>
-                <span
-                  style={{ fontWeight: "600", color: "var(--medical-navy)" }}
-                >
+                <h3 style={cardTitleStyle}>Email Us</h3>
+                <p style={cardTextStyle}>
+                  For general inquiries & order status
+                </p>
+                <a href="mailto:melbournepeptides1@gmail.com" style={linkStyle}>
                   melbournepeptides1@gmail.com
-                </span>
+                </a>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-              <div
-                style={{
-                  background: "#f0fdf4",
-                  padding: "10px",
-                  borderRadius: "50%",
-                }}
-              >
-                <Phone size={20} color="#10b981" />
+            {/* Card 2: Phone */}
+            <div style={infoCardStyle}>
+              <div style={iconBoxStyle}>
+                <MessageCircle size={24} color="var(--medical-navy)" />
               </div>
               <div>
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: "0.9rem",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Phone / WhatsApp
-                </strong>
-                <span
-                  style={{ fontWeight: "600", color: "var(--medical-navy)" }}
-                >
+                <h3 style={cardTitleStyle}>WhatsApp / SMS</h3>
+                <p style={cardTextStyle}>Quick questions & technical support</p>
+                <span style={{ ...linkStyle, cursor: "default" }}>
                   +61 468 533 070
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-              <div
-                style={{
-                  background: "#fefce8",
-                  padding: "10px",
-                  borderRadius: "50%",
-                }}
-              >
-                <MapPin size={20} color="#eab308" />
+            {/* Card 3: Location */}
+            <div style={infoCardStyle}>
+              <div style={iconBoxStyle}>
+                <MapPin size={24} color="var(--medical-navy)" />
               </div>
               <div>
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: "0.9rem",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Location
-                </strong>
+                <h3 style={cardTitleStyle}>Facility</h3>
+                <p style={cardTextStyle}>Melbourne, Australia</p>
                 <span
-                  style={{ fontWeight: "600", color: "var(--medical-navy)" }}
+                  style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}
                 >
-                  Melbourne, Australia
+                  Dispatch Centre Only
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Form */}
+        {/* RIGHT COLUMN: CONTACT FORM */}
         <div
           style={{
+            flex: "1 1 400px",
             background: "white",
             padding: "40px",
             borderRadius: "16px",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-lg)",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
           }}
         >
+          <h2
+            style={{
+              fontSize: "1.5rem",
+              color: "var(--medical-navy)",
+              marginBottom: "24px",
+            }}
+          >
+            Send an Inquiry
+          </h2>
+
           {success ? (
-            <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <div style={{ textAlign: "center", padding: "60px 20px" }}>
               <CheckCircle
                 size={60}
                 color="#10b981"
                 style={{ margin: "0 auto 20px" }}
               />
-              <h3 style={{ color: "var(--medical-navy)" }}>Message Sent!</h3>
-              <p style={{ color: "var(--text-muted)" }}>
-                We will get back to you shortly.
+              <h3
+                style={{ color: "var(--medical-navy)", marginBottom: "10px" }}
+              >
+                Message Received
+              </h3>
+              <p style={{ color: "var(--text-muted)", marginBottom: "30px" }}>
+                Our team will review your inquiry and respond within 24 hours.
               </p>
               <button
                 onClick={() => setSuccess(false)}
                 style={{
-                  marginTop: "20px",
-                  padding: "10px 20px",
-                  background: "none",
-                  border: "1px solid var(--border)",
+                  padding: "10px 24px",
+                  background: "#f1f5f9",
+                  border: "none",
                   borderRadius: "8px",
+                  color: "var(--medical-navy)",
+                  fontWeight: "600",
                   cursor: "pointer",
-                  color: "var(--text-muted)",
                 }}
               >
-                Send another message
+                Send Another
               </button>
             </div>
           ) : (
@@ -214,66 +191,82 @@ export default function Contact() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
                   gap: "20px",
                 }}
               >
+                <div>
+                  <label style={labelStyle}>Your Name</label>
+                  <input
+                    required
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    type="text"
+                    placeholder="Dr. Smith"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Email Address</label>
+                  <input
+                    required
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    type="email"
+                    placeholder="name@lab.com"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Subject</label>
                 <input
                   required
-                  name="name"
-                  value={formData.name}
+                  name="subject"
+                  value={formData.subject}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Name"
-                  style={inputStyle}
-                />
-                <input
-                  required
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  type="email"
-                  placeholder="Email"
+                  placeholder="Product Inquiry..."
                   style={inputStyle}
                 />
               </div>
-              <input
-                required
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                type="text"
-                placeholder="Subject"
-                style={inputStyle}
-              />
-              <textarea
-                required
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                rows="6"
-                placeholder="How can we help?"
-                style={{ ...inputStyle, resize: "vertical" }}
-              ></textarea>
+
+              <div>
+                <label style={labelStyle}>Message</label>
+                <textarea
+                  required
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  rows="5"
+                  placeholder="How can we assist your research?"
+                  style={{ ...inputStyle, resize: "vertical" }}
+                ></textarea>
+              </div>
 
               <button
                 type="submit"
                 disabled={loading}
                 className="buy-btn"
                 style={{
+                  marginTop: "10px",
                   width: "100%",
-                  padding: "14px",
+                  padding: "16px",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                   gap: "10px",
+                  fontSize: "1rem",
                 }}
               >
                 {loading ? (
                   <Loader className="spin-anim" size={20} />
                 ) : (
                   <>
-                    <Send size={18} /> Send Inquiry
+                    <Send size={18} /> Send Message
                   </>
                 )}
               </button>
@@ -285,12 +278,65 @@ export default function Contact() {
   );
 }
 
+// STYLES
+const infoCardStyle = {
+  background: "white",
+  padding: "24px",
+  borderRadius: "12px",
+  border: "1px solid #e2e8f0",
+  display: "flex",
+  alignItems: "center",
+  gap: "20px",
+  transition: "transform 0.2s ease",
+};
+
+const iconBoxStyle = {
+  width: "50px",
+  height: "50px",
+  background: "#f1f5f9", // Neutral gray/slate instead of bright colors
+  borderRadius: "12px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
+
+const cardTitleStyle = {
+  margin: "0 0 4px 0",
+  fontSize: "1.1rem",
+  color: "var(--medical-navy)",
+  fontWeight: "700",
+};
+
+const cardTextStyle = {
+  margin: "0 0 4px 0",
+  color: "var(--text-muted)",
+  fontSize: "0.9rem",
+};
+
+const linkStyle = {
+  color: "var(--primary)",
+  fontWeight: "600",
+  textDecoration: "none",
+  fontSize: "0.95rem",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "8px",
+  fontSize: "0.9rem",
+  fontWeight: "600",
+  color: "#475569",
+};
+
 const inputStyle = {
+  width: "100%",
   padding: "12px 16px",
-  border: "1px solid var(--border)",
+  border: "1px solid #cbd5e1",
   borderRadius: "8px",
   fontSize: "1rem",
   outline: "none",
-  transition: "border-color 0.2s",
+  background: "#f8fafc",
+  transition: "all 0.2s",
   fontFamily: "inherit",
 };
