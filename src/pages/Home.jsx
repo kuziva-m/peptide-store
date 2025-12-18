@@ -10,6 +10,7 @@ import {
   Star,
   MessageSquarePlus,
   User,
+  Heart,
 } from "lucide-react";
 import "./Home.css";
 
@@ -53,7 +54,6 @@ export default function Home() {
             return allProducts.find((p) => {
               const name = p.name.toLowerCase();
               const search = term.toLowerCase();
-              // Handle variations like "Melanotan 2" vs "Melanotan II" or "BPC 157" vs "BPC-157"
               return (
                 name.includes(search) ||
                 (search === "melanotan" && name.includes("melanotan")) ||
@@ -147,7 +147,79 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. REVIEWS SECTION */}
+      {/* 4. NEW: LOVED BY MANY (Social Proof) */}
+      <section className="section-container" style={{ paddingBottom: "20px" }}>
+        <div className="container">
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#fdf2f8",
+                color: "#be185d",
+                padding: "8px 16px",
+                borderRadius: "50px",
+                fontWeight: "600",
+                fontSize: "0.9rem",
+                marginBottom: "16px",
+              }}
+            >
+              <Heart size={16} fill="#be185d" /> Community Favorites
+            </div>
+            <h2 className="section-title" style={{ marginBottom: "10px" }}>
+              Loved by Many
+            </h2>
+            <p
+              style={{
+                color: "var(--text-muted)",
+                maxWidth: "500px",
+                margin: "0 auto",
+              }}
+            >
+              Join thousands of researchers trusting Prime Labs for their daily
+              laboratory needs.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "24px",
+            }}
+          >
+            {/* Image 1 */}
+            <div style={imageCardStyle}>
+              <img
+                src="/images/testimonials/user1.jpeg"
+                alt="Happy Customer 1"
+                style={imageStyle}
+              />
+            </div>
+
+            {/* Image 2 */}
+            <div style={imageCardStyle}>
+              <img
+                src="/images/testimonials/user2.jpeg"
+                alt="Happy Customer 2"
+                style={imageStyle}
+              />
+            </div>
+
+            {/* Image 3 */}
+            <div style={imageCardStyle}>
+              <img
+                src="/images/testimonials/user3.jpeg"
+                alt="Happy Customer 3"
+                style={imageStyle}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. REVIEWS SECTION */}
       <section className="section-container">
         <div className="container">
           <h2 className="section-title text-center mb-50">
@@ -217,7 +289,6 @@ export default function Home() {
             <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
               Share your findings and experience with the community.
             </p>
-            {/* UPDATED LINK */}
             <Link
               to="/write-review"
               className="trust-btn"
@@ -235,3 +306,23 @@ export default function Home() {
     </div>
   );
 }
+
+// --- Internal Styles for the Gallery ---
+const imageCardStyle = {
+  borderRadius: "16px",
+  overflow: "hidden",
+  boxShadow:
+    "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+  border: "1px solid #f1f5f9",
+  aspectRatio: "4/5", // Professional portrait ratio (like Instagram)
+  position: "relative",
+  backgroundColor: "#f8fafc", // Placeholder color while loading
+};
+
+const imageStyle = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover", // This creates the perfect crop automatically
+  transition: "transform 0.5s ease",
+  cursor: "pointer",
+};
