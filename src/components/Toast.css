@@ -1,6 +1,7 @@
 .toast-notification {
   position: fixed;
-  bottom: 24px;
+  /* Moved up from bottom: 24px to bottom: 100px */
+  bottom: 100px;
   right: 24px;
   background-color: #10b981; /* Emerald Green */
   color: white;
@@ -20,11 +21,35 @@
 
 @keyframes slideIn {
   from {
-    transform: translateY(100%);
+    transform: translateY(20px); /* Subtle slide up */
     opacity: 0;
   }
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+/* On mobile, center it at the top instead to be extra safe */
+@media (max-width: 600px) {
+  .toast-notification {
+    bottom: auto;
+    top: 24px;
+    right: 50%;
+    transform: translateX(50%);
+    width: 90%;
+    justify-content: center;
+    animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translate(50%, -20px);
+      opacity: 0;
+    }
+    to {
+      transform: translate(50%, 0);
+      opacity: 1;
+    }
   }
 }

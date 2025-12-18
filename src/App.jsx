@@ -7,6 +7,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import WhatsAppButton from "./components/WhatsAppButton";
 import DiscountPopup from "./components/DiscountPopup";
 import Toast from "./components/Toast";
+import AnnouncementBar from "./components/AnnouncementBar"; // <--- IMPORT THIS
 
 // Pages
 import Home from "./pages/Home";
@@ -20,7 +21,8 @@ import FAQ from "./pages/FAQ";
 import Product from "./pages/Product";
 import Success from "./pages/Success";
 import Calculator from "./pages/Calculator";
-import TrackOrder from "./pages/TrackOrder"; // Ensuring TrackOrder is imported if used
+import TrackOrder from "./pages/TrackOrder";
+import WriteReview from "./pages/WriteReview";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,24 +31,8 @@ function App() {
     <div
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
     >
-      {/* --- NEW: SHIPPING BANNER --- */}
-      <div
-        style={{
-          backgroundColor: "#0f172a", // var(--medical-navy)
-          color: "white",
-          textAlign: "center",
-          padding: "10px",
-          fontSize: "0.9rem",
-          fontWeight: "500",
-          letterSpacing: "0.02em",
-        }}
-      >
-        ✈️ Flat Rate Shipping{" "}
-        <span style={{ color: "#facc15", fontWeight: "700" }}>$9.99 AUD</span>{" "}
-        Australia Wide &nbsp;<span style={{ opacity: 0.5 }}>|</span>&nbsp; ⚡
-        24hr Dispatch &nbsp;<span style={{ opacity: 0.5 }}>|</span>&nbsp; 📦 1-3
-        Days Delivery
-      </div>
+      {/* NEW: REPLACED OLD STATIC BANNER WITH ANIMATED BAR */}
+      <AnnouncementBar />
 
       <ScrollToTop />
       <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
@@ -59,6 +45,7 @@ function App() {
           <Route path="/product/:id" element={<Product />} />
           <Route path="/calculator" element={<Calculator />} />
           <Route path="/track" element={<TrackOrder />} />
+          <Route path="/write-review" element={<WriteReview />} />
 
           <Route path="/admin" element={<Admin />} />
           <Route path="/contact" element={<Contact />} />

@@ -1,0 +1,56 @@
+/* src/components/AnnouncementBar.css */
+
+.announcement-bar {
+  background-color: var(--medical-navy);
+  color: white;
+  height: 44px; /* Fixed height for stability */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Hide the text when it slides out */
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.announcement-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  opacity: 0;
+  transform: translateY(20px); /* Start slightly below */
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none; /* Prevent clicking while fading */
+}
+
+/* The "Active" slide */
+.announcement-content.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* The "Exiting" slide (optional if you want a specific exit animation, 
+   but strictly toggling active class usually works best for simple fades) */
+
+.announcement-highlight {
+  color: #fbbf24; /* Amber-400 for prices */
+  font-weight: 700;
+}
+
+.announcement-icon {
+  color: var(--clinical-teal); /* Teal for icons */
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .announcement-bar {
+    font-size: 0.8rem;
+  }
+}

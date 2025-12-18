@@ -217,8 +217,9 @@ export default function Home() {
             <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
               Share your findings and experience with the community.
             </p>
+            {/* UPDATED LINK */}
             <Link
-              to="/contact"
+              to="/write-review"
               className="trust-btn"
               style={{
                 display: "inline-flex",

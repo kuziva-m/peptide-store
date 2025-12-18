@@ -12,7 +12,6 @@ export default function Shipping() {
       .eq("key", "shipping_policy")
       .single()
       .then(({ data }) => {
-        // We only grab the text part if it exists, or fall back to default
         if (data && data.value && data.value.text) {
           setPolicyText(data.value.text);
         }
@@ -142,7 +141,7 @@ export default function Shipping() {
               margin: "0",
             }}
           >
-            Over $129
+            Over $150
           </p>
           <p
             style={{

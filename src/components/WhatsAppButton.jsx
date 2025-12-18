@@ -1,6 +1,9 @@
 import { MessageCircle } from "lucide-react";
+import { useCart } from "../lib/CartContext";
 
 export default function WhatsAppButton() {
+  const { isCartOpen } = useCart();
+
   // Replace with actual number
   const phoneNumber = "+61468533070";
   const message = "Hi Melbourne Peptides, I have a question about my research.";
@@ -12,8 +15,10 @@ export default function WhatsAppButton() {
       rel="noreferrer"
       style={{
         position: "fixed",
-        bottom: "90px", // Above the toast/footer
-        right: "24px",
+        bottom: "90px",
+        // Logic: If cart is open, move to LEFT. If closed, stay on RIGHT.
+        right: isCartOpen ? "auto" : "24px",
+        left: isCartOpen ? "24px" : "auto",
         backgroundColor: "#25D366",
         color: "white",
         width: "60px",
@@ -23,7 +28,7 @@ export default function WhatsAppButton() {
         alignItems: "center",
         justifyContent: "center",
         boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-        zIndex: 9998,
+        zIndex: 9999, // Ensure it sits above most things
         transition: "transform 0.2s",
       }}
       onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.1)")}

@@ -7,11 +7,15 @@ import {
   Lock,
   ShoppingBag,
   MessageSquare,
-} from "lucide-react"; // Added MessageSquare icon
+  Mail,
+  Users,
+} from "lucide-react";
 import ProductManager from "../components/admin/ProductManager";
 import ContentEditor from "../components/admin/ContentEditor";
 import OrderManager from "../components/admin/OrderManager";
-import ReviewManager from "../components/admin/ReviewManager"; // Import the new component
+import ReviewManager from "../components/admin/ReviewManager";
+import InquiryManager from "../components/admin/InquiryManager";
+import SubscriberManager from "../components/admin/SubscriberManager"; // <--- NEW IMPORT
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -190,12 +194,23 @@ export default function Admin() {
           label="Orders"
         />
         <TabButton
+          active={activeTab === "inquiries"}
+          onClick={() => setActiveTab("inquiries")}
+          icon={<Mail size={18} />}
+          label="Inquiries"
+        />
+        <TabButton
+          active={activeTab === "subscribers"}
+          onClick={() => setActiveTab("subscribers")}
+          icon={<Users size={18} />}
+          label="Subscribers"
+        />
+        <TabButton
           active={activeTab === "products"}
           onClick={() => setActiveTab("products")}
           icon={<Package size={18} />}
           label="Inventory"
         />
-        {/* NEW TAB */}
         <TabButton
           active={activeTab === "reviews"}
           onClick={() => setActiveTab("reviews")}
@@ -213,6 +228,9 @@ export default function Admin() {
       {/* CONTENT AREA */}
       <div>
         {activeTab === "orders" && <OrderManager />}
+        {activeTab === "inquiries" && <InquiryManager />}
+        {activeTab === "subscribers" && <SubscriberManager />}{" "}
+        {/* <--- RENDER NEW COMPONENT */}
         {activeTab === "products" && <ProductManager />}
         {activeTab === "reviews" && <ReviewManager />}
         {activeTab === "content" && <ContentEditor />}

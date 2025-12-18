@@ -30,7 +30,7 @@ export default function CartDrawer() {
 
   // --- CONFIG ---
   const FLAT_RATE_SHIPPING = 9.99;
-  const FREE_SHIPPING_THRESHOLD = 129.0;
+  const FREE_SHIPPING_THRESHOLD = 150.00; // <--- UPDATED TO $150
 
   // --- LOGIC ---
   const isFreeShipping = cartTotal >= FREE_SHIPPING_THRESHOLD;

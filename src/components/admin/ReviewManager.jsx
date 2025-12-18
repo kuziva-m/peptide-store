@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { Trash2, Plus, Save, Star, User } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  Save,
+  Star,
+  User,
+  Mail,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 export default function ReviewManager() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch reviews on load
   useEffect(() => {
     fetchReviews();
   }, []);
@@ -20,42 +28,30 @@ export default function ReviewManager() {
     setLoading(false);
   }
 
-  // Add a blank review
-  async function addReview() {
-    const newReview = {
-      name: "New Reviewer",
-      role: "Verified Buyer",
-      text: "Write review here...",
-      rating: 5,
-      avatar_url: "",
-      is_active: true,
-    };
-    const { data, error } = await supabase
+  // Toggle Active Status (Approve/Reject)
+  async function toggleActive(id, currentStatus) {
+    const newStatus = !currentStatus;
+    setReviews(
+      reviews.map((r) => (r.id === id ? { ...r, is_active: newStatus } : r))
+    );
+    await supabase
       .from("reviews")
-      .insert(newReview)
-      .select();
-    if (data) setReviews([data[0], ...reviews]);
+      .update({ is_active: newStatus })
+      .eq("id", id);
   }
 
-  // Update a specific field for a review
   async function updateReview(id, field, value) {
-    // 1. Update local state immediately for snappy UI
-    const updatedReviews = reviews.map((r) =>
-      r.id === id ? { ...r, [field]: value } : r
+    setReviews(
+      reviews.map((r) => (r.id === id ? { ...r, [field]: value } : r))
     );
-    setReviews(updatedReviews);
-
-    // 2. Save to DB
     await supabase
       .from("reviews")
       .update({ [field]: value })
       .eq("id", id);
   }
 
-  // Delete review
   async function deleteReview(id) {
-    if (!confirm("Are you sure you want to delete this review?")) return;
-
+    if (!confirm("Delete this review?")) return;
     setReviews(reviews.filter((r) => r.id !== id));
     await supabase.from("reviews").delete().eq("id", id);
   }
@@ -64,34 +60,9 @@ export default function ReviewManager() {
 
   return (
     <div style={{ maxWidth: "800px" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <h2 style={{ margin: 0, color: "var(--medical-navy)" }}>
-          Manage Reviews
-        </h2>
-        <button
-          onClick={addReview}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 16px",
-            background: "var(--primary)",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: "600",
-          }}
-        >
-          <Plus size={18} /> Add Review
-        </button>
-      </div>
+      <h2 style={{ marginBottom: "20px", color: "var(--medical-navy)" }}>
+        Manage Reviews
+      </h2>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {reviews.map((review) => (
@@ -102,40 +73,37 @@ export default function ReviewManager() {
               padding: "20px",
               borderRadius: "12px",
               border: "1px solid #e2e8f0",
-              boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+              opacity: review.is_active ? 1 : 0.7,
+              borderLeft: review.is_active
+                ? "4px solid #10b981"
+                : "4px solid #cbd5e1",
             }}
           >
-            {/* Header: Avatar, Name, Role */}
+            {/* Top Bar: Status & Rating */}
             <div
               style={{
                 display: "flex",
-                gap: "15px",
+                justifyContent: "space-between",
+                alignItems: "center",
                 marginBottom: "15px",
-                flexWrap: "wrap",
               }}
             >
-              <div style={{ flex: 1, minWidth: "200px" }}>
-                <label style={labelStyle}>Reviewer Name</label>
-                <input
-                  value={review.name}
-                  onChange={(e) =>
-                    updateReview(review.id, "name", e.target.value)
-                  }
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: "200px" }}>
-                <label style={labelStyle}>Role / Badge</label>
-                <input
-                  value={review.role}
-                  onChange={(e) =>
-                    updateReview(review.id, "role", e.target.value)
-                  }
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{ width: "80px" }}>
-                <label style={labelStyle}>Rating</label>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: "700",
+                    textTransform: "uppercase",
+                    color: review.is_active ? "#10b981" : "#94a3b8",
+                    background: review.is_active ? "#ecfdf5" : "#f1f5f9",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  {review.is_active ? "Published" : "Pending"}
+                </span>
                 <input
                   type="number"
                   max="5"
@@ -144,61 +112,47 @@ export default function ReviewManager() {
                   onChange={(e) =>
                     updateReview(review.id, "rating", parseInt(e.target.value))
                   }
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-
-            {/* Avatar URL */}
-            <div style={{ marginBottom: "15px" }}>
-              <label style={labelStyle}>Profile Photo URL (Optional)</label>
-              <div
-                style={{ display: "flex", gap: "10px", alignItems: "center" }}
-              >
-                <div
                   style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    background: "#f0fdfa",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
+                    width: "60px",
+                    padding: "6px",
+                    borderRadius: "6px",
                     border: "1px solid #ddd",
                   }}
-                >
-                  {review.avatar_url ? (
-                    <img
-                      src={review.avatar_url}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
-                    <User size={20} color="#0d9488" />
-                  )}
-                </div>
-                <input
-                  placeholder="https://..."
-                  value={review.avatar_url || ""}
-                  onChange={(e) =>
-                    updateReview(review.id, "avatar_url", e.target.value)
-                  }
-                  style={{ ...inputStyle, flex: 1 }}
                 />
+                <Star size={16} fill="#fbbf24" color="#fbbf24" />
               </div>
-              <small style={{ color: "#94a3b8" }}>
-                Tip: Right click a photo on Google -> "Copy Image Address" and
-                paste here.
-              </small>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  onClick={() => toggleActive(review.id, review.is_active)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: review.is_active ? "#f59e0b" : "#10b981",
+                    fontWeight: "600",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {review.is_active ? "Unpublish" : "Approve"}
+                </button>
+              </div>
             </div>
 
-            {/* Review Text */}
+            {/* Title & Review */}
             <div style={{ marginBottom: "15px" }}>
-              <label style={labelStyle}>Review Content</label>
+              <input
+                placeholder="Review Title"
+                value={review.title || ""}
+                onChange={(e) =>
+                  updateReview(review.id, "title", e.target.value)
+                }
+                style={{
+                  ...inputStyle,
+                  fontWeight: "700",
+                  marginBottom: "10px",
+                }}
+              />
               <textarea
                 rows={3}
                 value={review.text}
@@ -209,24 +163,60 @@ export default function ReviewManager() {
               />
             </div>
 
-            {/* Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            {/* Author Details */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "15px",
+                alignItems: "end",
+              }}
+            >
+              <div>
+                <label style={labelStyle}>Reviewer Name</label>
+                <input
+                  value={review.name}
+                  onChange={(e) =>
+                    updateReview(review.id, "name", e.target.value)
+                  }
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Email (Private)</label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "#64748b",
+                    fontSize: "0.9rem",
+                    padding: "10px",
+                    background: "#f8fafc",
+                    borderRadius: "6px",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Mail size={16} /> {review.email || "No email"}
+                </div>
+              </div>
+            </div>
+
+            {/* Delete */}
+            <div style={{ marginTop: "15px", textAlign: "right" }}>
               <button
                 onClick={() => deleteReview(review.id)}
                 style={{
                   color: "#ef4444",
-                  background: "#fef2f2",
+                  background: "none",
                   border: "none",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
                   cursor: "pointer",
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  fontWeight: "600",
                 }}
               >
-                <Trash2 size={16} /> Delete
+                <Trash2 size={16} /> Delete Review
               </button>
             </div>
           </div>
@@ -238,14 +228,14 @@ export default function ReviewManager() {
 
 const labelStyle = {
   display: "block",
-  fontSize: "0.85rem",
+  fontSize: "0.8rem",
   color: "#64748b",
-  marginBottom: "5px",
-  fontWeight: "500",
+  marginBottom: "4px",
+  fontWeight: "600",
 };
 const inputStyle = {
   width: "100%",
-  padding: "10px",
+  padding: "8px 12px",
   borderRadius: "6px",
   border: "1px solid #cbd5e1",
   fontSize: "0.95rem",

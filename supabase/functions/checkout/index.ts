@@ -7,7 +7,6 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
 });
 
 serve(async (req: Request) => {
-  // CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: {
@@ -39,6 +38,7 @@ serve(async (req: Request) => {
       });
     }
 
+    // 1. Get product prices from DB
     const variantIds = items.map((item: any) => item.variantId);
     const { data: dbVariants, error: dbError } = await supabaseClient
       .from("variants")
@@ -46,25 +46,16 @@ serve(async (req: Request) => {
       .in("id", variantIds);
 
     if (dbError) throw new Error(dbError.message);
-    if (!dbVariants || dbVariants.length !== variantIds.length) {
-      throw new Error("One or more cart items were not found in the database.");
-    }
 
     const dbVariantMap = new Map(dbVariants.map((v: any) => [v.id, v]));
-    let calculatedSubtotal = 0; // In Cents
+    let calculatedSubtotal = 0;
 
+    // 2. Create the list of products
     const lineItems = items.map((item: any) => {
       const dbVariant = dbVariantMap.get(item.variantId);
       const validatedPrice = dbVariant.price;
       const quantity = item.quantity;
 
-      if (typeof validatedPrice !== "number" || validatedPrice < 0) {
-        throw new Error(
-          `Invalid price found for variant ID: ${item.variantId}`
-        );
-      }
-
-      // Add to running subtotal (Dollars * 100 * Quantity)
       calculatedSubtotal += Math.round(validatedPrice * 100) * quantity;
 
       return {
@@ -83,12 +74,27 @@ serve(async (req: Request) => {
       };
     });
 
-    // --- FREE SHIPPING LOGIC ---
-    // Threshold is $129.00 AUD (12900 cents)
-    const FREE_SHIPPING_THRESHOLD_CENTS = 12900;
+    // 3. THE "SHIPPING AS A PRODUCT" LOGIC
+    // If order is under $150, we ADD a product called "Flat Rate Shipping"
+    const FREE_SHIPPING_THRESHOLD_CENTS = 15000; // <--- UPDATED TO 15000 CENTS ($150)
     const isFreeShipping = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD_CENTS;
-    const shippingAmount = isFreeShipping ? 0 : 999; // 0 or 999 cents ($9.99)
 
+    if (!isFreeShipping) {
+      lineItems.push({
+        price_data: {
+          currency: "aud",
+          product_data: {
+            name: "Flat Rate Shipping",
+            description: "Standard Shipping (24hr Dispatch)",
+            images: ["https://cdn-icons-png.flaticon.com/512/411/411763.png"],
+          },
+          unit_amount: 999, // $9.99
+        },
+        quantity: 1,
+      });
+    }
+
+    // 4. Create Session
     const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
       mode: "payment",
@@ -99,26 +105,6 @@ serve(async (req: Request) => {
 
       shipping_address_collection: { allowed_countries: ["AU"] },
       phone_number_collection: { enabled: true },
-
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: {
-              amount: shippingAmount,
-              currency: "aud",
-            },
-            // Dynamic Label
-            display_name: isFreeShipping
-              ? "Free Express Shipping"
-              : "Standard Shipping (24hr Dispatch)",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 1 },
-              maximum: { unit: "business_day", value: 3 },
-            },
-          },
-        },
-      ],
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
@@ -128,17 +114,12 @@ serve(async (req: Request) => {
       },
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: `Payment Processing Error: ${errorMessage}` }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: `Error: ${error.message}` }), {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
   }
 });
