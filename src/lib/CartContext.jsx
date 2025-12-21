@@ -1,86 +1,102 @@
-import { createContext, useState, useContext } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
-  const [notification, setNotification] = useState(null);
+  // 1. Safer Initialization
+  const [cart, setCart] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem("cart");
+      // If saved is "null", "undefined", or invalid JSON, return []
+      return saved ? JSON.parse(saved) || [] : [];
+    } catch (error) {
+      console.error("Cart load error:", error);
+      return [];
+    }
+  });
 
-  // NEW: Control the Cart Drawer visibility
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const toggleCart = () => setIsCartOpen(!isCartOpen);
-  const openCart = () => setIsCartOpen(true);
-  const closeCart = () => setIsCartOpen(false);
+  // 2. Sync to LocalStorage (Only if cart is valid array)
+  useEffect(() => {
+    if (Array.isArray(cart)) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+  }, [cart]);
 
-  const addToCart = (product, variant) => {
-    setCartItems((prevItems) => {
-      const existingItemIndex = prevItems.findIndex(
-        (item) => item.productId === product.id && item.variantId === variant.id
+  // 3. Calculated Total
+  const cartTotal = Array.isArray(cart)
+    ? cart.reduce((total, item) => total + item.price * item.quantity, 0)
+    : 0;
+
+  const cartCount = Array.isArray(cart)
+    ? cart.reduce((count, item) => count + item.quantity, 0)
+    : 0;
+
+  const toggleCart = () => setIsCartOpen(!isCartOpen);
+
+  const addToCart = (product, quantity = 1, variant = "Default") => {
+    setCart((prevCart) => {
+      // Safety check: ensure prevCart is an array
+      const currentCart = Array.isArray(prevCart) ? prevCart : [];
+
+      const existingItemIndex = currentCart.findIndex(
+        (item) => item.id === product.id && item.variant === variant
       );
 
       if (existingItemIndex > -1) {
-        const newItems = [...prevItems];
-        newItems[existingItemIndex].quantity += 1;
-        return newItems;
+        const newCart = [...currentCart];
+        newCart[existingItemIndex].quantity += quantity;
+        return newCart;
       } else {
-        return [
-          ...prevItems,
-          {
-            productId: product.id,
-            variantId: variant.id,
-            name: product.name,
-            size: variant.size_label,
-            price: variant.price,
-            quantity: 1,
-            image: variant.image_url || product.image_url, // Store image for drawer
-          },
-        ];
+        return [...currentCart, { ...product, quantity, variant }];
       }
     });
-
-    setNotification(`Added ${product.name} to cart`);
-    setTimeout(() => setNotification(null), 3000);
-
-    // Optional: Auto-open cart on add
-    setIsCartOpen(true);
+    setIsCartOpen(true); // Open cart when adding
   };
 
-  const removeFromCart = (variantId) => {
-    setCartItems((prev) => prev.filter((item) => item.variantId !== variantId));
+  const removeFromCart = (id, variant) => {
+    setCart((prev) => {
+      const current = Array.isArray(prev) ? prev : [];
+      // If variant is provided, match both id and variant, otherwise just id (legacy support)
+      if (variant) {
+        return current.filter(
+          (item) => !(item.id === id && item.variant === variant)
+        );
+      }
+      return current.filter((item) => item.id !== id);
+    });
   };
 
-  const updateQuantity = (variantId, delta) => {
-    setCartItems((prev) =>
-      prev.map((item) => {
-        if (item.variantId === variantId) {
-          return { ...item, quantity: Math.max(1, item.quantity + delta) };
+  const updateQuantity = (id, newQuantity, variant) => {
+    if (newQuantity < 1) return;
+    setCart((prev) => {
+      const current = Array.isArray(prev) ? prev : [];
+      return current.map((item) => {
+        // Match by ID and Variant if possible
+        if (item.id === id && (!variant || item.variant === variant)) {
+          return { ...item, quantity: newQuantity };
         }
         return item;
-      })
-    );
+      });
+    });
   };
 
-  const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
-  const cartTotal = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  const clearCart = () => setCart([]);
 
   return (
     <CartContext.Provider
       value={{
-        cartItems,
+        cart: Array.isArray(cart) ? cart : [], // Always ensure array return
+        isCartOpen,
+        toggleCart,
         addToCart,
         removeFromCart,
         updateQuantity,
-        cartCount,
+        clearCart,
         cartTotal,
-        notification,
-        isCartOpen,
-        toggleCart,
-        openCart,
-        closeCart,
+        cartCount,
       }}
     >
       {children}

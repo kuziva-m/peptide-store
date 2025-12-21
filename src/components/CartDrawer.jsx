@@ -17,38 +17,45 @@ import "./CartDrawer.css";
 
 export default function CartDrawer() {
   const {
-    cart,
+    cart = [],
     isCartOpen,
     toggleCart,
     updateQuantity,
     removeFromCart,
-    cartTotal,
+    cartTotal = 0,
   } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // --- NEW: DISCOUNT STATE ---
   const [discountCode, setDiscountCode] = useState("");
-  const [appliedDiscount, setAppliedDiscount] = useState(null); // 'WELCOME10' or null
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountError, setDiscountError] = useState("");
 
-  // --- SCROLL LOCKING (Fixes double scrollbar) ---
+  // Lock background scroll
   useEffect(() => {
     if (isCartOpen) {
-      document.body.style.overflow = "hidden"; // Lock background
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "unset"; // Unlock
+      document.body.style.overflow = "unset";
     }
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [isCartOpen]);
 
+  // --- CRITICAL FIX: SAFETY HELPER ---
+  // This prevents the "Error #31" crash by converting objects to text
+  const renderVariantName = (variant) => {
+    if (!variant) return "";
+    if (typeof variant === "string") return variant;
+    // If it's a "poisoned" object, extract the label safely
+    if (typeof variant === "object") return variant.size_label || "Standard";
+    return String(variant);
+  };
+
   const handleApplyCoupon = (e) => {
     e.preventDefault();
     setDiscountError("");
-
-    // Check if code matches WELCOME10 (Case insensitive)
     if (discountCode.trim().toUpperCase() === "WELCOME10") {
       setAppliedDiscount("WELCOME10");
       setDiscountError("");
@@ -68,10 +75,7 @@ export default function CartDrawer() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("checkout", {
-        body: {
-          items: cart,
-          discountCode: appliedDiscount,
-        },
+        body: { items: cart, discountCode: appliedDiscount },
       });
 
       if (error) throw error;
@@ -85,21 +89,20 @@ export default function CartDrawer() {
   };
 
   if (!isCartOpen) return null;
+  const itemCount = cart ? cart.length : 0;
 
   return (
     <>
       <div className="cart-overlay" onClick={toggleCart}></div>
-
       <div className="cart-drawer">
-        {/* 1. FIXED HEADER */}
         <div className="cart-header">
-          <h3>Your Cart ({cart.length})</h3>
+          <h3>Your Cart ({itemCount})</h3>
           <button onClick={toggleCart} className="close-cart-btn">
             <X size={24} />
           </button>
         </div>
 
-        {cart.length === 0 ? (
+        {itemCount === 0 ? (
           <div className="empty-cart">
             <ShoppingBag size={48} color="#e2e8f0" />
             <p>Your cart is empty.</p>
@@ -115,69 +118,83 @@ export default function CartDrawer() {
           </div>
         ) : (
           <>
-            {/* 2. SCROLLABLE ITEMS LIST */}
             <div className="cart-items">
-              {cart.map((item) => (
-                <div key={item.id} className="cart-item">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="cart-item-img"
-                  />
-                  <div className="cart-item-details">
-                    <div>
-                      <h4>{item.name}</h4>
-                      <p className="cart-item-variant">{item.variant}</p>
-                    </div>
-                    <div className="cart-item-controls">
-                      <div className="qty-selector">
-                        <button
-                          onClick={() =>
-                            updateQuantity(item.id, item.quantity - 1)
-                          }
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button
-                          onClick={() =>
-                            updateQuantity(item.id, item.quantity + 1)
-                          }
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <p className="cart-item-price">
-                          ${(item.price * item.quantity).toFixed(2)}
+              {cart &&
+                cart.map((item) => (
+                  <div
+                    key={`${item.id}-${renderVariantName(item.variant)}`}
+                    className="cart-item"
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="cart-item-img"
+                    />
+                    <div className="cart-item-details">
+                      <div>
+                        <h4>{item.name}</h4>
+                        {/* --- CRITICAL FIX APPLIED HERE --- */}
+                        <p className="cart-item-variant">
+                          {renderVariantName(item.variant)}
                         </p>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            color: "#ef4444",
-                            fontSize: "0.7rem",
-                            cursor: "pointer",
-                            marginTop: "4px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            marginLeft: "auto",
-                          }}
-                        >
-                          <Trash2 size={12} /> Remove
-                        </button>
+                      </div>
+                      <div className="cart-item-controls">
+                        <div className="qty-selector">
+                          <button
+                            onClick={() =>
+                              updateQuantity(
+                                item.id,
+                                item.quantity - 1,
+                                item.variant
+                              )
+                            }
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button
+                            onClick={() =>
+                              updateQuantity(
+                                item.id,
+                                item.quantity + 1,
+                                item.variant
+                              )
+                            }
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p className="cart-item-price">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </p>
+                          <button
+                            onClick={() =>
+                              removeFromCart(item.id, item.variant)
+                            }
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#ef4444",
+                              fontSize: "0.7rem",
+                              cursor: "pointer",
+                              marginTop: "4px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              marginLeft: "auto",
+                            }}
+                          >
+                            <Trash2 size={12} /> Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
 
-            {/* 3. FIXED FOOTER (Contains Discount & Checkout) */}
             <div className="cart-footer">
-              {/* DISCOUNT SECTION */}
               <div style={{ marginBottom: "24px" }}>
                 {!appliedDiscount ? (
                   <form
@@ -277,7 +294,6 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {/* TOTALS */}
               <div style={{ marginBottom: "20px" }}>
                 <div
                   style={{
@@ -290,7 +306,6 @@ export default function CartDrawer() {
                   <span>Subtotal</span>
                   <span>${cartTotal.toFixed(2)}</span>
                 </div>
-
                 {appliedDiscount && (
                   <div
                     style={{
@@ -304,7 +319,6 @@ export default function CartDrawer() {
                     <span>-${(cartTotal * 0.1).toFixed(2)}</span>
                   </div>
                 )}
-
                 <div
                   style={{
                     display: "flex",
@@ -339,9 +353,6 @@ export default function CartDrawer() {
                   </>
                 )}
               </button>
-              <p className="shipping-note">
-                Shipping & Taxes calculated at checkout
-              </p>
             </div>
           </>
         )}

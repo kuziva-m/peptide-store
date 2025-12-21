@@ -10,6 +10,8 @@ import {
   ChevronDown,
   FileText,
   ExternalLink,
+  Plus,
+  Minus,
 } from "lucide-react";
 import "./Product.css";
 
@@ -20,6 +22,9 @@ export default function Product() {
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // --- RESTORED: Quantity State ---
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -41,6 +46,32 @@ export default function Product() {
     fetchProduct();
   }, [id]);
 
+  // --- RESTORED & FIXED: Add to Cart Logic ---
+  const handleAddToCart = () => {
+    if (!product || !selectedVariant) return;
+
+    addToCart(
+      {
+        ...product,
+        id: product.id,
+        price: selectedVariant.price,
+        image: selectedVariant.image_url || product.image_url,
+        // Backend needs this to verify price
+        variantId: selectedVariant.id,
+      },
+      quantity,
+      // Frontend needs this as a STRING to avoid crashing
+      selectedVariant.size_label
+    );
+  };
+
+  const formatPrice = (amount) => {
+    return new Intl.NumberFormat("en-AU", {
+      style: "currency",
+      currency: "AUD",
+    }).format(amount);
+  };
+
   if (loading)
     return (
       <div className="container" style={{ padding: "80px" }}>
@@ -54,29 +85,20 @@ export default function Product() {
       </div>
     );
 
-  // Find the formatPrice function and update:
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat("en-AU", {
-      style: "currency",
-      currency: "AUD",
-    }).format(amount);
-  };
-
   const displayImage =
     selectedVariant?.image_url ||
     product.image_url ||
     "https://via.placeholder.com/600";
+
+  // Check if specifically marked as out of stock (default to true if undefined)
   const isInStock = product.in_stock !== false;
 
-  // --- SMART LAB RESULT FALLBACK LOGIC ---
-  // 1. Check if the *selected variant* has a specific test.
-  // 2. If not, use the main *product* test.
   const activeLabUrl =
     selectedVariant?.lab_result_url || product.lab_result_url;
 
   return (
     <div className="container product-page">
-      <Link to="/" className="back-link">
+      <Link to="/shop" className="back-link">
         <ChevronLeft size={16} /> Back to Catalog
       </Link>
 
@@ -214,36 +236,79 @@ export default function Product() {
             </div>
           </div>
 
-          <button
-            className="p-add-btn"
-            onClick={() =>
-              selectedVariant && addToCart(product, selectedVariant)
-            }
-            disabled={!selectedVariant || !isInStock}
-            style={{
-              width: "100%",
-              padding: "18px",
-              backgroundColor: isInStock ? "#4635de" : "#94a3b8",
-              color: "white",
-              border: "none",
-              borderRadius: "10px",
-              fontSize: "1.1rem",
-              fontWeight: "bold",
-              cursor: isInStock ? "pointer" : "not-allowed",
-              marginBottom: "30px",
-              boxShadow: isInStock
-                ? "0 4px 10px rgba(70, 53, 222, 0.2)"
-                : "none",
-            }}
-          >
-            {isInStock
-              ? selectedVariant
-                ? "Add to Cart"
-                : "Select a Variant"
-              : "Out of Stock"}
-          </button>
+          {/* --- RESTORED: Quantity & Add Button Row --- */}
+          <div style={{ display: "flex", gap: "15px", marginBottom: "30px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "#f1f5f9",
+                borderRadius: "10px",
+                padding: "0 10px",
+              }}
+            >
+              <button
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "10px",
+                }}
+              >
+                <Minus size={16} />
+              </button>
+              <span
+                style={{
+                  fontWeight: "700",
+                  minWidth: "20px",
+                  textAlign: "center",
+                }}
+              >
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity((q) => q + 1)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "10px",
+                }}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
 
-          {/* DYNAMIC LAB RESULTS ACCORDION */}
+            <button
+              className="p-add-btn"
+              onClick={handleAddToCart}
+              disabled={!selectedVariant || !isInStock}
+              style={{
+                flex: 1,
+                padding: "18px",
+                backgroundColor: isInStock ? "#4635de" : "#94a3b8",
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                fontSize: "1.1rem",
+                fontWeight: "bold",
+                cursor: isInStock ? "pointer" : "not-allowed",
+                boxShadow: isInStock
+                  ? "0 4px 10px rgba(70, 53, 222, 0.2)"
+                  : "none",
+              }}
+            >
+              {isInStock
+                ? selectedVariant
+                  ? `Add to Cart - ${formatPrice(
+                      selectedVariant.price * quantity
+                    )}`
+                  : "Select a Variant"
+                : "Out of Stock"}
+            </button>
+          </div>
+
           {activeLabUrl && (
             <details className="lab-accordion" open={false}>
               <summary className="lab-summary">
@@ -363,3 +428,4 @@ export default function Product() {
     </div>
   );
 }
+
