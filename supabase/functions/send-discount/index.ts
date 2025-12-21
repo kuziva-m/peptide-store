@@ -21,7 +21,8 @@ serve(async (req) => {
     // --- CONFIGURATION ---
     const SENDER_NAME = "Melbourne Peptides";
 
-    // USAGE: Any name you want @ your verified domain
+    // NOTE: This must match your verified domain in Resend
+    // If you haven't verified 'melbournepeptides.com.au' yet, use 'onboarding@resend.dev' for testing
     const SENDER_EMAIL = "support@melbournepeptides.com.au";
 
     console.log(`Sending email to ${email} from ${SENDER_NAME}`);
@@ -29,21 +30,20 @@ serve(async (req) => {
     const { data, error } = await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to: [email],
-      // IMPORTANT: Replies will go to your real Gmail so you don't miss them
       reply_to: "melbournepeptides1@gmail.com",
-      subject: "Your Exclusive Discount Code is Inside!",
+      subject: "Welcome to Melbourne Peptides",
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
           <h1 style="color: #0f172a; text-align: center;">Welcome to Melbourne Peptides</h1>
           <p>Hi ${name},</p>
-          <p>You've unlocked a special discount for your research supplies.</p>
+          <p>Thank you for joining our research community. As a welcome gift, we have a special discount for you.</p>
           
           <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;">
-            <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #64748b;">YOUR CODE:</p>
-            <span style="font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: 2px;">PRIME10</span>
+            <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #64748b;">YOUR EXCLUSIVE CODE:</p>
+            <span style="font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: 2px;">WELCOME10</span>
           </div>
 
-          <p>Apply this code at checkout to see your surprise savings.</p>
+          <p>Apply this code at checkout to receive <strong>10% OFF</strong> your first order.</p>
           
           <div style="text-align: center; margin-top: 30px;">
             <a href="https://melbournepeptides.com.au/shop" style="background: #0f172a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Shop Now</a>

@@ -6,15 +6,15 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
   apiVersion: "2022-11-15",
 });
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const supabaseClient = createClient(
@@ -24,22 +24,20 @@ serve(async (req: Request) => {
   );
 
   try {
-    const { action, items, session_id } = await req.json();
+    // 1. Receive inputs (including discountCode)
+    const { items, session_id, action, discountCode } = await req.json();
 
     if (action === "retrieve" && session_id) {
       const session = await stripe.checkout.sessions.retrieve(session_id, {
         expand: ["line_items", "total_details.breakdown"],
       });
       return new Response(JSON.stringify({ session }), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 1. Get product prices from DB
-    const variantIds = items.map((item: any) => item.variantId);
+    // 2. Validate Products with Database
+    const variantIds = items.map((item: any) => item.variantId || item.id);
     const { data: dbVariants, error: dbError } = await supabaseClient
       .from("variants")
       .select("id, price, size_label, products(name, image_url)")
@@ -50,9 +48,11 @@ serve(async (req: Request) => {
     const dbVariantMap = new Map(dbVariants.map((v: any) => [v.id, v]));
     let calculatedSubtotal = 0;
 
-    // 2. Create the list of products
     const lineItems = items.map((item: any) => {
-      const dbVariant = dbVariantMap.get(item.variantId);
+      const dbVariant = dbVariantMap.get(item.variantId || item.id);
+
+      if (!dbVariant) throw new Error("Product variant not found");
+
       const validatedPrice = dbVariant.price;
       const quantity = item.quantity;
 
@@ -74,9 +74,8 @@ serve(async (req: Request) => {
       };
     });
 
-    // 3. THE "SHIPPING AS A PRODUCT" LOGIC
-    // If order is under $150, we ADD a product called "Flat Rate Shipping"
-    const FREE_SHIPPING_THRESHOLD_CENTS = 15000; // <--- UPDATED TO 15000 CENTS ($150)
+    // 3. Shipping Logic
+    const FREE_SHIPPING_THRESHOLD_CENTS = 15000; // $150
     const isFreeShipping = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD_CENTS;
 
     if (!isFreeShipping) {
@@ -94,32 +93,37 @@ serve(async (req: Request) => {
       });
     }
 
-    // 4. Create Session
-    const session = await stripe.checkout.sessions.create({
+    // 4. Session Config
+    const sessionParams: any = {
       line_items: lineItems,
       mode: "payment",
       success_url: `${req.headers.get(
         "origin"
       )}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/?canceled=true`,
-
       shipping_address_collection: { allowed_countries: ["AU"] },
       phone_number_collection: { enabled: true },
-    });
+    };
+
+    // 5. APPLY COUPON (This adds the deduction to Stripe)
+    // Make sure you created the coupon "WELCOME10" in your Stripe Dashboard!
+    if (discountCode === "WELCOME10") {
+      sessionParams.discounts = [
+        {
+          coupon: "WELCOME10",
+        },
+      ];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return new Response(JSON.stringify({ url: session.url }), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: `Error: ${error.message}` }), {
       status: 400,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

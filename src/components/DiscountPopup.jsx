@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Gift, ArrowRight, CheckCircle, Mail } from "lucide-react";
+import { X, Gift, ArrowRight, CheckCircle, Mail, Copy } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function DiscountPopup() {
@@ -25,7 +25,11 @@ export default function DiscountPopup() {
 
   const handleOpen = () => {
     setIsVisible(true);
-    setStep("form"); // <--- FORCE FORM TO SHOW EVERY TIME (Good for testing)
+    if (localStorage.getItem("discount_unlocked") === "true") {
+      setStep("success");
+    } else {
+      setStep("form");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -33,29 +37,22 @@ export default function DiscountPopup() {
     setLoading(true);
 
     try {
-      // 1. Save to Database
       const { error: dbError } = await supabase
         .from("subscribers")
         .insert([formData]);
-      // Ignore duplicate email errors so the flow continues
       if (dbError && dbError.code !== "23505") throw dbError;
 
-      // 2. Send Email via Cloud Function
       const { error: emailError } = await supabase.functions.invoke(
         "send-discount",
         {
           body: { name: formData.name, email: formData.email },
         }
       );
+      if (emailError) console.error("Email error:", emailError);
 
-      if (emailError) {
-        console.error("Email send failed:", emailError);
-        alert("Failed to send email. Check Supabase logs.");
-      }
-
-      // 3. Success State
       setStep("success");
       localStorage.setItem("discount_popup_seen", "true");
+      localStorage.setItem("discount_unlocked", "true");
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Please try again.");
@@ -64,108 +61,29 @@ export default function DiscountPopup() {
     }
   };
 
-  // --- STATE 1: FLOATING TRIGGER BUTTON ---
+  const copyCode = () => {
+    navigator.clipboard.writeText("WELCOME10");
+    alert("Code copied to clipboard!");
+  };
+
   if (!isVisible) {
     return (
-      <button
-        onClick={handleOpen}
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          left: "24px",
-          backgroundColor: "#0f172a",
-          color: "white",
-          padding: "12px 20px",
-          borderRadius: "50px",
-          border: "1px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          cursor: "pointer",
-          zIndex: 9990,
-          fontWeight: "600",
-          fontSize: "0.9rem",
-          transition: "transform 0.2s, box-shadow 0.2s",
-          animation: "fadeIn 0.5s ease",
-        }}
-      >
-        <Gift size={18} color="#fbbf24" /> Get Exclusive Discount
+      <button onClick={handleOpen} style={floatingBtnStyle}>
+        <Gift size={18} color="#fbbf24" /> Get Welcome Discount
       </button>
     );
   }
 
-  // --- STATE 2: POPUP ---
   return (
     <>
-      <div
-        onClick={handleClose}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          backgroundColor: "rgba(15, 23, 42, 0.6)",
-          backdropFilter: "blur(4px)",
-          zIndex: 99999,
-          animation: "fadeIn 0.3s ease",
-        }}
-      />
-
-      <div
-        style={{
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "90%",
-          maxWidth: "850px",
-          backgroundColor: "white",
-          borderRadius: "20px",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-          zIndex: 100000,
-          display: "flex",
-          overflow: "hidden",
-          animation: "slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
-      >
-        <button
-          onClick={handleClose}
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "20px",
-            background: "white",
-            border: "none",
-            borderRadius: "50%",
-            width: "36px",
-            height: "36px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-            color: "#64748b",
-            zIndex: 10,
-          }}
-        >
+      <div onClick={handleClose} style={backdropStyle} />
+      <div style={modalStyle}>
+        <button onClick={handleClose} style={closeBtnStyle}>
           <X size={20} />
         </button>
 
-        {/* LEFT IMAGE */}
-        <div
-          className="popup-image-side"
-          style={{
-            flex: 1,
-            backgroundColor: "#0f172a",
-            backgroundImage: "url('/hero-banner.jpeg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            position: "relative",
-            minHeight: "400px",
-          }}
-        >
+        {/* LEFT */}
+        <div className="popup-image-side" style={imageSideStyle}>
           <div
             style={{
               position: "absolute",
@@ -213,7 +131,7 @@ export default function DiscountPopup() {
           </div>
         </div>
 
-        {/* RIGHT FORM */}
+        {/* RIGHT */}
         <div
           style={{
             flex: 1,
@@ -237,7 +155,7 @@ export default function DiscountPopup() {
                 Get your code
               </h3>
               <p style={{ color: "#64748b", marginBottom: "30px" }}>
-                Enter your details to receive your surprise discount.
+                Enter your details to receive your discount.
               </p>
               <div
                 style={{
@@ -284,20 +202,11 @@ export default function DiscountPopup() {
             </form>
           ) : (
             <div style={{ textAlign: "center", animation: "fadeIn 0.5s ease" }}>
-              <div
-                style={{
-                  background: "#f0fdf4",
-                  width: "80px",
-                  height: "80px",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                }}
-              >
-                <Mail size={40} color="#10b981" />
-              </div>
+              <CheckCircle
+                size={60}
+                color="#10b981"
+                style={{ margin: "0 auto 20px" }}
+              />
               <h3
                 style={{
                   fontSize: "1.8rem",
@@ -305,18 +214,49 @@ export default function DiscountPopup() {
                   marginBottom: "10px",
                 }}
               >
-                Check Your Inbox!
+                You're In!
               </h3>
-              <p
+              <p style={{ color: "#64748b", marginBottom: "30px" }}>
+                Here is your exclusive discount code:
+              </p>
+
+              <div
+                onClick={copyCode}
                 style={{
-                  color: "#64748b",
-                  marginBottom: "30px",
-                  lineHeight: "1.6",
+                  background: "#f1f5f9",
+                  padding: "20px",
+                  borderRadius: "12px",
+                  border: "2px dashed #0f172a",
+                  cursor: "pointer",
+                  marginBottom: "20px",
                 }}
               >
-                We've sent your exclusive discount code to{" "}
-                <strong>{formData.email}</strong>.
-              </p>
+                <span
+                  style={{
+                    fontSize: "2rem",
+                    fontWeight: "800",
+                    color: "#0f172a",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  WELCOME10
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    fontSize: "0.9rem",
+                    color: "#4f46e5",
+                    marginTop: "10px",
+                    fontWeight: "600",
+                  }}
+                >
+                  <Copy size={14} /> Click to Copy
+                </div>
+              </div>
+
               <button
                 onClick={handleClose}
                 style={{
@@ -361,4 +301,76 @@ const buttonStyle = {
   alignItems: "center",
   gap: "10px",
   transition: "opacity 0.2s",
+};
+const floatingBtnStyle = {
+  position: "fixed",
+  bottom: "24px",
+  left: "24px",
+  backgroundColor: "#0f172a",
+  color: "white",
+  padding: "12px 20px",
+  borderRadius: "50px",
+  border: "1px solid rgba(255,255,255,0.1)",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  cursor: "pointer",
+  zIndex: 9990,
+  fontWeight: "600",
+  fontSize: "0.9rem",
+  transition: "transform 0.2s, box-shadow 0.2s",
+  animation: "fadeIn 0.5s ease",
+};
+const backdropStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  backgroundColor: "rgba(15, 23, 42, 0.6)",
+  backdropFilter: "blur(4px)",
+  zIndex: 99999,
+  animation: "fadeIn 0.3s ease",
+};
+const modalStyle = {
+  position: "fixed",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: "90%",
+  maxWidth: "850px",
+  backgroundColor: "white",
+  borderRadius: "20px",
+  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+  zIndex: 100000,
+  display: "flex",
+  overflow: "hidden",
+  animation: "slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+};
+const closeBtnStyle = {
+  position: "absolute",
+  top: "20px",
+  right: "20px",
+  background: "white",
+  border: "none",
+  borderRadius: "50%",
+  width: "36px",
+  height: "36px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+  color: "#64748b",
+  zIndex: 10,
+};
+const imageSideStyle = {
+  flex: 1,
+  backgroundColor: "#0f172a",
+  backgroundImage: "url('/hero-banner.jpeg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  position: "relative",
+  minHeight: "400px",
 };
