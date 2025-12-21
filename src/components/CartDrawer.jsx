@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Minus,
@@ -8,6 +8,7 @@ import {
   Tag,
   Check,
   Loader,
+  Trash2,
 } from "lucide-react";
 import { useCart } from "../lib/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +31,18 @@ export default function CartDrawer() {
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(null); // 'WELCOME10' or null
   const [discountError, setDiscountError] = useState("");
+
+  // --- SCROLL LOCKING (Fixes double scrollbar) ---
+  useEffect(() => {
+    if (isCartOpen) {
+      document.body.style.overflow = "hidden"; // Lock background
+    } else {
+      document.body.style.overflow = "unset"; // Unlock
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isCartOpen]);
 
   const handleApplyCoupon = (e) => {
     e.preventDefault();
@@ -57,7 +70,7 @@ export default function CartDrawer() {
       const { data, error } = await supabase.functions.invoke("checkout", {
         body: {
           items: cart,
-          discountCode: appliedDiscount, // <--- Sends code to backend
+          discountCode: appliedDiscount,
         },
       });
 
@@ -76,7 +89,9 @@ export default function CartDrawer() {
   return (
     <>
       <div className="cart-overlay" onClick={toggleCart}></div>
+
       <div className="cart-drawer">
+        {/* 1. FIXED HEADER */}
         <div className="cart-header">
           <h3>Your Cart ({cart.length})</h3>
           <button onClick={toggleCart} className="close-cart-btn">
@@ -87,7 +102,7 @@ export default function CartDrawer() {
         {cart.length === 0 ? (
           <div className="empty-cart">
             <ShoppingBag size={48} color="#e2e8f0" />
-            <p>Your cart is currently empty.</p>
+            <p>Your cart is empty.</p>
             <button
               onClick={() => {
                 toggleCart();
@@ -100,6 +115,7 @@ export default function CartDrawer() {
           </div>
         ) : (
           <>
+            {/* 2. SCROLLABLE ITEMS LIST */}
             <div className="cart-items">
               {cart.map((item) => (
                 <div key={item.id} className="cart-item">
@@ -109,8 +125,10 @@ export default function CartDrawer() {
                     className="cart-item-img"
                   />
                   <div className="cart-item-details">
-                    <h4>{item.name}</h4>
-                    <p className="cart-item-variant">{item.variant}</p>
+                    <div>
+                      <h4>{item.name}</h4>
+                      <p className="cart-item-variant">{item.variant}</p>
+                    </div>
                     <div className="cart-item-controls">
                       <div className="qty-selector">
                         <button
@@ -129,18 +147,38 @@ export default function CartDrawer() {
                           <Plus size={14} />
                         </button>
                       </div>
-                      <p className="cart-item-price">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </p>
+                      <div style={{ textAlign: "right" }}>
+                        <p className="cart-item-price">
+                          ${(item.price * item.quantity).toFixed(2)}
+                        </p>
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            fontSize: "0.7rem",
+                            cursor: "pointer",
+                            marginTop: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            marginLeft: "auto",
+                          }}
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
+            {/* 3. FIXED FOOTER (Contains Discount & Checkout) */}
             <div className="cart-footer">
-              {/* --- DISCOUNT INPUT SECTION --- */}
-              <div style={{ marginBottom: "20px" }}>
+              {/* DISCOUNT SECTION */}
+              <div style={{ marginBottom: "24px" }}>
                 {!appliedDiscount ? (
                   <form
                     onSubmit={handleApplyCoupon}
@@ -164,10 +202,10 @@ export default function CartDrawer() {
                         onChange={(e) => setDiscountCode(e.target.value)}
                         style={{
                           width: "100%",
-                          padding: "10px 10px 10px 36px",
+                          padding: "12px 12px 12px 38px",
                           border: "1px solid #e2e8f0",
                           borderRadius: "8px",
-                          fontSize: "0.9rem",
+                          fontSize: "0.95rem",
                           outline: "none",
                         }}
                       />
@@ -194,7 +232,7 @@ export default function CartDrawer() {
                       justifyContent: "space-between",
                       alignItems: "center",
                       background: "#ecfdf5",
-                      padding: "10px 16px",
+                      padding: "12px 16px",
                       borderRadius: "8px",
                       border: "1px solid #a7f3d0",
                     }}
@@ -230,7 +268,7 @@ export default function CartDrawer() {
                     style={{
                       color: "#ef4444",
                       fontSize: "0.85rem",
-                      marginTop: "6px",
+                      marginTop: "8px",
                       marginLeft: "4px",
                     }}
                   >
@@ -239,18 +277,54 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {/* --- TOTALS --- */}
-              <div className="cart-total-row">
-                <span>Subtotal</span>
-                <span>${cartTotal.toFixed(2)} AUD</span>
-              </div>
-
-              {appliedDiscount && (
-                <div className="cart-total-row" style={{ color: "#059669" }}>
-                  <span>Discount (10%)</span>
-                  <span>-${(cartTotal * 0.1).toFixed(2)} AUD</span>
+              {/* TOTALS */}
+              <div style={{ marginBottom: "20px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    color: "#64748b",
+                  }}
+                >
+                  <span>Subtotal</span>
+                  <span>${cartTotal.toFixed(2)}</span>
                 </div>
-              )}
+
+                {appliedDiscount && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "8px",
+                      color: "#059669",
+                    }}
+                  >
+                    <span>Discount (10%)</span>
+                    <span>-${(cartTotal * 0.1).toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "1.25rem",
+                    fontWeight: "800",
+                    color: "#0f172a",
+                    marginTop: "12px",
+                    paddingTop: "12px",
+                    borderTop: "1px dashed #e2e8f0",
+                  }}
+                >
+                  <span>Total</span>
+                  <span>
+                    $
+                    {(appliedDiscount ? cartTotal * 0.9 : cartTotal).toFixed(2)}{" "}
+                    AUD
+                  </span>
+                </div>
+              </div>
 
               <button
                 onClick={handleCheckout}
@@ -265,7 +339,9 @@ export default function CartDrawer() {
                   </>
                 )}
               </button>
-              <p className="shipping-note">Shipping calculated at checkout</p>
+              <p className="shipping-note">
+                Shipping & Taxes calculated at checkout
+              </p>
             </div>
           </>
         )}
