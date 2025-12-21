@@ -1,177 +1,192 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
-import { Search, Package, Truck, CheckCircle } from "lucide-react";
+import { Search, Package, ExternalLink, ArrowRight, Info } from "lucide-react";
 
 export default function TrackOrder() {
-  const [orderId, setOrderId] = useState("");
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [trackingNumber, setTrackingNumber] = useState("");
 
-  const handleTrack = async (e) => {
+  const handleTrack = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setOrder(null);
+    if (!trackingNumber) return;
 
-    // UUID validation (basic)
-    if (orderId.length < 20) {
-      setError(
-        "Please enter a valid Order ID (e.g. from your confirmation email)."
-      );
-      setLoading(false);
-      return;
-    }
+    // The Official Deep Link
+    const ausPostUrl = `https://auspost.com.au/mypost/track/#/details/${trackingNumber.trim()}`;
 
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("id", orderId)
-      .single();
-
-    if (error || !data) {
-      setError("Order not found. Please check your Order ID.");
-    } else {
-      setOrder(data);
-    }
-    setLoading(false);
+    // 'noopener,noreferrer' hides that they came from your site
+    // This sometimes reduces the "Verify Device" trigger frequency
+    window.open(ausPostUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div
       className="container"
-      style={{ padding: "80px 24px", maxWidth: "600px", minHeight: "60vh" }}
+      style={{ padding: "80px 24px", maxWidth: "600px" }}
     >
-      <h1
+      <div style={{ textAlign: "center", marginBottom: "40px" }}>
+        <div
+          style={{
+            background: "#f1f5f9",
+            width: "80px",
+            height: "80px",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 20px",
+          }}
+        >
+          <Package size={40} color="var(--medical-navy)" />
+        </div>
+        <h1 style={{ color: "var(--medical-navy)", marginBottom: "10px" }}>
+          Track Your Order
+        </h1>
+        <p style={{ color: "var(--text-muted)" }}>
+          Enter your tracking number to see real-time updates.
+        </p>
+      </div>
+
+      <div
         style={{
-          textAlign: "center",
-          marginBottom: "40px",
-          color: "var(--medical-navy)",
+          background: "white",
+          padding: "40px",
+          borderRadius: "16px",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)",
         }}
       >
-        Track Your Order
-      </h1>
+        <form onSubmit={handleTrack}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "10px",
+              fontWeight: "600",
+              color: "#64748b",
+            }}
+          >
+            Tracking Number
+          </label>
 
-      <form
-        onSubmit={handleTrack}
-        style={{ display: "flex", gap: "10px", marginBottom: "40px" }}
-      >
-        <input
-          placeholder="Enter Order ID"
-          value={orderId}
-          onChange={(e) => setOrderId(e.target.value)}
-          style={{
-            flex: 1,
-            padding: "14px",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            fontSize: "1rem",
-          }}
-        />
-        <button
-          disabled={loading}
-          style={{
-            background: "var(--primary)",
-            color: "white",
-            border: "none",
-            padding: "0 24px",
-            borderRadius: "8px",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
-          {loading ? "..." : "Track"}
-        </button>
-      </form>
-
-      {error && (
-        <div
-          style={{
-            color: "#ef4444",
-            textAlign: "center",
-            background: "#fef2f2",
-            padding: "15px",
-            borderRadius: "8px",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {order && (
-        <div
-          style={{
-            background: "white",
-            padding: "30px",
-            borderRadius: "16px",
-            border: "1px solid #e2e8f0",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: "20px" }}>
-            <StatusIcon status={order.status} />
-            <h2
-              style={{
-                textTransform: "capitalize",
-                marginTop: "15px",
-                color: "var(--medical-navy)",
-              }}
-            >
-              {order.status}
-            </h2>
-            <p style={{ color: "#64748b" }}>
-              Order placed on {new Date(order.created_at).toLocaleDateString()}
-            </p>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <Search
+                size={20}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="e.g. 33L76..."
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "14px 14px 14px 44px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "1.1rem",
+                  outline: "none",
+                  fontWeight: "500",
+                }}
+              />
+            </div>
           </div>
 
-          {order.tracking_number && (
-            <div
+          <button
+            type="submit"
+            className="buy-btn"
+            style={{
+              width: "100%",
+              padding: "16px",
+              fontSize: "1.1rem",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            Track Shipment <ExternalLink size={18} />
+          </button>
+        </form>
+
+        {/* Helpful Tip for the Issue */}
+        <div
+          style={{
+            marginTop: "25px",
+            display: "flex",
+            gap: "12px",
+            background: "#fffbeb",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #fcd34d",
+          }}
+        >
+          <Info
+            size={20}
+            color="#b45309"
+            style={{ flexShrink: 0, marginTop: "2px" }}
+          />
+          <div>
+            <h4
               style={{
-                background: "#f8fafc",
-                padding: "20px",
-                borderRadius: "12px",
-                textAlign: "center",
-                marginTop: "20px",
+                margin: "0 0 4px 0",
+                color: "#92400e",
+                fontSize: "0.95rem",
               }}
             >
-              <p style={{ marginBottom: "10px", fontWeight: "600" }}>
-                AusPost Tracking Number:
-              </p>
-              <div
-                style={{
-                  fontSize: "1.2rem",
-                  fontFamily: "monospace",
-                  marginBottom: "15px",
-                }}
-              >
-                {order.tracking_number}
-              </div>
-              <a
-                href={`https://auspost.com.au/mypost/track/#/details/${order.tracking_number}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: "inline-block",
-                  background: "#DC1928",
-                  color: "white",
-                  textDecoration: "none",
-                  padding: "10px 20px",
-                  borderRadius: "50px",
-                  fontWeight: "bold",
-                }}
-              >
-                Track on AusPost
-              </a>
-            </div>
-          )}
+              First time tracking?
+            </h4>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.85rem",
+                color: "#b45309",
+                lineHeight: "1.5",
+              }}
+            >
+              Australia Post may ask you to verify your device for security. If
+              the tracking number disappears during this check, simply click
+              "Track Shipment" again.
+            </p>
+          </div>
         </div>
-      )}
+
+        <div
+          style={{
+            marginTop: "20px",
+            padding: "20px",
+            background: "#f8fafc",
+            borderRadius: "8px",
+            border: "1px dashed #cbd5e1",
+          }}
+        >
+          <h4
+            style={{
+              margin: "0 0 10px 0",
+              color: "var(--medical-navy)",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <ArrowRight size={16} /> How it works
+          </h4>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.9rem",
+              color: "#64748b",
+              lineHeight: "1.6",
+            }}
+          >
+            Clicking "Track Shipment" will open the official Australia Post
+            portal in a new secure tab.
+          </p>
+        </div>
+      </div>
     </div>
   );
-}
-
-function StatusIcon({ status }) {
-  if (status === "delivered") return <CheckCircle size={64} color="#10b981" />;
-  if (status === "shipped") return <Truck size={64} color="#3b82f6" />;
-  return <Package size={64} color="#f59e0b" />;
 }

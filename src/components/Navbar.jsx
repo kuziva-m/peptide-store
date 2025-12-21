@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Search, Menu, X } from "lucide-react";
 import { useCart } from "../lib/CartContext";
 import "./Navbar.css";
@@ -7,6 +7,14 @@ import "./Navbar.css";
 export default function Navbar({ searchQuery, setSearchQuery }) {
   const { cartCount, toggleCart } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSearchSubmit = (e) => {
+    if (e.key === "Enter") {
+      navigate("/shop");
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   return (
     <nav className="navbar">
@@ -19,7 +27,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* 2. IMAGE LOGO */}
+        {/* 2. LOGO */}
         <Link to="/" className="nav-logo-wrapper">
           <img
             src="/logo.png"
@@ -28,7 +36,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           />
         </Link>
 
-        {/* Search Input */}
+        {/* 3. SEARCH BAR (WORKING NOW) */}
         <div className="search-widget">
           <Search size={18} className="search-icon" />
           <input
@@ -36,24 +44,28 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             placeholder="Search for peptides..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchSubmit} // Navigate on Enter
             className="search-input-header"
           />
         </div>
 
-        {/* Actions */}
+        {/* 4. ACTIONS */}
         <div className="nav-actions">
           <button className="cart-btn" onClick={toggleCart}>
-            <ShoppingCart size={18} strokeWidth={2.5} />
-            <span className="cart-count-badge">{cartCount}</span>
+            {/* Switched to a cleaner icon stroke */}
+            <ShoppingCart size={26} strokeWidth={1.5} />
+            {cartCount > 0 && (
+              <span className="cart-count-badge">{cartCount}</span>
+            )}
           </button>
         </div>
       </div>
 
-      {/* DYNAMIC LINKS CONTAINER */}
+      {/* 5. NAVIGATION LINKS */}
       <div
         className={`nav-bottom-bar ${isMobileMenuOpen ? "mobile-open" : ""}`}
       >
-        <div className="container nav-links-container">
+        <div className="nav-links-container">
           <Link
             to="/"
             className="nav-link"
@@ -68,7 +80,6 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           >
             Shop All
           </Link>
-          {/* REMOVED Shipping & Returns from here */}
           <Link
             to="/calculator"
             className="nav-link"
@@ -89,6 +100,13 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             FAQ
+          </Link>
+          <Link
+            to="/track"
+            className="nav-link"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Track Order
           </Link>
         </div>
       </div>

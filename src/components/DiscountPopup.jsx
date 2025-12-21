@@ -1,29 +1,31 @@
 import { useState, useEffect } from "react";
-import { X, Gift, ArrowRight, Copy, CheckCircle } from "lucide-react";
+import { X, Gift, ArrowRight, CheckCircle, Mail } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function DiscountPopup() {
   const [isVisible, setIsVisible] = useState(false);
-  const [step, setStep] = useState("form"); // 'form' | 'success'
+  const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "" });
 
   useEffect(() => {
-    // Check if user has already seen/closed this
-    const hasSeenPopup = localStorage.getItem("discount_popup_seen");
-
-    if (!hasSeenPopup) {
+    const hasSeen = localStorage.getItem("discount_popup_seen");
+    if (!hasSeen) {
       const timer = setTimeout(() => {
         setIsVisible(true);
-      }, 4000); // Show after 4 seconds
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, []);
 
   const handleClose = () => {
     setIsVisible(false);
-    // Don't show again for this session (or set a date for 30 days)
     localStorage.setItem("discount_popup_seen", "true");
+  };
+
+  const handleOpen = () => {
+    setIsVisible(true);
+    setStep("form"); // <--- FORCE FORM TO SHOW EVERY TIME (Good for testing)
   };
 
   const handleSubmit = async (e) => {
@@ -31,32 +33,71 @@ export default function DiscountPopup() {
     setLoading(true);
 
     try {
-      // Save to Supabase
-      const { error } = await supabase.from("subscribers").insert([formData]);
+      // 1. Save to Database
+      const { error: dbError } = await supabase
+        .from("subscribers")
+        .insert([formData]);
+      // Ignore duplicate email errors so the flow continues
+      if (dbError && dbError.code !== "23505") throw dbError;
 
-      // Ignore duplicate email errors (just show success anyway so user isn't frustrated)
-      if (error && error.code !== "23505") throw error;
+      // 2. Send Email via Cloud Function
+      const { error: emailError } = await supabase.functions.invoke(
+        "send-discount",
+        {
+          body: { name: formData.name, email: formData.email },
+        }
+      );
 
+      if (emailError) {
+        console.error("Email send failed:", emailError);
+        alert("Failed to send email. Check Supabase logs.");
+      }
+
+      // 3. Success State
       setStep("success");
-      // Mark as seen permanently since they subscribed
       localStorage.setItem("discount_popup_seen", "true");
     } catch (err) {
+      console.error(err);
       alert("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const copyCode = () => {
-    navigator.clipboard.writeText("PRIME10");
-    alert("Code copied to clipboard!");
-  };
+  // --- STATE 1: FLOATING TRIGGER BUTTON ---
+  if (!isVisible) {
+    return (
+      <button
+        onClick={handleOpen}
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          left: "24px",
+          backgroundColor: "#0f172a",
+          color: "white",
+          padding: "12px 20px",
+          borderRadius: "50px",
+          border: "1px solid rgba(255,255,255,0.1)",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          cursor: "pointer",
+          zIndex: 9990,
+          fontWeight: "600",
+          fontSize: "0.9rem",
+          transition: "transform 0.2s, box-shadow 0.2s",
+          animation: "fadeIn 0.5s ease",
+        }}
+      >
+        <Gift size={18} color="#fbbf24" /> Get Exclusive Discount
+      </button>
+    );
+  }
 
-  if (!isVisible) return null;
-
+  // --- STATE 2: POPUP ---
   return (
     <>
-      {/* 1. BACKDROP OVERLAY */}
       <div
         onClick={handleClose}
         style={{
@@ -65,14 +106,13 @@ export default function DiscountPopup() {
           left: 0,
           width: "100%",
           height: "100%",
-          backgroundColor: "rgba(15, 23, 42, 0.6)", // Dark Navy transparent
+          backgroundColor: "rgba(15, 23, 42, 0.6)",
           backdropFilter: "blur(4px)",
           zIndex: 99999,
-          animation: "fadeIn 0.5s ease",
+          animation: "fadeIn 0.3s ease",
         }}
       />
 
-      {/* 2. THE GIANT POPUP */}
       <div
         style={{
           position: "fixed",
@@ -87,10 +127,9 @@ export default function DiscountPopup() {
           zIndex: 100000,
           display: "flex",
           overflow: "hidden",
-          animation: "slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+          animation: "slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
-        {/* CLOSE BUTTON */}
         <button
           onClick={handleClose}
           style={{
@@ -108,33 +147,32 @@ export default function DiscountPopup() {
             justifyContent: "center",
             boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
             color: "#64748b",
+            zIndex: 10,
           }}
         >
           <X size={20} />
         </button>
 
-        {/* LEFT SIDE: IMAGE / VISUAL */}
+        {/* LEFT IMAGE */}
         <div
+          className="popup-image-side"
           style={{
             flex: 1,
-            backgroundColor: "#0f172a", // var(--medical-navy)
-            backgroundImage: "url('/hero-banner.jpeg')", // Reusing your hero image
+            backgroundColor: "#0f172a",
+            backgroundImage: "url('/hero-banner.jpeg')",
             backgroundSize: "cover",
             backgroundPosition: "center",
             position: "relative",
-            display: "none", // Hidden on mobile
             minHeight: "400px",
           }}
         >
-          {/* Overlay to darken image */}
           <div
             style={{
               position: "absolute",
               inset: 0,
-              background: "rgba(15, 23, 42, 0.7)",
+              background: "rgba(15, 23, 42, 0.75)",
             }}
           ></div>
-
           <div
             style={{
               position: "relative",
@@ -166,16 +204,16 @@ export default function DiscountPopup() {
                 color: "white",
               }}
             >
-              Unlock 10% Off Your First Order
+              Unlock Discount
             </h2>
             <p style={{ fontSize: "1.1rem", opacity: 0.9 }}>
-              Join our exclusive research community and get access to
-              member-only purity reports and discounts.
+              Join our exclusive research community for member-only purity
+              reports and special offers.
             </p>
           </div>
         </div>
 
-        {/* RIGHT SIDE: CONTENT */}
+        {/* RIGHT FORM */}
         <div
           style={{
             flex: 1,
@@ -193,14 +231,14 @@ export default function DiscountPopup() {
                   fontSize: "1.8rem",
                   color: "#0f172a",
                   marginBottom: "10px",
+                  marginTop: 0,
                 }}
               >
-                Get your discount code
+                Get your code
               </h3>
               <p style={{ color: "#64748b", marginBottom: "30px" }}>
-                Enter your details below to reveal your coupon.
+                Enter your details to receive your surprise discount.
               </p>
-
               <div
                 style={{
                   display: "flex",
@@ -229,7 +267,7 @@ export default function DiscountPopup() {
                   style={inputStyle}
                 />
                 <button type="submit" disabled={loading} style={buttonStyle}>
-                  {loading ? "Processing..." : "Unlock Discount"}{" "}
+                  {loading ? "Sending..." : "Unlock Discount"}{" "}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -241,16 +279,25 @@ export default function DiscountPopup() {
                   textAlign: "center",
                 }}
               >
-                We respect your privacy. No spam, strictly science.
+                We respect your privacy. No spam.
               </p>
             </form>
           ) : (
             <div style={{ textAlign: "center", animation: "fadeIn 0.5s ease" }}>
-              <CheckCircle
-                size={60}
-                color="#10b981"
-                style={{ margin: "0 auto 20px" }}
-              />
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  width: "80px",
+                  height: "80px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}
+              >
+                <Mail size={40} color="#10b981" />
+              </div>
               <h3
                 style={{
                   fontSize: "1.8rem",
@@ -258,50 +305,18 @@ export default function DiscountPopup() {
                   marginBottom: "10px",
                 }}
               >
-                You're In!
+                Check Your Inbox!
               </h3>
-              <p style={{ color: "#64748b", marginBottom: "30px" }}>
-                Here is your exclusive discount code:
-              </p>
-
-              <div
-                onClick={copyCode}
+              <p
                 style={{
-                  background: "#f1f5f9",
-                  padding: "20px",
-                  borderRadius: "12px",
-                  border: "2px dashed #0f172a",
-                  cursor: "pointer",
-                  position: "relative",
-                  marginBottom: "20px",
+                  color: "#64748b",
+                  marginBottom: "30px",
+                  lineHeight: "1.6",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: "800",
-                    color: "#0f172a",
-                    letterSpacing: "2px",
-                  }}
-                >
-                  PRIME10
-                </span>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    fontSize: "0.9rem",
-                    color: "#4635de",
-                    marginTop: "10px",
-                    fontWeight: "600",
-                  }}
-                >
-                  <Copy size={14} /> Click to Copy
-                </div>
-              </div>
-
+                We've sent your exclusive discount code to{" "}
+                <strong>{formData.email}</strong>.
+              </p>
               <button
                 onClick={handleClose}
                 style={{
@@ -311,33 +326,17 @@ export default function DiscountPopup() {
                   color: "#64748b",
                 }}
               >
-                Continue Shopping
+                Close & Continue Shopping
               </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* --- CSS FOR MOBILE & ANIMATION --- */}
-      <style>{`
-        @media (min-width: 768px) {
-          .announcement-bar { display: flex !important; } 
-          div[style*="background-image"] { display: flex !important; }
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translate(-50%, -40%); }
-          to { opacity: 1; transform: translate(-50%, -50%); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
+      <style>{`@media (max-width: 768px) { .popup-image-side { display: none !important; } } @keyframes slideUp { from { opacity: 0; transform: translate(-50%, -40%); } to { opacity: 1; transform: translate(-50%, -50%); } } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
     </>
   );
 }
 
-// STYLES
 const inputStyle = {
   width: "100%",
   padding: "16px",
@@ -347,7 +346,6 @@ const inputStyle = {
   outline: "none",
   transition: "border-color 0.2s",
 };
-
 const buttonStyle = {
   width: "100%",
   padding: "16px",
