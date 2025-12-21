@@ -13,6 +13,7 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => {
+  // 1. Handle CORS (Browser Security)
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -24,9 +25,9 @@ serve(async (req: Request) => {
   );
 
   try {
-    // 1. Receive inputs (including discountCode)
     const { items, session_id, action, discountCode } = await req.json();
 
+    // 2. Handle "Success Page" Session Retrieval
     if (action === "retrieve" && session_id) {
       const session = await stripe.checkout.sessions.retrieve(session_id, {
         expand: ["line_items", "total_details.breakdown"],
@@ -36,7 +37,7 @@ serve(async (req: Request) => {
       });
     }
 
-    // 2. Validate Products with Database
+    // 3. Verify Products with Database (Security)
     const variantIds = items.map((item: any) => item.variantId || item.id);
     const { data: dbVariants, error: dbError } = await supabaseClient
       .from("variants")
@@ -48,34 +49,51 @@ serve(async (req: Request) => {
     const dbVariantMap = new Map(dbVariants.map((v: any) => [v.id, v]));
     let calculatedSubtotal = 0;
 
+    // --- CHECK FOR DISCOUNT ---
+    const hasValidDiscount = discountCode === "WELCOME10";
+    const discountMultiplier = hasValidDiscount ? 0.9 : 1.0; // 10% off if valid
+
+    // 4. Build Line Items with Manual Discount Calculation
     const lineItems = items.map((item: any) => {
       const dbVariant = dbVariantMap.get(item.variantId || item.id);
 
       if (!dbVariant) throw new Error("Product variant not found");
 
-      const validatedPrice = dbVariant.price;
-      const quantity = item.quantity;
+      // Original Price from DB
+      const originalPrice = dbVariant.price;
 
-      calculatedSubtotal += Math.round(validatedPrice * 100) * quantity;
+      // Calculate Discounted Price (Round to nearest cent)
+      // Example: $100 * 0.9 = $90.00
+      const finalUnitAmount = Math.round(
+        originalPrice * discountMultiplier * 100
+      );
+
+      const quantity = item.quantity;
+      calculatedSubtotal += finalUnitAmount * quantity;
 
       return {
         price_data: {
           currency: "aud",
           product_data: {
-            name: dbVariant.products.name,
+            // Optional: Add "(10% Off)" to the name so they know why it's cheaper
+            name: hasValidDiscount
+              ? `${dbVariant.products.name} (10% Off)`
+              : dbVariant.products.name,
             description: dbVariant.size_label,
             images: dbVariant.products.image_url
               ? [dbVariant.products.image_url]
               : [],
           },
-          unit_amount: Math.round(validatedPrice * 100),
+          unit_amount: finalUnitAmount, // Use the cheaper price here
         },
         quantity: quantity,
       };
     });
 
-    // 3. Shipping Logic
-    const FREE_SHIPPING_THRESHOLD_CENTS = 15000; // $150
+    // 5. Shipping Logic
+    // Note: Free shipping is based on the FINAL amount they pay.
+    // If discount drops them below $150, they pay shipping.
+    const FREE_SHIPPING_THRESHOLD_CENTS = 15000; // $150.00
     const isFreeShipping = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD_CENTS;
 
     if (!isFreeShipping) {
@@ -87,14 +105,14 @@ serve(async (req: Request) => {
             description: "Standard Shipping (24hr Dispatch)",
             images: ["https://cdn-icons-png.flaticon.com/512/411/411763.png"],
           },
-          unit_amount: 999, // $9.99
+          unit_amount: 999, // $9.99 (Shipping is NOT discounted)
         },
         quantity: 1,
       });
     }
 
-    // 4. Session Config
-    const sessionParams: any = {
+    // 6. Create Stripe Session
+    const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
       mode: "payment",
       success_url: `${req.headers.get(
@@ -103,19 +121,8 @@ serve(async (req: Request) => {
       cancel_url: `${req.headers.get("origin")}/?canceled=true`,
       shipping_address_collection: { allowed_countries: ["AU"] },
       phone_number_collection: { enabled: true },
-    };
-
-    // 5. APPLY COUPON (This adds the deduction to Stripe)
-    // Make sure you created the coupon "WELCOME10" in your Stripe Dashboard!
-    if (discountCode === "WELCOME10") {
-      sessionParams.discounts = [
-        {
-          coupon: "WELCOME10",
-        },
-      ];
-    }
-
-    const session = await stripe.checkout.sessions.create(sessionParams);
+      // Note: We REMOVED the 'discounts' array because we applied it manually above
+    });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

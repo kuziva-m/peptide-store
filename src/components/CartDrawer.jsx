@@ -31,7 +31,6 @@ export default function CartDrawer() {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountError, setDiscountError] = useState("");
 
-  // Lock background scroll
   useEffect(() => {
     if (isCartOpen) {
       document.body.style.overflow = "hidden";
@@ -43,14 +42,12 @@ export default function CartDrawer() {
     };
   }, [isCartOpen]);
 
-  // --- CRITICAL FIX: SAFETY HELPER ---
-  // This prevents the "Error #31" crash by converting objects to text
-  const renderVariantName = (variant) => {
-    if (!variant) return "";
-    if (typeof variant === "string") return variant;
-    // If it's a "poisoned" object, extract the label safely
-    if (typeof variant === "object") return variant.size_label || "Standard";
-    return String(variant);
+  // --- HELPER: Safely render variant strings ---
+  const getVariantLabel = (v) => {
+    if (!v) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "object") return v.size_label || "Option";
+    return String(v);
   };
 
   const handleApplyCoupon = (e) => {
@@ -77,7 +74,6 @@ export default function CartDrawer() {
       const { data, error } = await supabase.functions.invoke("checkout", {
         body: { items: cart, discountCode: appliedDiscount },
       });
-
       if (error) throw error;
       if (data?.url) window.location.href = data.url;
     } catch (error) {
@@ -89,20 +85,19 @@ export default function CartDrawer() {
   };
 
   if (!isCartOpen) return null;
-  const itemCount = cart ? cart.length : 0;
 
   return (
     <>
       <div className="cart-overlay" onClick={toggleCart}></div>
       <div className="cart-drawer">
         <div className="cart-header">
-          <h3>Your Cart ({itemCount})</h3>
+          <h3>Your Cart ({cart.length})</h3>
           <button onClick={toggleCart} className="close-cart-btn">
             <X size={24} />
           </button>
         </div>
 
-        {itemCount === 0 ? (
+        {cart.length === 0 ? (
           <div className="empty-cart">
             <ShoppingBag size={48} color="#e2e8f0" />
             <p>Your cart is empty.</p>
@@ -119,12 +114,13 @@ export default function CartDrawer() {
         ) : (
           <>
             <div className="cart-items">
-              {cart &&
-                cart.map((item) => (
-                  <div
-                    key={`${item.id}-${renderVariantName(item.variant)}`}
-                    className="cart-item"
-                  >
+              {cart.map((item, index) => {
+                // Generate a safe key combining id, variant string, and index fallback
+                const safeVariant = getVariantLabel(item.variant);
+                const itemKey = `${item.id}-${safeVariant}-${index}`;
+
+                return (
+                  <div key={itemKey} className="cart-item">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -133,10 +129,8 @@ export default function CartDrawer() {
                     <div className="cart-item-details">
                       <div>
                         <h4>{item.name}</h4>
-                        {/* --- CRITICAL FIX APPLIED HERE --- */}
-                        <p className="cart-item-variant">
-                          {renderVariantName(item.variant)}
-                        </p>
+                        {/* --- SAFE RENDER --- */}
+                        <p className="cart-item-variant">{safeVariant}</p>
                       </div>
                       <div className="cart-item-controls">
                         <div className="qty-selector">
@@ -191,7 +185,8 @@ export default function CartDrawer() {
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
 
             <div className="cart-footer">

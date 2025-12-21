@@ -82,7 +82,6 @@ export default function DiscountPopup() {
           <X size={20} />
         </button>
 
-        {/* LEFT */}
         <div className="popup-image-side" style={imageSideStyle}>
           <div
             style={{
@@ -125,13 +124,12 @@ export default function DiscountPopup() {
               Unlock Discount
             </h2>
             <p style={{ fontSize: "1.1rem", opacity: 0.9 }}>
-              Join our exclusive research community for member-only purity
-              reports and special offers.
+              Join our exclusive community for member-only purity reports and
+              special offers.
             </p>
           </div>
         </div>
 
-        {/* RIGHT */}
         <div
           style={{
             flex: 1,
@@ -219,7 +217,6 @@ export default function DiscountPopup() {
               <p style={{ color: "#64748b", marginBottom: "30px" }}>
                 Here is your exclusive discount code:
               </p>
-
               <div
                 onClick={copyCode}
                 style={{
@@ -256,7 +253,6 @@ export default function DiscountPopup() {
                   <Copy size={14} /> Click to Copy
                 </div>
               </div>
-
               <button
                 onClick={handleClose}
                 style={{

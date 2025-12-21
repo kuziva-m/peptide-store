@@ -9,6 +9,7 @@ export default function ProductCard({ product, loading }) {
   // Logic to handle variants
   const sortedVariants =
     product?.variants?.sort((a, b) => a.price - b.price) || [];
+
   const [selectedVariant, setSelectedVariant] = useState(null);
 
   // Initialize selected variant when product loads
@@ -38,7 +39,6 @@ export default function ProductCard({ product, loading }) {
     product.image_url ||
     "https://via.placeholder.com/400";
 
-  // Find the formatPrice function and update:
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-AU", {
       style: "currency",
@@ -46,7 +46,26 @@ export default function ProductCard({ product, loading }) {
     }).format(amount);
   };
 
-  const isInStock = product.in_stock !== false; // Default to true if undefined
+  const isInStock = product.in_stock !== false;
+
+  // --- CRITICAL FIX: Secure Add To Cart ---
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+
+    if (isInStock && selectedVariant) {
+      addToCart(
+        {
+          ...product,
+          id: product.id,
+          price: selectedVariant.price,
+          image: selectedVariant.image_url || product.image_url,
+          variantId: selectedVariant.id, // Secure ID for backend
+        },
+        1, // Quantity
+        selectedVariant.size_label // PASS STRING ONLY (Prevents Crash)
+      );
+    }
+  };
 
   return (
     <div className="product-card">
@@ -115,11 +134,7 @@ export default function ProductCard({ product, loading }) {
         <button
           className="buy-btn"
           disabled={!isInStock}
-          onClick={(e) => {
-            e.preventDefault();
-            if (isInStock && selectedVariant)
-              addToCart(product, selectedVariant);
-          }}
+          onClick={handleAddToCart}
         >
           {isInStock ? "Add to Cart" : "Out of Stock"}
         </button>

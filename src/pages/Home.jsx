@@ -17,13 +17,10 @@ import "./Home.css";
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [content, setContent] = useState(null);
-
-  // State for Reviews
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Fetch Content Settings
       const { data: settings } = await supabase
         .from("site_settings")
         .select("value")
@@ -31,7 +28,6 @@ export default function Home() {
         .single();
       if (settings) setContent(settings.value);
 
-      // 2. Fetch Reviews
       const { data: reviewsData } = await supabase
         .from("reviews")
         .select("*")
@@ -40,15 +36,12 @@ export default function Home() {
         .limit(3);
       if (reviewsData) setReviews(reviewsData);
 
-      // 3. Fetch & Sort Featured Products (Specific Order)
       const { data: allProducts } = await supabase
         .from("products")
         .select(`*, variants (*)`);
 
       if (allProducts) {
-        // The exact list you wanted, in order
         const targetNames = ["Retatrutide", "Melanotan", "BPC-157", "GHK-Cu"];
-
         const sorted = targetNames
           .map((term) => {
             return allProducts.find((p) => {
@@ -62,9 +55,8 @@ export default function Home() {
               );
             });
           })
-          .filter(Boolean); // Remove any that weren't found
+          .filter(Boolean);
 
-        // If we found less than 4 specific ones, fill the rest with other products
         if (sorted.length < 4) {
           const remaining = allProducts.filter((p) => !sorted.includes(p));
           setFeaturedProducts([...sorted, ...remaining].slice(0, 4));
@@ -73,13 +65,11 @@ export default function Home() {
         }
       }
     }
-
     fetchData();
   }, []);
 
   return (
     <div className="home-page">
-      {/* 1. HERO SECTION */}
       <section className="hero-banner-wrapper">
         <div className="container" style={{ padding: 0, maxWidth: "100%" }}>
           <img
@@ -95,11 +85,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. POPULAR PEPTIDES */}
       <section className="section-container">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Popular Research Peptides</h2>
+            <h2 className="section-title">Popular Peptides</h2>
             <Link to="/shop" className="view-all-link">
               View All <ArrowRight size={16} />
             </Link>
@@ -109,13 +98,11 @@ export default function Home() {
               ? featuredProducts.map((p) => (
                   <ProductCard key={p.id} product={p} loading={false} />
                 ))
-              : // Loading Skeleton
-                [1, 2, 3, 4].map((n) => <ProductCard key={n} loading={true} />)}
+              : [1, 2, 3, 4].map((n) => <ProductCard key={n} loading={true} />)}
           </div>
         </div>
       </section>
 
-      {/* 3. CATEGORIES */}
       <section className="section-container bg-grey">
         <div className="container">
           <h2 className="section-title text-center mb-50">
@@ -127,14 +114,14 @@ export default function Home() {
                 <Beaker size={32} />
               </div>
               <h3>Peptides</h3>
-              <p>Pure research compounds</p>
+              <p>Pure compounds</p>
             </Link>
             <Link to="/shop?category=Peptide Blends" className="cat-card">
               <div className="cat-icon">
                 <Shield size={32} />
               </div>
               <h3>Peptide Blends</h3>
-              <p>Pre-mixed research stacks</p>
+              <p>Pre-mixed stacks</p>
             </Link>
             <Link to="/shop?category=Mixing Solution" className="cat-card">
               <div className="cat-icon">
@@ -147,7 +134,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. NEW: LOVED BY MANY (Social Proof) */}
       <section className="section-container" style={{ paddingBottom: "20px" }}>
         <div className="container">
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
@@ -177,7 +163,7 @@ export default function Home() {
                 margin: "0 auto",
               }}
             >
-              Join thousands of researchers trusting Prime Labs for their daily
+              Join thousands of customers trusting Prime Labs for their daily
               laboratory needs.
             </p>
           </div>
@@ -189,7 +175,6 @@ export default function Home() {
               gap: "24px",
             }}
           >
-            {/* Image 1 */}
             <div style={imageCardStyle}>
               <img
                 src="/images/testimonials/user1.jpeg"
@@ -197,8 +182,6 @@ export default function Home() {
                 style={imageStyle}
               />
             </div>
-
-            {/* Image 2 */}
             <div style={imageCardStyle}>
               <img
                 src="/images/testimonials/user2.jpeg"
@@ -206,8 +189,6 @@ export default function Home() {
                 style={imageStyle}
               />
             </div>
-
-            {/* Image 3 */}
             <div style={imageCardStyle}>
               <img
                 src="/images/testimonials/user3.jpeg"
@@ -219,13 +200,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. REVIEWS SECTION */}
       <section className="section-container">
         <div className="container">
           <h2 className="section-title text-center mb-50">
-            What Researchers Say
+            What Customers Say
           </h2>
-
           <div className="reviews-grid">
             {reviews.length > 0 ? (
               reviews.map((review) => (
@@ -272,7 +251,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* WRITE A REVIEW ACTION */}
           <div
             style={{
               marginTop: "60px",
@@ -284,7 +262,7 @@ export default function Home() {
             }}
           >
             <h3 style={{ fontSize: "1.5rem", marginBottom: "10px" }}>
-              Have you conducted research with our products?
+              Have you used our products?
             </h3>
             <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
               Share your findings and experience with the community.
@@ -307,22 +285,20 @@ export default function Home() {
   );
 }
 
-// --- Internal Styles for the Gallery ---
 const imageCardStyle = {
   borderRadius: "16px",
   overflow: "hidden",
   boxShadow:
     "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
   border: "1px solid #f1f5f9",
-  aspectRatio: "4/5", // Professional portrait ratio (like Instagram)
+  aspectRatio: "4/5",
   position: "relative",
-  backgroundColor: "#f8fafc", // Placeholder color while loading
+  backgroundColor: "#f8fafc",
 };
-
 const imageStyle = {
   width: "100%",
   height: "100%",
-  objectFit: "cover", // This creates the perfect crop automatically
+  objectFit: "cover",
   transition: "transform 0.5s ease",
   cursor: "pointer",
 };

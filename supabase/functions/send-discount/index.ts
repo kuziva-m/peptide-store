@@ -10,7 +10,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -18,11 +17,7 @@ serve(async (req) => {
   try {
     const { name, email } = await req.json();
 
-    // --- CONFIGURATION ---
     const SENDER_NAME = "Melbourne Peptides";
-
-    // NOTE: This must match your verified domain in Resend
-    // If you haven't verified 'melbournepeptides.com.au' yet, use 'onboarding@resend.dev' for testing
     const SENDER_EMAIL = "support@melbournepeptides.com.au";
 
     console.log(`Sending email to ${email} from ${SENDER_NAME}`);
@@ -36,7 +31,7 @@ serve(async (req) => {
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
           <h1 style="color: #0f172a; text-align: center;">Welcome to Melbourne Peptides</h1>
           <p>Hi ${name},</p>
-          <p>Thank you for joining our research community. As a welcome gift, we have a special discount for you.</p>
+          <p>Thank you for joining our community. As a welcome gift, we have a special discount for you.</p>
           
           <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;">
             <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #64748b;">YOUR EXCLUSIVE CODE:</p>
@@ -50,7 +45,7 @@ serve(async (req) => {
           </div>
           
            <p style="margin-top: 40px; font-size: 0.8rem; color: #94a3b8; text-align: center;">
-            Research purposes only. Not for human consumption.
+            Peptides. Not for human consumption.
           </p>
         </div>
       `,

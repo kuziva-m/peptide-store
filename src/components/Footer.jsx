@@ -5,18 +5,16 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="container footer-grid">
-        {/* Column 1: Brand */}
         <div className="footer-col">
           <h3 className="footer-logo">
             Melbourne<span>Peptides</span>
           </h3>
           <p className="footer-text">
-            Premium research-grade peptides for laboratory use. Third-party
-            tested for purity and stability.
+            Premium peptides for laboratory use. Third-party tested for purity
+            and stability.
           </p>
         </div>
 
-        {/* Column 2: Customer Service */}
         <div className="footer-col">
           <h4>Support</h4>
           <ul className="footer-links">
@@ -29,11 +27,9 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Column 3: Legal */}
         <div className="footer-col">
           <h4>Legal</h4>
           <ul className="footer-links">
-            {/* MOVED HERE */}
             <li>
               <Link to="/shipping">Shipping & Returns</Link>
             </li>
@@ -49,8 +45,8 @@ export default function Footer() {
 
       <div className="footer-bottom container">
         <p>
-          &copy; {new Date().getFullYear()} Melbourne Peptides. Research Use
-          Only. Not for human consumption.
+          &copy; {new Date().getFullYear()} Melbourne Peptides. Peptides. Not
+          for human consumption.
         </p>
       </div>
     </footer>

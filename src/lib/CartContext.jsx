@@ -3,79 +3,100 @@ import { createContext, useState, useContext, useEffect } from "react";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  // 1. Safer Initialization
+  // 1. SAFER INITIALIZATION (The Sanitizer)
   const [cart, setCart] = useState(() => {
     if (typeof window === "undefined") return [];
     try {
       const saved = localStorage.getItem("cart");
-      // If saved is "null", "undefined", or invalid JSON, return []
-      return saved ? JSON.parse(saved) || [] : [];
+      if (!saved) return [];
+
+      const parsed = JSON.parse(saved);
+
+      // SANITIZE: Loop through saved items and fix "Object" variants
+      // This automatically repairs the "poisoned" data causing your crash
+      const cleanCart = Array.isArray(parsed)
+        ? parsed.map((item) => {
+            let cleanVariant = item.variant;
+
+            // If variant is an object (the bug), extract the label
+            if (typeof item.variant === "object" && item.variant !== null) {
+              cleanVariant =
+                item.variant.size_label || item.variant.name || "Standard";
+            }
+
+            return {
+              ...item,
+              variant: cleanVariant || "Standard", // Ensure it's always a string
+            };
+          })
+        : [];
+
+      return cleanCart;
     } catch (error) {
-      console.error("Cart load error:", error);
+      console.error("Cart corrupted, resetting:", error);
+      // If data is totally broken, wipe it to save the app
+      localStorage.removeItem("cart");
       return [];
     }
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // 2. Sync to LocalStorage (Only if cart is valid array)
+  // 2. Sync to LocalStorage
   useEffect(() => {
-    if (Array.isArray(cart)) {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
+    localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  // 3. Calculated Total
-  const cartTotal = Array.isArray(cart)
-    ? cart.reduce((total, item) => total + item.price * item.quantity, 0)
-    : 0;
-
-  const cartCount = Array.isArray(cart)
-    ? cart.reduce((count, item) => count + item.quantity, 0)
-    : 0;
+  // 3. Totals
+  const cartTotal = cart.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+  const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   const toggleCart = () => setIsCartOpen(!isCartOpen);
 
-  const addToCart = (product, quantity = 1, variant = "Default") => {
+  const addToCart = (product, quantity = 1, variantLabel = "Standard") => {
     setCart((prevCart) => {
-      // Safety check: ensure prevCart is an array
-      const currentCart = Array.isArray(prevCart) ? prevCart : [];
+      // Ensure we are working with a clean string for the variant
+      const safeVariant =
+        typeof variantLabel === "object"
+          ? variantLabel.size_label || "Standard"
+          : variantLabel;
 
-      const existingItemIndex = currentCart.findIndex(
-        (item) => item.id === product.id && item.variant === variant
+      const existingItemIndex = prevCart.findIndex(
+        (item) => item.id === product.id && item.variant === safeVariant
       );
 
       if (existingItemIndex > -1) {
-        const newCart = [...currentCart];
+        const newCart = [...prevCart];
         newCart[existingItemIndex].quantity += quantity;
         return newCart;
       } else {
-        return [...currentCart, { ...product, quantity, variant }];
+        return [
+          ...prevCart,
+          {
+            ...product,
+            quantity,
+            variant: safeVariant, // Storing strict string
+          },
+        ];
       }
     });
-    setIsCartOpen(true); // Open cart when adding
+    setIsCartOpen(true);
   };
 
   const removeFromCart = (id, variant) => {
-    setCart((prev) => {
-      const current = Array.isArray(prev) ? prev : [];
-      // If variant is provided, match both id and variant, otherwise just id (legacy support)
-      if (variant) {
-        return current.filter(
-          (item) => !(item.id === id && item.variant === variant)
-        );
-      }
-      return current.filter((item) => item.id !== id);
-    });
+    setCart((prev) =>
+      prev.filter((item) => !(item.id === id && item.variant === variant))
+    );
   };
 
   const updateQuantity = (id, newQuantity, variant) => {
     if (newQuantity < 1) return;
     setCart((prev) => {
-      const current = Array.isArray(prev) ? prev : [];
-      return current.map((item) => {
-        // Match by ID and Variant if possible
-        if (item.id === id && (!variant || item.variant === variant)) {
+      return prev.map((item) => {
+        if (item.id === id && item.variant === variant) {
           return { ...item, quantity: newQuantity };
         }
         return item;
@@ -88,7 +109,7 @@ export function CartProvider({ children }) {
   return (
     <CartContext.Provider
       value={{
-        cart: Array.isArray(cart) ? cart : [], // Always ensure array return
+        cart,
         isCartOpen,
         toggleCart,
         addToCart,

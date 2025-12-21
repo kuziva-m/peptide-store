@@ -22,8 +22,6 @@ export default function Product() {
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // --- RESTORED: Quantity State ---
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
@@ -46,7 +44,6 @@ export default function Product() {
     fetchProduct();
   }, [id]);
 
-  // --- RESTORED & FIXED: Add to Cart Logic ---
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
 
@@ -56,11 +53,9 @@ export default function Product() {
         id: product.id,
         price: selectedVariant.price,
         image: selectedVariant.image_url || product.image_url,
-        // Backend needs this to verify price
         variantId: selectedVariant.id,
       },
       quantity,
-      // Frontend needs this as a STRING to avoid crashing
       selectedVariant.size_label
     );
   };
@@ -74,13 +69,19 @@ export default function Product() {
 
   if (loading)
     return (
-      <div className="container" style={{ padding: "80px" }}>
-        Loading Product...
+      <div
+        className="container"
+        style={{ padding: "80px", textAlign: "center" }}
+      >
+        Loading Data...
       </div>
     );
   if (!product)
     return (
-      <div className="container" style={{ padding: "80px" }}>
+      <div
+        className="container"
+        style={{ padding: "80px", textAlign: "center" }}
+      >
         Product not found.
       </div>
     );
@@ -90,7 +91,6 @@ export default function Product() {
     product.image_url ||
     "https://via.placeholder.com/600";
 
-  // Check if specifically marked as out of stock (default to true if undefined)
   const isInStock = product.in_stock !== false;
 
   const activeLabUrl =
@@ -140,6 +140,7 @@ export default function Product() {
           >
             {product.name}
           </h1>
+
           <div
             className="p-meta"
             style={{ display: "flex", gap: "15px", marginBottom: "20px" }}
@@ -155,7 +156,7 @@ export default function Product() {
                 fontWeight: "bold",
               }}
             >
-              Research Grade
+              Peptides
             </span>
             <span
               className="p-cas"
@@ -184,6 +185,17 @@ export default function Product() {
           </div>
 
           <div className="p-price-box" style={{ marginBottom: "25px" }}>
+            <span
+              style={{
+                display: "block",
+                fontSize: "0.9rem",
+                color: "#64748b",
+                marginBottom: "4px",
+                fontWeight: "600",
+              }}
+            >
+              Price
+            </span>
             <span
               className="p-price"
               style={{ fontSize: "2rem", fontWeight: "bold", color: "#4635de" }}
@@ -236,7 +248,6 @@ export default function Product() {
             </div>
           </div>
 
-          {/* --- RESTORED: Quantity & Add Button Row --- */}
           <div style={{ display: "flex", gap: "15px", marginBottom: "30px" }}>
             <div
               style={{
@@ -420,7 +431,7 @@ export default function Product() {
               }}
             >
               <AlertTriangle size={20} color="#b91c1c" />
-              <span>Research Use Only</span>
+              <span>Peptides</span>
             </div>
           </div>
         </div>
@@ -428,4 +439,3 @@ export default function Product() {
     </div>
   );
 }
-
