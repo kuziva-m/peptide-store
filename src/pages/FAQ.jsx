@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import {
-  ChevronDown,
   Plus,
   Minus,
   MessageCircle,
@@ -36,7 +35,6 @@ export default function FAQ() {
     }));
   };
 
-  // Helper to get an icon based on category name
   const getCategoryIcon = (categoryName) => {
     const lower = categoryName.toLowerCase();
     if (lower.includes("shipping") || lower.includes("delivery"))
@@ -50,23 +48,22 @@ export default function FAQ() {
 
   return (
     <div className="faq-page">
-      {/* 1. PROFESSIONAL HERO HEADER */}
+      {/* 1. HERO HEADER */}
       <div className="faq-hero">
         <h1 className="faq-title">Help Center</h1>
         <p className="faq-subtitle">
           Find answers regarding shipping protocols, product storage, and order
           processing.
           <br />
-          Professional support for reliable research.
+          Professional support for reliable service.
         </p>
       </div>
 
-      {/* 2. MAIN DOCUMENT CONTENT */}
+      {/* 2. MAIN CONTENT */}
       <div className="faq-content">
         {faqCategories.length > 0 ? (
           faqCategories.map((category, catIndex) => (
             <div key={catIndex} className="faq-category">
-              {/* Category Header */}
               <div className="faq-cat-header">
                 <div className="faq-icon-wrapper">
                   {getCategoryIcon(category.category)}
@@ -74,7 +71,6 @@ export default function FAQ() {
                 <h2 className="faq-cat-title">{category.category}</h2>
               </div>
 
-              {/* Questions List */}
               <div className="faq-list">
                 {category.questions.map((item, qIndex) => {
                   const key = `${catIndex}-${qIndex}`;
@@ -88,14 +84,12 @@ export default function FAQ() {
                         aria-expanded={isOpen}
                       >
                         <span>{item.q}</span>
-                        {/* Use Plus/Minus for a cleaner, medical feel */}
                         {isOpen ? (
                           <Minus size={18} color="var(--primary)" />
                         ) : (
                           <Plus size={18} color="#94a3b8" />
                         )}
                       </button>
-
                       <div className={`faq-answer ${isOpen ? "open" : ""}`}>
                         {item.a}
                       </div>
@@ -106,7 +100,6 @@ export default function FAQ() {
             </div>
           ))
         ) : (
-          // Skeleton loading state
           <div
             className="faq-category"
             style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}
@@ -115,7 +108,7 @@ export default function FAQ() {
           </div>
         )}
 
-        {/* 3. HUMAN SUPPORT BANNER */}
+        {/* 3. SUPPORT BANNER (Updated to WhatsApp) */}
         <div className="support-banner">
           <div className="support-icon">
             <MessageCircle size={28} />
@@ -127,15 +120,26 @@ export default function FAQ() {
               color: "var(--medical-navy)",
             }}
           >
-            Need technical assistance?
+            Need assistance?
           </h3>
-          <p style={{ color: "var(--text-muted)", marginBottom: "0" }}>
-            Our team is available to assist with research inquiries and order
-            status.
+          <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
+            Our team is available to assist with inquiries and order status via
+            WhatsApp.
           </p>
 
-          <a href="mailto:melbournepeptides1@gmail.com" className="support-btn">
-            Contact Support
+          <a
+            href="https://wa.me/61482087884"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="support-btn"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <MessageCircle size={18} /> Chat on WhatsApp
           </a>
         </div>
       </div>

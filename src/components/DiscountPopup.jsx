@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 
 export default function DiscountPopup() {
   const [isVisible, setIsVisible] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "" });
@@ -21,6 +22,11 @@ export default function DiscountPopup() {
   const handleClose = () => {
     setIsVisible(false);
     localStorage.setItem("discount_popup_seen", "true");
+  };
+
+  const handleDismiss = (e) => {
+    e.stopPropagation();
+    setIsDismissed(true);
   };
 
   const handleOpen = () => {
@@ -66,11 +72,47 @@ export default function DiscountPopup() {
     alert("Code copied to clipboard!");
   };
 
+  if (isDismissed) return null;
+
   if (!isVisible) {
     return (
-      <button onClick={handleOpen} style={floatingBtnStyle}>
-        <Gift size={18} color="#fbbf24" /> Get Welcome Discount
-      </button>
+      <div
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          left: "24px",
+          zIndex: 9990,
+          animation: "fadeIn 0.5s ease",
+        }}
+      >
+        <button onClick={handleOpen} style={floatingBtnStyle}>
+          <Gift size={18} color="#fbbf24" /> Discount
+        </button>
+
+        {/* Close Button for Floating Pill */}
+        <button
+          onClick={handleDismiss}
+          style={{
+            background: "white",
+            border: "1px solid #e2e8f0",
+            borderRadius: "50%",
+            width: "22px",
+            height: "22px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+            color: "#64748b",
+            position: "absolute",
+            top: "-8px",
+            right: "-5px",
+            zIndex: 9991,
+          }}
+        >
+          <X size={12} />
+        </button>
+      </div>
     );
   }
 
@@ -299,9 +341,6 @@ const buttonStyle = {
   transition: "opacity 0.2s",
 };
 const floatingBtnStyle = {
-  position: "fixed",
-  bottom: "24px",
-  left: "24px",
   backgroundColor: "#0f172a",
   color: "white",
   padding: "12px 20px",
@@ -312,11 +351,11 @@ const floatingBtnStyle = {
   alignItems: "center",
   gap: "10px",
   cursor: "pointer",
-  zIndex: 9990,
   fontWeight: "600",
   fontSize: "0.9rem",
   transition: "transform 0.2s, box-shadow 0.2s",
-  animation: "fadeIn 0.5s ease",
+  height: "45px", // Enforced height
+  boxSizing: "border-box",
 };
 const backdropStyle = {
   position: "fixed",

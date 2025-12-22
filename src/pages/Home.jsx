@@ -163,7 +163,7 @@ export default function Home() {
                 margin: "0 auto",
               }}
             >
-              Join thousands of customers trusting Prime Labs for their daily
+              Join thousands of customers trusting Melbourne Peptides for their daily
               laboratory needs.
             </p>
           </div>

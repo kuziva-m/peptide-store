@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom"; // <-- Import this
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
+import { LayoutGrid, FlaskConical, Layers, Droplets } from "lucide-react";
 import "./Home.css";
 import "./Shop.css";
 
 export default function Shop({ searchQuery }) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,9 +16,13 @@ export default function Shop({ searchQuery }) {
     searchParams.get("category") || "All"
   );
 
-  const categories = ["All", "Peptides", "Peptide Blends", "Mixing Solution"];
+  const categories = [
+    { name: "All", icon: <LayoutGrid size={20} /> },
+    { name: "Peptides", icon: <FlaskConical size={20} /> },
+    { name: "Peptide Blends", icon: <Layers size={20} /> },
+    { name: "Mixing Solution", icon: <Droplets size={20} /> },
+  ];
 
-  // Update active category if URL changes (e.g. clicking links in Navbar/Home while already on Shop)
   useEffect(() => {
     const catFromUrl = searchParams.get("category");
     if (catFromUrl) {
@@ -49,7 +54,7 @@ export default function Shop({ searchQuery }) {
     let result = products;
 
     // 1. Filter by Search
-    if (searchQuery.trim() !== "") {
+    if (searchQuery && searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter((product) =>
         product.name.toLowerCase().includes(lowerQuery)
@@ -95,7 +100,7 @@ export default function Shop({ searchQuery }) {
             color: "var(--medical-navy)",
           }}
         >
-          Shop Research Peptides
+          Shop Peptides
         </h1>
         <p
           style={{
@@ -104,20 +109,26 @@ export default function Shop({ searchQuery }) {
             color: "var(--text-muted)",
           }}
         >
-          High-purity compounds for laboratory research use only.
+          High-purity compounds for laboratory use only.
         </p>
 
-        {/* CATEGORY TABS */}
-        <div className="category-tabs" style={{ marginBottom: "50px" }}>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`tab-btn ${activeCategory === cat ? "active" : ""}`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* CATEGORY TABS (Responsive) */}
+        <div className="category-tabs-container">
+          <div className="category-tabs">
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => setActiveCategory(cat.name)}
+                className={`tab-btn ${
+                  activeCategory === cat.name ? "active" : ""
+                }`}
+                title={cat.name}
+              >
+                <span className="tab-icon">{cat.icon}</span>
+                <span className="tab-text">{cat.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* RESULTS */}
@@ -132,7 +143,11 @@ export default function Shop({ searchQuery }) {
             {filteredGroupedProducts.length === 0 && (
               <div
                 className="empty-state"
-                style={{ textAlign: "center", color: "var(--text-muted)" }}
+                style={{
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  padding: "40px",
+                }}
               >
                 <p>No products found matching "{searchQuery}"</p>
               </div>
@@ -169,6 +184,71 @@ export default function Shop({ searchQuery }) {
           </div>
         )}
       </div>
+
+      {/* Internal CSS for Mobile Tabs */}
+      <style>{`
+        .category-tabs-container {
+          margin-bottom: 50px;
+          display: flex;
+          justify-content: center;
+        }
+        .category-tabs {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 20px;
+          border-radius: 50px;
+          border: 1px solid #e2e8f0;
+          background: white;
+          color: #64748b;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .tab-btn.active {
+          background: #0f172a;
+          color: white;
+          border-color: #0f172a;
+        }
+        
+        /* Mobile Optimization: Circles with Icons */
+        @media (max-width: 600px) {
+          .category-tabs-container {
+            overflow-x: auto;
+            justify-content: flex-start; /* Align left to allow scrolling if needed */
+            padding-bottom: 10px;
+          }
+          .category-tabs {
+            flex-wrap: nowrap; /* Prevent wrapping */
+            padding: 0 10px;
+          }
+          .tab-btn {
+            flex-direction: column;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            padding: 0;
+            border-radius: 50%; /* Circle shape */
+            flex-shrink: 0;
+          }
+          .tab-text {
+            display: none; /* Hide text on mobile */
+          }
+          .tab-icon {
+            display: flex;
+          }
+        }
+        @media (min-width: 601px) {
+          .tab-icon { display: none; } /* Hide icons on desktop if you prefer text-only */
+          /* Or keep them: .tab-icon { display: flex; } */
+        }
+      `}</style>
     </div>
   );
 }
