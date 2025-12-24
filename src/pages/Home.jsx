@@ -11,6 +11,7 @@ import {
   MessageSquarePlus,
   User,
   Heart,
+  Video, // Imported Video Icon
 } from "lucide-react";
 import "./Home.css";
 
@@ -134,6 +135,25 @@ export default function Home() {
         </div>
       </section>
 
+      {/* NEW: VIDEO SUPPORT SECTION */}
+      <section className="support-banner-dark">
+        <div className="container support-flex">
+          <div className="support-icon-glow">
+            <Video size={40} color="white" />
+          </div>
+          <div className="support-text">
+            <h2>Need guidance? Let's hop on a call.</h2>
+            <p>
+              Once you receive your peptides, we are happy to schedule a video
+              call to answer your questions and help you get started.
+            </p>
+          </div>
+          <Link to="/contact" className="support-action-btn">
+            Book Support Call
+          </Link>
+        </div>
+      </section>
+
       <section className="section-container" style={{ paddingBottom: "20px" }}>
         <div className="container">
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
@@ -163,8 +183,7 @@ export default function Home() {
                 margin: "0 auto",
               }}
             >
-              Join thousands of customers trusting Melbourne Peptides for their daily
-              laboratory needs.
+              Join thousands of customers trusting Melbourne Peptides
             </p>
           </div>
 

@@ -2,12 +2,11 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import {
   Mail,
-  Phone,
   MapPin,
   Send,
   Loader,
   CheckCircle,
-  MessageCircle,
+  Instagram,
 } from "lucide-react";
 
 export default function Contact() {
@@ -65,8 +64,8 @@ export default function Contact() {
             margin: "0 auto",
           }}
         >
-          Our research specialists are available to assist with product
-          specifications, bulk orders, and shipping inquiries.
+          Our specialists are available to assist with product specifications,
+          bulk orders, and shipping inquiries.
         </p>
       </div>
 
@@ -100,17 +99,22 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Card 2: Phone */}
+            {/* Card 2: Instagram */}
             <div style={infoCardStyle}>
               <div style={iconBoxStyle}>
-                <MessageCircle size={24} color="var(--medical-navy)" />
+                <Instagram size={24} color="var(--medical-navy)" />
               </div>
               <div>
-                <h3 style={cardTitleStyle}>WhatsApp / SMS</h3>
-                <p style={cardTextStyle}>Quick questions & technical support</p>
-                <span style={{ ...linkStyle, cursor: "default" }}>
-                  +61 468 533 070
-                </span>
+                <h3 style={cardTitleStyle}>Instagram Support</h3>
+                <p style={cardTextStyle}>Quick questions & updates</p>
+                <a
+                  href="https://ig.me/m/melbournepeptides"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={linkStyle}
+                >
+                  @melbournepeptides
+                </a>
               </div>
             </div>
 
@@ -203,7 +207,7 @@ export default function Contact() {
                     value={formData.name}
                     onChange={handleChange}
                     type="text"
-                    placeholder="Dr. Smith"
+                    placeholder="John Doe"
                     style={inputStyle}
                   />
                 </div>
@@ -215,7 +219,7 @@ export default function Contact() {
                     value={formData.email}
                     onChange={handleChange}
                     type="email"
-                    placeholder="name@lab.com"
+                    placeholder="John@example.com"
                     style={inputStyle}
                   />
                 </div>
@@ -242,7 +246,7 @@ export default function Contact() {
                   value={formData.message}
                   onChange={handleChange}
                   rows="5"
-                  placeholder="How can we assist your research?"
+                  placeholder="How can we assist you?"
                   style={{ ...inputStyle, resize: "vertical" }}
                 ></textarea>
               </div>
@@ -293,7 +297,7 @@ const infoCardStyle = {
 const iconBoxStyle = {
   width: "50px",
   height: "50px",
-  background: "#f1f5f9", // Neutral gray/slate instead of bright colors
+  background: "#f1f5f9",
   borderRadius: "12px",
   display: "flex",
   alignItems: "center",

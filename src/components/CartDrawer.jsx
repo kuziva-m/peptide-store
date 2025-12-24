@@ -9,6 +9,7 @@ import {
   Check,
   Loader,
   Trash2,
+  Mail,
 } from "lucide-react";
 import { useCart } from "../lib/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +32,10 @@ export default function CartDrawer() {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountError, setDiscountError] = useState("");
 
+  // NEW: Capture Email for Guest Validation
+  const [guestEmail, setGuestEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+
   useEffect(() => {
     if (isCartOpen) {
       document.body.style.overflow = "hidden";
@@ -42,7 +47,6 @@ export default function CartDrawer() {
     };
   }, [isCartOpen]);
 
-  // --- HELPER: Safely render variant strings ---
   const getVariantLabel = (v) => {
     if (!v) return "";
     if (typeof v === "string") return v;
@@ -69,35 +73,70 @@ export default function CartDrawer() {
   };
 
   const handleCheckout = async () => {
+    // 1. Basic Validation
+    if (appliedDiscount && !guestEmail) {
+      setEmailError("Email is required to use a discount code.");
+      return;
+    }
+    if (guestEmail && !/\S+@\S+\.\S+/.test(guestEmail)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
+    setEmailError("");
+
     try {
       const { data, error } = await supabase.functions.invoke("checkout", {
-        body: { items: cart, discountCode: appliedDiscount },
+        body: {
+          items: cart,
+          discountCode: appliedDiscount,
+          customerEmail: guestEmail, // Passing email to backend
+        },
       });
-      if (error) throw error;
+
+      if (error) {
+        // Handle the specific "Coupon Used" error gracefully
+        try {
+          const errBody = JSON.parse(await error.context.text());
+          if (errBody.error && errBody.error.includes("already used")) {
+            alert(
+              "This discount code has already been used by this email address."
+            );
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+        throw error;
+      }
+
+      if (data?.error) throw new Error(data.error);
       if (data?.url) window.location.href = data.url;
     } catch (error) {
       console.error(error);
-      alert("Checkout error: " + error.message);
+      alert(error.message || "Checkout error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
   if (!isCartOpen) return null;
+  const itemCount = cart ? cart.length : 0;
 
   return (
     <>
       <div className="cart-overlay" onClick={toggleCart}></div>
       <div className="cart-drawer">
         <div className="cart-header">
-          <h3>Your Cart ({cart.length})</h3>
+          <h3>Your Cart ({itemCount})</h3>
           <button onClick={toggleCart} className="close-cart-btn">
             <X size={24} />
           </button>
         </div>
 
-        {cart.length === 0 ? (
+        {itemCount === 0 ? (
           <div className="empty-cart">
             <ShoppingBag size={48} color="#e2e8f0" />
             <p>Your cart is empty.</p>
@@ -115,10 +154,8 @@ export default function CartDrawer() {
           <>
             <div className="cart-items">
               {cart.map((item, index) => {
-                // Generate a safe key combining id, variant string, and index fallback
                 const safeVariant = getVariantLabel(item.variant);
                 const itemKey = `${item.id}-${safeVariant}-${index}`;
-
                 return (
                   <div key={itemKey} className="cart-item">
                     <img
@@ -129,7 +166,6 @@ export default function CartDrawer() {
                     <div className="cart-item-details">
                       <div>
                         <h4>{item.name}</h4>
-                        {/* --- SAFE RENDER --- */}
                         <p className="cart-item-variant">{safeVariant}</p>
                       </div>
                       <div className="cart-item-controls">
@@ -190,6 +226,66 @@ export default function CartDrawer() {
             </div>
 
             <div className="cart-footer">
+              {/* NEW: EMAIL INPUT FOR GUEST CHECKOUT */}
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontWeight: "600",
+                    fontSize: "0.9rem",
+                    color: "#334155",
+                  }}
+                >
+                  Contact Information{" "}
+                  {appliedDiscount && (
+                    <span style={{ color: "#ef4444" }}>*</span>
+                  )}
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Mail
+                    size={16}
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#94a3b8",
+                    }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={guestEmail}
+                    onChange={(e) => {
+                      setGuestEmail(e.target.value);
+                      setEmailError("");
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 12px 12px 38px",
+                      border: emailError
+                        ? "1px solid #ef4444"
+                        : "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                      fontSize: "0.95rem",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                {emailError && (
+                  <p
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "0.85rem",
+                      marginTop: "6px",
+                    }}
+                  >
+                    {emailError}
+                  </p>
+                )}
+              </div>
+
               <div style={{ marginBottom: "24px" }}>
                 {!appliedDiscount ? (
                   <form

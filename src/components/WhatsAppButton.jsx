@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { MessageCircle, X } from "lucide-react";
+import { Instagram, X } from "lucide-react";
 
 export default function WhatsAppButton() {
   const [isVisible, setIsVisible] = useState(true);
+
+  // Your Instagram username from the link provided
+  const INSTAGRAM_USERNAME = "melbournepeptides";
 
   if (!isVisible) return null;
 
@@ -15,11 +18,11 @@ export default function WhatsAppButton() {
       }}
     >
       <a
-        href="https://wa.me/61482087884"
+        href={`https://ig.me/m/${INSTAGRAM_USERNAME}`}
         target="_blank"
         rel="noopener noreferrer"
         style={{
-          backgroundColor: "#0f172a", // Navy Background
+          backgroundColor: "#0f172a", // Navy (Matches theme)
           color: "white", // White Text & Icon
           padding: "12px 20px",
           borderRadius: "50px",
@@ -36,9 +39,9 @@ export default function WhatsAppButton() {
           boxSizing: "border-box",
         }}
       >
-        {/* UPDATED: Removed green fill/color to make it hollow/white */}
-        <MessageCircle size={20} />
-        WhatsApp
+        {/* Hollow Instagram Icon */}
+        <Instagram size={20} />
+        Chat on Insta
       </a>
 
       <button

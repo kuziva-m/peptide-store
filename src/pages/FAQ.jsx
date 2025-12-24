@@ -7,6 +7,7 @@ import {
   HelpCircle,
   ShieldCheck,
   Truck,
+  Instagram,
 } from "lucide-react";
 import "./FAQ.css";
 
@@ -47,71 +48,92 @@ export default function FAQ() {
   };
 
   return (
-    <div className="faq-page">
-      {/* 1. HERO HEADER */}
-      <div className="faq-hero">
-        <h1 className="faq-title">Help Center</h1>
-        <p className="faq-subtitle">
-          Find answers regarding shipping protocols, product storage, and order
-          processing.
-          <br />
-          Professional support for reliable service.
-        </p>
-      </div>
-
-      {/* 2. MAIN CONTENT */}
-      <div className="faq-content">
-        {faqCategories.length > 0 ? (
-          faqCategories.map((category, catIndex) => (
-            <div key={catIndex} className="faq-category">
-              <div className="faq-cat-header">
-                <div className="faq-icon-wrapper">
-                  {getCategoryIcon(category.category)}
-                </div>
-                <h2 className="faq-cat-title">{category.category}</h2>
-              </div>
-
-              <div className="faq-list">
-                {category.questions.map((item, qIndex) => {
-                  const key = `${catIndex}-${qIndex}`;
-                  const isOpen = openSection[key];
-
-                  return (
-                    <div key={qIndex} className="faq-item">
-                      <button
-                        className="faq-trigger"
-                        onClick={() => toggleQuestion(catIndex, qIndex)}
-                        aria-expanded={isOpen}
-                      >
-                        <span>{item.q}</span>
-                        {isOpen ? (
-                          <Minus size={18} color="var(--primary)" />
-                        ) : (
-                          <Plus size={18} color="#94a3b8" />
-                        )}
-                      </button>
-                      <div className={`faq-answer ${isOpen ? "open" : ""}`}>
-                        {item.a}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))
-        ) : (
-          <div
-            className="faq-category"
-            style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}
+    <div className="page-wrapper">
+      <div
+        className="container"
+        style={{ padding: "80px 24px", maxWidth: "900px" }}
+      >
+        {/* 1. HEADER (Matches Shop & Contact Page) */}
+        <div style={{ textAlign: "center", marginBottom: "60px" }}>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              marginBottom: "16px",
+              color: "var(--medical-navy)", // Navy Text
+              fontWeight: "700",
+            }}
           >
-            Loading Help Center...
-          </div>
-        )}
+            Help Center
+          </h1>
+          <p
+            style={{
+              color: "var(--text-muted)", // Grey Text
+              fontSize: "1.1rem",
+              maxWidth: "600px",
+              margin: "0 auto",
+              lineHeight: "1.6",
+            }}
+          >
+            Find answers regarding shipping protocols, product storage, and
+            order processing. Professional support for reliable service.
+          </p>
+        </div>
 
-        {/* 3. SUPPORT BANNER (Updated to WhatsApp) */}
+        {/* 2. FAQ CONTENT */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
+          {faqCategories.length > 0 ? (
+            faqCategories.map((category, catIndex) => (
+              <div key={catIndex} className="faq-category">
+                <div className="faq-cat-header">
+                  <div className="faq-icon-wrapper">
+                    {getCategoryIcon(category.category)}
+                  </div>
+                  <h2 className="faq-cat-title">{category.category}</h2>
+                </div>
+
+                <div className="faq-list">
+                  {category.questions.map((item, qIndex) => {
+                    const key = `${catIndex}-${qIndex}`;
+                    const isOpen = openSection[key];
+
+                    return (
+                      <div key={qIndex} className="faq-item">
+                        <button
+                          className="faq-trigger"
+                          onClick={() => toggleQuestion(catIndex, qIndex)}
+                          aria-expanded={isOpen}
+                        >
+                          <span>{item.q}</span>
+                          {isOpen ? (
+                            <Minus size={18} color="var(--primary)" />
+                          ) : (
+                            <Plus size={18} color="#94a3b8" />
+                          )}
+                        </button>
+
+                        <div className={`faq-answer ${isOpen ? "open" : ""}`}>
+                          {item.a}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div
+              className="faq-category"
+              style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}
+            >
+              Loading Help Center...
+            </div>
+          )}
+        </div>
+
+        {/* 3. SUPPORT BANNER (Instagram) */}
         <div className="support-banner">
           <div className="support-icon">
-            <MessageCircle size={28} />
+            <Instagram size={28} />
           </div>
           <h3
             style={{
@@ -120,26 +142,21 @@ export default function FAQ() {
               color: "var(--medical-navy)",
             }}
           >
-            Need assistance?
+            Need technical assistance?
           </h3>
           <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
             Our team is available to assist with inquiries and order status via
-            WhatsApp.
+            Instagram.
           </p>
 
           <a
-            href="https://wa.me/61482087884"
+            href="https://ig.me/m/melbournepeptides"
             target="_blank"
             rel="noopener noreferrer"
             className="support-btn"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
           >
-            <MessageCircle size={18} /> Chat on WhatsApp
+            <Instagram size={18} /> Chat on Instagram
           </a>
         </div>
       </div>
