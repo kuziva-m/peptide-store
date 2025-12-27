@@ -16,6 +16,13 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
     }
   };
 
+  // UPDATED: Clears search AND navigates to Home
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    navigate("/");
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <nav className="navbar">
       <div className="container nav-top-bar">
@@ -36,7 +43,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           />
         </Link>
 
-        {/* 3. SEARCH BAR (WORKING NOW) */}
+        {/* 3. SEARCH BAR (DESKTOP) */}
         <div className="search-widget">
           <Search size={18} className="search-icon" />
           <input
@@ -44,7 +51,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             placeholder="Search for peptides..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchSubmit} // Navigate on Enter
+            onKeyDown={handleSearchSubmit}
             className="search-input-header"
           />
         </div>
@@ -52,7 +59,6 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
         {/* 4. ACTIONS */}
         <div className="nav-actions">
           <button className="cart-btn" onClick={toggleCart}>
-            {/* Switched to a cleaner icon stroke */}
             <ShoppingCart size={26} strokeWidth={1.5} />
             {cartCount > 0 && (
               <span className="cart-count-badge">{cartCount}</span>
@@ -61,7 +67,33 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
         </div>
       </div>
 
-      {/* 5. NAVIGATION LINKS */}
+      {/* NEW LOCATION: MOBILE SEARCH BAR (Always visible on mobile) */}
+      <div className="mobile-search-wrapper">
+        <div className="mobile-search-inner">
+          <Search size={18} className="mobile-search-icon" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchSubmit}
+            className="mobile-search-input"
+          />
+        </div>
+
+        {/* 'X' Button: Clears search and goes HOME */}
+        {searchQuery && (
+          <button
+            className="mobile-cancel-btn"
+            onClick={handleClearSearch}
+            aria-label="Clear Search and Go Home"
+          >
+            <X size={24} strokeWidth={1.5} />
+          </button>
+        )}
+      </div>
+
+      {/* 5. NAVIGATION LINKS (DROPDOWN) */}
       <div
         className={`nav-bottom-bar ${isMobileMenuOpen ? "mobile-open" : ""}`}
       >
