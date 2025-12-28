@@ -9,7 +9,6 @@ import {
   Check,
   Loader,
   Trash2,
-  Mail,
 } from "lucide-react";
 import { useCart } from "../lib/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -31,10 +30,6 @@ export default function CartDrawer() {
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountError, setDiscountError] = useState("");
-
-  // NEW: Capture Email for Guest Validation
-  const [guestEmail, setGuestEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     if (isCartOpen) {
@@ -73,42 +68,18 @@ export default function CartDrawer() {
   };
 
   const handleCheckout = async () => {
-    // 1. Basic Validation
-    if (appliedDiscount && !guestEmail) {
-      setEmailError("Email is required to use a discount code.");
-      return;
-    }
-    if (guestEmail && !/\S+@\S+\.\S+/.test(guestEmail)) {
-      setEmailError("Please enter a valid email address.");
-      return;
-    }
-
     setLoading(true);
-    setEmailError("");
 
     try {
+      // Updated: Removed customerEmail from payload since it's collected later
       const { data, error } = await supabase.functions.invoke("checkout", {
         body: {
           items: cart,
           discountCode: appliedDiscount,
-          customerEmail: guestEmail, // Passing email to backend
         },
       });
 
       if (error) {
-        // Handle the specific "Coupon Used" error gracefully
-        try {
-          const errBody = JSON.parse(await error.context.text());
-          if (errBody.error && errBody.error.includes("already used")) {
-            alert(
-              "This discount code has already been used by this email address."
-            );
-            setLoading(false);
-            return;
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
         throw error;
       }
 
@@ -226,66 +197,7 @@ export default function CartDrawer() {
             </div>
 
             <div className="cart-footer">
-              {/* NEW: EMAIL INPUT FOR GUEST CHECKOUT */}
-              <div style={{ marginBottom: "20px" }}>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "8px",
-                    fontWeight: "600",
-                    fontSize: "0.9rem",
-                    color: "#334155",
-                  }}
-                >
-                  Contact Information{" "}
-                  {appliedDiscount && (
-                    <span style={{ color: "#ef4444" }}>*</span>
-                  )}
-                </label>
-                <div style={{ position: "relative" }}>
-                  <Mail
-                    size={16}
-                    style={{
-                      position: "absolute",
-                      left: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "#94a3b8",
-                    }}
-                  />
-                  <input
-                    type="email"
-                    placeholder="Enter your email address"
-                    value={guestEmail}
-                    onChange={(e) => {
-                      setGuestEmail(e.target.value);
-                      setEmailError("");
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "12px 12px 12px 38px",
-                      border: emailError
-                        ? "1px solid #ef4444"
-                        : "1px solid #e2e8f0",
-                      borderRadius: "8px",
-                      fontSize: "0.95rem",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-                {emailError && (
-                  <p
-                    style={{
-                      color: "#ef4444",
-                      fontSize: "0.85rem",
-                      marginTop: "6px",
-                    }}
-                  >
-                    {emailError}
-                  </p>
-                )}
-              </div>
-
+              {/* Discount Section Only - Email Section Removed */}
               <div style={{ marginBottom: "24px" }}>
                 {!appliedDiscount ? (
                   <form

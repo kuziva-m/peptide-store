@@ -77,12 +77,12 @@ export default function WhatsAppButton() {
           right: 24px; /* Default: Bottom Right */
         }
         
-        /* Mobile: Stack on Left above Discount Button */
+        /* Mobile: Ensure it stays on the RIGHT side */
         @media (max-width: 768px) {
           .whatsapp-float-container {
-            right: auto;
-            left: 24px;
-            bottom: 80px; /* Stacks above the discount button */
+            left: auto; /* Reset left */
+            right: 24px; /* Force Right */
+            bottom: 80px; /* Stacks above bottom elements if needed */
           }
         }
       `}</style>
