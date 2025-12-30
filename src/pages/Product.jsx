@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useCart } from "../lib/CartContext";
+import SEO from "../components/SEO";
 import {
   ChevronLeft,
   ShieldCheck,
@@ -16,7 +17,9 @@ import {
 import "./Product.css";
 
 export default function Product() {
-  const { id } = useParams();
+  // FIX: App.jsx defines the route as "/product/:handle"
+  // So we must extract "handle", which contains the ID passed from the Product Card.
+  const { handle } = useParams();
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
@@ -26,10 +29,11 @@ export default function Product() {
 
   useEffect(() => {
     async function fetchProduct() {
+      // FIX: Query using "handle" (which is the ID)
       const { data, error } = await supabase
         .from("products")
         .select(`*, variants (*)`)
-        .eq("id", id)
+        .eq("id", handle)
         .single();
 
       if (data) {
@@ -42,7 +46,7 @@ export default function Product() {
       setLoading(false);
     }
     fetchProduct();
-  }, [id]);
+  }, [handle]); // FIX: Dependency is now "handle"
 
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
@@ -96,8 +100,22 @@ export default function Product() {
   const activeLabUrl =
     selectedVariant?.lab_result_url || product.lab_result_url;
 
+  // SEO Description Logic
+  const metaDescription = product.description
+    ? `${product.description.substring(0, 150)}... Buy ${
+        product.name
+      } online in Australia.`
+    : `Buy ${product.name} research peptides in Australia. High purity, lab tested.`;
+
   return (
     <div className="container product-page">
+      <SEO
+        title={`Buy ${product.name} Australia`}
+        description={metaDescription}
+        image={displayImage}
+        type="product"
+      />
+
       <Link to="/shop" className="back-link">
         <ChevronLeft size={16} /> Back to Catalog
       </Link>

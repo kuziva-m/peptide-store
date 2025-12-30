@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://melbournepeptides.com.au/sitemap.xml

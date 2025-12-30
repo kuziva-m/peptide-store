@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
+import SEO from "../components/SEO";
 import {
   Truck,
   Shield,
@@ -11,7 +12,7 @@ import {
   MessageSquarePlus,
   User,
   Heart,
-  Video, // Imported Video Icon
+  Video,
 } from "lucide-react";
 import "./Home.css";
 
@@ -71,14 +72,48 @@ export default function Home() {
 
   return (
     <div className="home-page">
+      <SEO
+        title="Home"
+        description="Australia's #1 source for premium peptides. Lab-tested BPC-157, Melanotan 2, GHK-Cu and more. 99% purity guaranteed with fast express shipping from Melbourne."
+      />
+
       <section className="hero-banner-wrapper">
         <div className="container" style={{ padding: 0, maxWidth: "100%" }}>
+          {/* FIX: Removed 'aspectRatio' and 'objectFit' to stop cropping.
+              Added 'maxHeight' to keep it reasonable. 
+              
+              IMPORTANT: Update width="1920" and height="600" below to match
+              your REAL image dimensions to keep the Speed Score high.
+          */}
           <img
             src="/hero-banner.jpeg"
             alt="Welcome"
             className="hero-banner-img"
+            width="1920"
+            height="600"
+            style={{
+              width: "100%",
+              height: "auto",
+              maxHeight: "80vh", // Ensures it doesn't get too tall on big screens
+              display: "block",
+            }}
           />
           <div className="hero-overlay-actions">
+            <h1
+              style={{
+                position: "absolute",
+                width: "1px",
+                height: "1px",
+                padding: "0",
+                overflow: "hidden",
+                clip: "rect(0,0,0,0)",
+                whiteSpace: "nowrap",
+                border: "0",
+              }}
+            >
+              Melbourne Peptides - Premium Peptides Australia
+            </h1>
+
             <Link to="/shop" className="hero-cta-btn">
               {content?.hero_cta || "Shop Online Now"}
             </Link>
@@ -135,7 +170,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NEW: VIDEO SUPPORT SECTION */}
       <section className="support-banner-dark">
         <div className="container support-flex">
           <div className="support-icon-glow">
@@ -304,6 +338,7 @@ export default function Home() {
   );
 }
 
+// STYLES
 const imageCardStyle = {
   borderRadius: "16px",
   overflow: "hidden",

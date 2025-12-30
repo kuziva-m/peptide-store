@@ -3,38 +3,30 @@ import { createContext, useState, useContext, useEffect } from "react";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  // 1. SAFER INITIALIZATION (The Sanitizer)
+  // 1. SAFER INITIALIZATION
   const [cart, setCart] = useState(() => {
     if (typeof window === "undefined") return [];
     try {
       const saved = localStorage.getItem("cart");
       if (!saved) return [];
-
       const parsed = JSON.parse(saved);
 
-      // SANITIZE: Loop through saved items and fix "Object" variants
-      // This automatically repairs the "poisoned" data causing your crash
       const cleanCart = Array.isArray(parsed)
         ? parsed.map((item) => {
             let cleanVariant = item.variant;
-
-            // If variant is an object (the bug), extract the label
             if (typeof item.variant === "object" && item.variant !== null) {
               cleanVariant =
                 item.variant.size_label || item.variant.name || "Standard";
             }
-
             return {
               ...item,
-              variant: cleanVariant || "Standard", // Ensure it's always a string
+              variant: cleanVariant || "Standard",
             };
           })
         : [];
-
       return cleanCart;
     } catch (error) {
       console.error("Cart corrupted, resetting:", error);
-      // If data is totally broken, wipe it to save the app
       localStorage.removeItem("cart");
       return [];
     }
@@ -42,12 +34,13 @@ export function CartProvider({ children }) {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // 2. Sync to LocalStorage
+  // NEW: Notification State for Toasts
+  const [notification, setNotification] = useState(null);
+
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  // 3. Totals
   const cartTotal = cart.reduce(
     (total, item) => total + item.price * item.quantity,
     0
@@ -56,9 +49,14 @@ export function CartProvider({ children }) {
 
   const toggleCart = () => setIsCartOpen(!isCartOpen);
 
+  // Helper to show notification
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   const addToCart = (product, quantity = 1, variantLabel = "Standard") => {
     setCart((prevCart) => {
-      // Ensure we are working with a clean string for the variant
       const safeVariant =
         typeof variantLabel === "object"
           ? variantLabel.size_label || "Standard"
@@ -78,11 +76,14 @@ export function CartProvider({ children }) {
           {
             ...product,
             quantity,
-            variant: safeVariant, // Storing strict string
+            variant: safeVariant,
           },
         ];
       }
     });
+
+    // Trigger the notification
+    showNotification(`${quantity} x ${product.name} added to cart`);
     setIsCartOpen(true);
   };
 
@@ -118,6 +119,7 @@ export function CartProvider({ children }) {
         clearCart,
         cartTotal,
         cartCount,
+        notification, // Exporting this so Toast.jsx can read it
       }}
     >
       {children}

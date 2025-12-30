@@ -1,8 +1,9 @@
 import { useCart } from "../lib/CartContext";
 import { CheckCircle } from "lucide-react";
-import "./Toast.css"; // Create or add to index.css
+import "./Toast.css";
 
-export default function Toast() {
+// 1. The Toast Component (Internal)
+function Toast() {
   const { notification } = useCart();
 
   if (!notification) return null;
@@ -14,3 +15,16 @@ export default function Toast() {
     </div>
   );
 }
+
+// 2. The Provider (Exported)
+// This sits in App.jsx and injects the Toast into the page
+export function ToastProvider({ children }) {
+  return (
+    <>
+      {children}
+      <Toast />
+    </>
+  );
+}
+
+export default Toast;
