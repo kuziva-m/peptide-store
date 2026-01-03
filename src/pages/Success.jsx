@@ -13,10 +13,11 @@ export default function Success() {
   // Clear cart on load
   const { cartItems, removeFromCart } = useCart();
   useEffect(() => {
-    if (cartItems.length > 0) {
-      cartItems.forEach((i) => removeFromCart(i.variantId));
+    if (cartItems && cartItems.length > 0) {
+      // FIX: Ensure clean cart clearing
+      cartItems.forEach((i) => removeFromCart(i.id, i.variant));
     }
-  }, []);
+  }, []); // Run once on mount
 
   useEffect(() => {
     if (!sessionId) {
@@ -26,6 +27,7 @@ export default function Success() {
 
     async function fetchOrder() {
       try {
+        // CALL BACKEND: The Edge Function will now Retrieve + SAVE the order
         const { data, error } = await supabase.functions.invoke("checkout", {
           body: { action: "retrieve", session_id: sessionId },
         });
@@ -35,21 +37,8 @@ export default function Success() {
         const session = data.session;
         setOrder(session);
 
-        // Save order to DB if needed
-        if (session) {
-          await supabase.from("orders").upsert(
-            {
-              stripe_session_id: session.id,
-              customer_email: session.customer_details?.email,
-              customer_name: session.customer_details?.name,
-              total_amount: session.amount_total / 100,
-              status: "pending",
-              shipping_address: session.shipping_details?.address,
-              items: session.line_items?.data || [],
-            },
-            { onConflict: "stripe_session_id" }
-          );
-        }
+        // NOTE: Order saving is now handled by the 'checkout' function.
+        // We no longer attempt to save from the browser to avoid permission errors.
       } catch (err) {
         console.error("Error fetching order:", err);
       } finally {
@@ -68,7 +57,7 @@ export default function Success() {
       >
         <Loader className="spin-anim" size={40} style={{ margin: "0 auto" }} />
         <p style={{ marginTop: "20px", color: "var(--text-muted)" }}>
-          Loading order details...
+          Finalizing order details...
         </p>
       </div>
     );
@@ -81,6 +70,7 @@ export default function Success() {
         style={{ padding: "100px 20px", textAlign: "center" }}
       >
         <h1>Order not found</h1>
+        <p>Please check your email for confirmation.</p>
         <Link
           to="/"
           className="buy-btn"
@@ -92,7 +82,6 @@ export default function Success() {
     );
   }
 
-  // Calculate Shipping Cost from Stripe Data
   const shippingCost = order.total_details?.amount_shipping
     ? order.total_details.amount_shipping / 100
     : 0;
@@ -160,6 +149,7 @@ export default function Success() {
             <a
               href={order.invoice_pdf || order.receipt_url}
               target="_blank"
+              rel="noreferrer"
               className="buy-btn"
               style={{
                 width: "auto",
@@ -221,7 +211,6 @@ export default function Success() {
             marginTop: "20px",
           }}
         >
-          {/* NEW: SHIPPING ROW */}
           <div
             style={{
               display: "flex",
@@ -235,7 +224,6 @@ export default function Success() {
             <span>${shippingCost.toFixed(2)} AUD</span>
           </div>
 
-          {/* TOTAL ROW */}
           <div
             style={{
               display: "flex",

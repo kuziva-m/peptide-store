@@ -47,74 +47,35 @@ export default function ContentEditor() {
         maxWidth: "800px",
       }}
     >
-      {/* 1. SHIPPING CONFIG */}
-      <Section title="Shipping Configuration">
-        <label>Policy Text</label>
-        <textarea
-          rows={3}
-          defaultValue={settings.shipping_policy?.text}
-          onBlur={(e) =>
-            handleSave("shipping_policy", {
-              ...settings.shipping_policy,
-              text: e.target.value,
-            })
-          }
-          style={styles.textarea}
-        />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "20px",
-            marginTop: "10px",
-          }}
-        >
-          <div>
-            <label>Standard Price ($)</label>
-            <input
-              type="number"
-              defaultValue={settings.shipping_policy?.price_standard}
-              onBlur={(e) =>
-                handleSave("shipping_policy", {
-                  ...settings.shipping_policy,
-                  price_standard: parseFloat(e.target.value),
-                })
-              }
-              style={styles.input}
-            />
-          </div>
-          <div>
-            <label>Express Price ($)</label>
-            <input
-              type="number"
-              defaultValue={settings.shipping_policy?.price_express}
-              onBlur={(e) =>
-                handleSave("shipping_policy", {
-                  ...settings.shipping_policy,
-                  price_express: parseFloat(e.target.value),
-                })
-              }
-              style={styles.input}
-            />
-          </div>
-        </div>
-      </Section>
-
-      {/* 2. HOME PAGE CONTENT */}
-      <Section title="Home Page Content">
-        <label>Hero Headline</label>
+      {/* 1. HOME PAGE CONTENT */}
+      <Section title="Home Page Banner">
+        <label style={styles.label}>Headline</label>
         <input
-          defaultValue={settings.home_content?.hero_title}
+          defaultValue={settings.home_content?.hero_headline}
           onBlur={(e) =>
             handleSave("home_content", {
               ...settings.home_content,
-              hero_title: e.target.value,
+              hero_headline: e.target.value,
             })
           }
           style={styles.input}
         />
-        <label style={{ marginTop: "10px", display: "block" }}>
-          Call to Action Label
+        <label style={{ ...styles.label, marginTop: "15px" }}>
+          Sub-Headline
+        </label>
+        <textarea
+          rows={3}
+          defaultValue={settings.home_content?.hero_subheadline}
+          onBlur={(e) =>
+            handleSave("home_content", {
+              ...settings.home_content,
+              hero_subheadline: e.target.value,
+            })
+          }
+          style={styles.textarea}
+        />
+        <label style={{ ...styles.label, marginTop: "15px" }}>
+          Button Text
         </label>
         <input
           defaultValue={settings.home_content?.hero_cta}
@@ -128,41 +89,35 @@ export default function ContentEditor() {
         />
       </Section>
 
-      {/* 3. DISCOUNT POPUP */}
-      <Section title="Discount Popup">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            marginBottom: "15px",
-          }}
-        >
-          <input
-            type="checkbox"
-            defaultChecked={settings.discount_popup?.active}
-            onChange={(e) =>
-              handleSave("discount_popup", {
-                ...settings.discount_popup,
-                active: e.target.checked,
-              })
-            }
-            style={{ width: "20px", height: "20px" }}
-          />
-          <span style={{ fontWeight: "600" }}>Enable Popup</span>
-        </div>
-        <label>Popup Text</label>
+      {/* 2. ANNOUNCEMENT BAR */}
+      <Section title="Announcement Bar">
+        <label style={styles.label}>Message</label>
         <input
-          defaultValue={settings.discount_popup?.text}
+          defaultValue={settings.announcement_bar?.text}
           onBlur={(e) =>
-            handleSave("discount_popup", {
-              ...settings.discount_popup,
+            handleSave("announcement_bar", {
+              ...settings.announcement_bar,
               text: e.target.value,
             })
           }
           style={styles.input}
         />
-        <label style={{ marginTop: "10px", display: "block" }}>
+      </Section>
+
+      {/* 3. DISCOUNT POPUP */}
+      <Section title="Discount Popup">
+        <label style={styles.label}>Popup Title</label>
+        <input
+          defaultValue={settings.discount_popup?.title}
+          onBlur={(e) =>
+            handleSave("discount_popup", {
+              ...settings.discount_popup,
+              title: e.target.value,
+            })
+          }
+          style={styles.input}
+        />
+        <label style={{ ...styles.label, marginTop: "15px" }}>
           Discount Code
         </label>
         <input
@@ -177,10 +132,41 @@ export default function ContentEditor() {
         />
       </Section>
 
-      {/* 4. PRIVACY POLICY */}
-      <Section title="Privacy Policy">
+      {/* 4. SHIPPING POLICY (NEW) */}
+      <Section title="Shipping Policy">
+        <p
+          style={{
+            fontSize: "0.85rem",
+            color: "#64748b",
+            marginBottom: "10px",
+          }}
+        >
+          This text will appear on the Shipping & Returns page.
+        </p>
         <textarea
-          rows={6}
+          rows={8}
+          defaultValue={settings.shipping_policy?.text}
+          placeholder="We process all orders within 24 hours..."
+          onBlur={(e) =>
+            handleSave("shipping_policy", { text: e.target.value })
+          }
+          style={styles.textarea}
+        />
+      </Section>
+
+      {/* 5. PRIVACY POLICY */}
+      <Section title="Privacy Policy">
+        <p
+          style={{
+            fontSize: "0.85rem",
+            color: "#64748b",
+            marginBottom: "10px",
+          }}
+        >
+          HTML is supported for formatting (e.g. &lt;strong&gt;, &lt;p&gt;).
+        </p>
+        <textarea
+          rows={12}
           defaultValue={settings.privacy_policy?.text}
           onBlur={(e) => handleSave("privacy_policy", { text: e.target.value })}
           style={styles.textarea}
@@ -218,19 +204,27 @@ function Section({ title, children }) {
 }
 
 const styles = {
+  label: {
+    display: "block",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: "6px",
+  },
   input: {
     width: "100%",
-    padding: "10px",
+    padding: "10px 12px",
     borderRadius: "6px",
     border: "1px solid #cbd5e1",
-    fontFamily: "inherit",
+    fontSize: "0.95rem",
   },
   textarea: {
     width: "100%",
-    padding: "10px",
+    padding: "10px 12px",
     borderRadius: "6px",
     border: "1px solid #cbd5e1",
+    fontSize: "0.95rem",
+    lineHeight: "1.5",
     fontFamily: "inherit",
-    resize: "vertical",
   },
 };

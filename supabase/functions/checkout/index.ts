@@ -52,7 +52,7 @@ serve(async (req: Request) => {
       await req.json();
 
     // ---------------------------------------------------------
-    // PART A: Success Page - Retrieve Session, Record Usage, & NOTIFY ADMIN
+    // PART A: Success Page - Retrieve Session, SAVE ORDER, & Notify
     // ---------------------------------------------------------
     if (action === "retrieve" && session_id) {
       const session = await stripe.checkout.sessions.retrieve(session_id, {
@@ -60,7 +60,30 @@ serve(async (req: Request) => {
       });
 
       if (session.payment_status === "paid") {
-        // 1. Record Discount Usage (Existing Logic)
+        // 1. CRITICAL FIX: Save Order to Database (Server-Side)
+        // This bypasses RLS and ensures data consistency
+        const { error: orderError } = await supabaseClient
+          .from("orders")
+          .upsert(
+            {
+              stripe_session_id: session.id,
+              customer_email: session.customer_details?.email,
+              customer_name: session.customer_details?.name,
+              total_amount: (session.amount_total || 0) / 100,
+              status: "pending", // Default status
+              shipping_address: session.shipping_details?.address,
+              items: session.line_items?.data || [],
+              created_at: new Date().toISOString(),
+            },
+            { onConflict: "stripe_session_id" }
+          );
+
+        if (orderError) {
+          console.error("FAILED TO SAVE ORDER:", orderError);
+          // We continue execution to ensure email is sent, but log the error
+        }
+
+        // 2. Record Discount Usage
         if (session.metadata?.discountCode) {
           const usedEmail =
             session.customer_details?.email || session.metadata.customerEmail;
@@ -76,16 +99,14 @@ serve(async (req: Request) => {
           }
         }
 
-        // 2. NEW: Admin Notification (Prevents duplicates on refresh)
+        // 3. Admin Notification (Prevents duplicates)
         if (!session.metadata?.admin_notified) {
           console.log("Sending admin notification...");
 
           const customerInfo = session.customer_details;
           const lineItems = session.line_items?.data || [];
-          const totalAmount = (session.amount_total || 0) / 100; // Convert cents to dollars
+          const totalAmount = (session.amount_total || 0) / 100;
 
-          // Build Item List HTML
-          // FIX: Explicitly typed 'item' as Stripe.LineItem to satisfy TypeScript
           const itemsHtml = lineItems
             .map(
               (item: Stripe.LineItem) =>
@@ -98,7 +119,6 @@ serve(async (req: Request) => {
             )
             .join("");
 
-          // Send Email via Resend
           if (RESEND_API_KEY) {
             await fetch("https://api.resend.com/emails", {
               method: "POST",
@@ -135,19 +155,13 @@ serve(async (req: Request) => {
                 } ${customerInfo?.address?.postal_code || ""}<br>
                       ${customerInfo?.address?.country || ""}
                     </p>
-
-                    <p style="margin-top:20px; color: #666; font-size: 12px;">
-                      View full details in your <a href="https://dashboard.stripe.com/payments/${
-                        session.payment_intent
-                      }">Stripe Dashboard</a>.
-                    </p>
                   </div>
                 `,
               }),
             });
           }
 
-          // 3. Mark session as notified in Stripe Metadata (To prevent duplicate emails on refresh)
+          // Mark session as notified
           await stripe.checkout.sessions.update(session_id, {
             metadata: {
               ...session.metadata,
@@ -164,10 +178,8 @@ serve(async (req: Request) => {
     }
 
     // ---------------------------------------------------------
-    // PART B: Create Checkout Session
+    // PART B: Create Checkout Session (Unchanged)
     // ---------------------------------------------------------
-
-    // 1. SECURITY: Check if code is already used
     if (discountCode === "WELCOME10" && customerEmail) {
       const { data: usage } = await supabaseClient
         .from("discount_usage")
@@ -189,7 +201,6 @@ serve(async (req: Request) => {
       }
     }
 
-    // 2. Validate Products
     const cartItems = items as CartItem[];
     const variantIds = cartItems.map((item) => item.variantId || item.id);
 
@@ -211,7 +222,6 @@ serve(async (req: Request) => {
     const hasValidDiscount = discountCode === "WELCOME10";
     const discountMultiplier = hasValidDiscount ? 0.9 : 1.0;
 
-    // 3. Build Line Items
     const lineItems = cartItems.map((item) => {
       const dbVariant = dbVariantMap.get(item.variantId || item.id);
       if (!dbVariant) throw new Error("Product variant not found");
@@ -242,7 +252,6 @@ serve(async (req: Request) => {
       };
     });
 
-    // 4. Shipping Logic
     const FREE_SHIPPING_THRESHOLD_CENTS = 15000;
     const isFreeShipping = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD_CENTS;
 
@@ -261,7 +270,6 @@ serve(async (req: Request) => {
       });
     }
 
-    // 5. Create Session
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       line_items: lineItems,
       mode: "payment",
@@ -274,7 +282,7 @@ serve(async (req: Request) => {
       metadata: {
         discountCode: hasValidDiscount ? "WELCOME10" : null,
         customerEmail: customerEmail,
-        admin_notified: null, // Initialize as null
+        admin_notified: null,
       },
     };
 
