@@ -17,26 +17,39 @@ import {
 import "./Product.css";
 
 export default function Product() {
-  // FIX: App.jsx defines the route as "/product/:handle"
-  // So we must extract "handle", which contains the ID passed from the Product Card.
-  const { handle } = useParams();
+  const { id } = useParams(); // Matches /product/:id in App.jsx
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     async function fetchProduct() {
-      // FIX: Query using "handle" (which is the ID)
+      console.log("Loading Product Page for ID:", id); // DEBUG LOG
+
+      if (!id || id === "undefined") {
+        console.error("Invalid ID detected in URL");
+        setErrorMsg("Invalid Product ID");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("products")
         .select(`*, variants (*)`)
-        .eq("id", handle)
+        .eq("id", id)
         .single();
 
+      if (error) {
+        console.error("Supabase Error:", error); // DEBUG LOG
+        setErrorMsg(error.message);
+      }
+
       if (data) {
+        console.log("Product Loaded:", data); // DEBUG LOG
         setProduct(data);
         if (data.variants && data.variants.length > 0) {
           const sorted = data.variants.sort((a, b) => a.price - b.price);
@@ -46,7 +59,7 @@ export default function Product() {
       setLoading(false);
     }
     fetchProduct();
-  }, [handle]); // FIX: Dependency is now "handle"
+  }, [id]);
 
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
@@ -80,13 +93,23 @@ export default function Product() {
         Loading Data...
       </div>
     );
+
   if (!product)
     return (
       <div
         className="container"
         style={{ padding: "80px", textAlign: "center" }}
       >
-        Product not found.
+        <h2>Product Not Found</h2>
+        <p style={{ color: "red" }}>Debug Error: {errorMsg}</p>
+        <p>Checked ID: {id}</p>
+        <Link
+          to="/shop"
+          className="back-link"
+          style={{ justifyContent: "center" }}
+        >
+          Return to Shop
+        </Link>
       </div>
     );
 

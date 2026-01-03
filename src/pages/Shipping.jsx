@@ -34,7 +34,7 @@ export default function Shipping() {
         Shipping & Returns
       </h1>
 
-      {/* 1. KEY HIGHLIGHTS GRID */}
+      {/* 1. KEY HIGHLIGHTS GRID (Updated Colors) */}
       <div
         style={{
           display: "grid",
@@ -43,172 +43,55 @@ export default function Shipping() {
           marginBottom: "50px",
         }}
       >
-        {/* Card 1: Flat Rate */}
-        <div
-          style={{
-            background: "white",
-            padding: "30px 20px",
-            borderRadius: "16px",
-            border: "1px solid #e2e8f0",
-            textAlign: "center",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-          }}
-        >
+        {/* Card 1: Flat Rate (Primary Purple) */}
+        <div style={cardStyle}>
           <div
             style={{
-              background: "#eff6ff",
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
+              ...iconCircleStyle,
+              background: "#ede9fe", // Very light purple
             }}
           >
-            <Truck size={28} color="#3b82f6" />
+            <Truck size={28} color="var(--primary)" />
           </div>
-          <h3
-            style={{
-              margin: "0 0 8px",
-              color: "var(--medical-navy)",
-              fontSize: "1.1rem",
-            }}
-          >
-            Flat Rate Shipping
-          </h3>
-          <p
-            style={{
-              fontSize: "1.8rem",
-              fontWeight: "800",
-              color: "#3b82f6",
-              margin: "0",
-            }}
-          >
+          <h3 style={cardTitleStyle}>Flat Rate Shipping</h3>
+          <p style={{ ...cardValueStyle, color: "var(--primary)" }}>
             $9.99 AUD
           </p>
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.9rem",
-              margin: "8px 0 0",
-              fontWeight: "500",
-            }}
-          >
-            Australia Wide
-          </p>
+          <p style={cardSubStyle}>Australia Wide</p>
         </div>
 
-        {/* Card 2: Free Shipping */}
-        <div
-          style={{
-            background: "white",
-            padding: "30px 20px",
-            borderRadius: "16px",
-            border: "1px solid #e2e8f0",
-            textAlign: "center",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-          }}
-        >
+        {/* Card 2: Free Shipping (Clinical Teal) */}
+        <div style={cardStyle}>
           <div
             style={{
-              background: "#f0fdf4",
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
+              ...iconCircleStyle,
+              background: "#ccfbf1", // Light teal
             }}
           >
-            <CheckCircle size={28} color="#10b981" />
+            <CheckCircle size={28} color="var(--clinical-teal)" />
           </div>
-          <h3
-            style={{
-              margin: "0 0 8px",
-              color: "var(--medical-navy)",
-              fontSize: "1.1rem",
-            }}
-          >
-            Free Shipping
-          </h3>
-          <p
-            style={{
-              fontSize: "1.8rem",
-              fontWeight: "800",
-              color: "#10b981",
-              margin: "0",
-            }}
-          >
+          <h3 style={cardTitleStyle}>Free Shipping</h3>
+          <p style={{ ...cardValueStyle, color: "var(--clinical-teal)" }}>
             Over $150
           </p>
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.9rem",
-              margin: "8px 0 0",
-              fontWeight: "500",
-            }}
-          >
-            Order Value
-          </p>
+          <p style={cardSubStyle}>Order Value</p>
         </div>
 
-        {/* Card 3: Speed */}
-        <div
-          style={{
-            background: "white",
-            padding: "30px 20px",
-            borderRadius: "16px",
-            border: "1px solid #e2e8f0",
-            textAlign: "center",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-          }}
-        >
+        {/* Card 3: Speed (Medical Navy) */}
+        <div style={cardStyle}>
           <div
             style={{
-              background: "#fff7ed",
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
+              ...iconCircleStyle,
+              background: "#f1f5f9", // Light grey/slate
             }}
           >
-            <Clock size={28} color="#f97316" />
+            <Clock size={28} color="var(--medical-navy)" />
           </div>
-          <h3
-            style={{
-              margin: "0 0 8px",
-              color: "var(--medical-navy)",
-              fontSize: "1.1rem",
-            }}
-          >
-            Express Delivery
-          </h3>
-          <p
-            style={{
-              fontSize: "1.4rem",
-              fontWeight: "700",
-              color: "#f97316",
-              margin: "5px 0",
-            }}
-          >
+          <h3 style={cardTitleStyle}>Express Delivery</h3>
+          <p style={{ ...cardValueStyle, color: "var(--medical-navy)" }}>
             24hr Dispatch
           </p>
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.9rem",
-              margin: "5px 0 0",
-              fontWeight: "500",
-            }}
-          >
-            1-3 Days Delivery Time
-          </p>
+          <p style={cardSubStyle}>1-3 Days Delivery Time</p>
         </div>
       </div>
 
@@ -221,13 +104,17 @@ export default function Shipping() {
           border: "1px solid var(--border)",
           lineHeight: "1.8",
           color: "var(--text-main)",
+          boxShadow: "var(--shadow-sm)",
         }}
       >
         <h3
           style={{
             marginTop: 0,
+            marginBottom: "20px",
             fontSize: "1.5rem",
             color: "var(--medical-navy)",
+            borderBottom: "1px solid #f1f5f9",
+            paddingBottom: "15px",
           }}
         >
           Shipping Policy
@@ -237,14 +124,14 @@ export default function Shipping() {
             "We process all orders within 24 hours of payment confirmation to ensure the fastest possible turnaround. All shipments are sent via our express courier network to ensure delivery within 1-3 business days, depending on your location in Australia. You will receive a tracking number via email immediately upon dispatch."}
         </p>
 
-        {/* 3. RETURNS ALERT */}
+        {/* 3. RETURNS ALERT (Refined Red) */}
         <div
           style={{
             marginTop: "40px",
             padding: "25px",
             background: "#fff1f2",
             borderRadius: "12px",
-            border: "1px solid #fecdd3",
+            border: "1px solid #fda4af", // Softer border
             display: "flex",
             gap: "15px",
             alignItems: "flex-start",
@@ -259,7 +146,7 @@ export default function Shipping() {
             <h4
               style={{
                 margin: "0 0 8px 0",
-                color: "#9f1239",
+                color: "#be123c", // Dark Rose
                 fontSize: "1.1rem",
               }}
             >
@@ -269,7 +156,7 @@ export default function Shipping() {
               style={{
                 margin: 0,
                 fontSize: "0.95rem",
-                color: "#881337",
+                color: "#881337", // Deep Rose Text
                 lineHeight: "1.6",
               }}
             >
@@ -289,3 +176,42 @@ export default function Shipping() {
     </div>
   );
 }
+
+// Shared Styles
+const cardStyle = {
+  background: "white",
+  padding: "30px 20px",
+  borderRadius: "16px",
+  border: "1px solid #e2e8f0",
+  textAlign: "center",
+  boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+};
+
+const iconCircleStyle = {
+  width: "60px",
+  height: "60px",
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  margin: "0 auto 20px",
+};
+
+const cardTitleStyle = {
+  margin: "0 0 8px",
+  color: "var(--medical-navy)",
+  fontSize: "1.1rem",
+};
+
+const cardValueStyle = {
+  fontSize: "1.8rem",
+  fontWeight: "800",
+  margin: "0",
+};
+
+const cardSubStyle = {
+  color: "#64748b",
+  fontSize: "0.9rem",
+  margin: "8px 0 0",
+  fontWeight: "500",
+};
