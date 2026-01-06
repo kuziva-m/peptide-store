@@ -56,13 +56,12 @@ serve(async (req: Request) => {
     // ---------------------------------------------------------
     if (action === "retrieve" && session_id) {
       const session = await stripe.checkout.sessions.retrieve(session_id, {
-        expand: ["line_items", "total_details.breakdown"],
+        expand: ["line_items.data.price.product", "total_details.breakdown"],
       });
 
       if (session.payment_status === "paid") {
-        // 1. CRITICAL FIX: Save Order to Database (Server-Side)
-        // This bypasses RLS and ensures data consistency
-        const { error: orderError } = await supabaseClient
+        // 1. Save Order to Database
+        const { data: orderData, error: orderError } = await supabaseClient
           .from("orders")
           .upsert(
             {
@@ -70,20 +69,57 @@ serve(async (req: Request) => {
               customer_email: session.customer_details?.email,
               customer_name: session.customer_details?.name,
               total_amount: (session.amount_total || 0) / 100,
-              status: "pending", // Default status
+              shipping_cost:
+                (session.total_details?.amount_shipping || 0) / 100,
+              status: "pending",
               shipping_address: session.shipping_details?.address,
               items: session.line_items?.data || [],
               created_at: new Date().toISOString(),
             },
             { onConflict: "stripe_session_id" }
-          );
+          )
+          .select()
+          .single();
 
         if (orderError) {
           console.error("FAILED TO SAVE ORDER:", orderError);
-          // We continue execution to ensure email is sent, but log the error
+        } else if (orderData) {
+          // 2. Update order_items table (Inventory Linking)
+          await supabaseClient
+            .from("order_items")
+            .delete()
+            .eq("order_id", orderData.id);
+
+          // Correctly Typed Mapping
+          const orderItemsToInsert = session.line_items?.data
+            .filter((item: Stripe.LineItem) => item.price?.product)
+            .map((item: Stripe.LineItem) => {
+              // Cast product to Stripe.Product to access metadata safely
+              const product = item.price?.product as Stripe.Product;
+              const variantId = product.metadata?.variantId;
+
+              if (item.description === "Flat Rate Shipping") return null;
+
+              return {
+                order_id: orderData.id,
+                variant_id: variantId ? parseInt(variantId) : null,
+                quantity: item.quantity,
+                price_at_purchase: (item.price?.unit_amount || 0) / 100,
+                product_name_snapshot: item.description,
+              };
+            })
+            .filter(Boolean);
+
+          if (orderItemsToInsert && orderItemsToInsert.length > 0) {
+            const { error: itemsError } = await supabaseClient
+              .from("order_items")
+              .insert(orderItemsToInsert);
+
+            if (itemsError) console.error("Failed to save items:", itemsError);
+          }
         }
 
-        // 2. Record Discount Usage
+        // 3. Record Discount Usage
         if (session.metadata?.discountCode) {
           const usedEmail =
             session.customer_details?.email || session.metadata.customerEmail;
@@ -99,7 +135,7 @@ serve(async (req: Request) => {
           }
         }
 
-        // 3. Admin Notification (Prevents duplicates)
+        // 4. Admin Notification
         if (!session.metadata?.admin_notified) {
           console.log("Sending admin notification...");
 
@@ -161,7 +197,6 @@ serve(async (req: Request) => {
             });
           }
 
-          // Mark session as notified
           await stripe.checkout.sessions.update(session_id, {
             metadata: {
               ...session.metadata,
@@ -178,7 +213,7 @@ serve(async (req: Request) => {
     }
 
     // ---------------------------------------------------------
-    // PART B: Create Checkout Session (Unchanged)
+    // PART B: Create Checkout Session
     // ---------------------------------------------------------
     if (discountCode === "WELCOME10" && customerEmail) {
       const { data: usage } = await supabaseClient
@@ -212,9 +247,10 @@ serve(async (req: Request) => {
     if (dbError) throw new Error(dbError.message);
 
     const dbVariantMap = new Map<string, VariantData>();
+    // FIX: Cast to unknown first to avoid "no-explicit-any" error
     if (dbVariants) {
       dbVariants.forEach((v) => {
-        dbVariantMap.set(v.id, v as unknown as VariantData);
+        dbVariantMap.set(v.id.toString(), v as unknown as VariantData);
       });
     }
 
@@ -222,35 +258,41 @@ serve(async (req: Request) => {
     const hasValidDiscount = discountCode === "WELCOME10";
     const discountMultiplier = hasValidDiscount ? 0.9 : 1.0;
 
-    const lineItems = cartItems.map((item) => {
-      const dbVariant = dbVariantMap.get(item.variantId || item.id);
-      if (!dbVariant) throw new Error("Product variant not found");
+    // FIX: Explicitly type this array so metadata is optional
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+      cartItems.map((item) => {
+        const vId = item.variantId || item.id;
+        const dbVariant = dbVariantMap.get(vId.toString());
+        if (!dbVariant) throw new Error("Product variant not found");
 
-      const originalPrice = dbVariant.price;
-      const finalUnitAmount = Math.round(
-        originalPrice * discountMultiplier * 100
-      );
-      const quantity = item.quantity;
+        const originalPrice = dbVariant.price;
+        const finalUnitAmount = Math.round(
+          originalPrice * discountMultiplier * 100
+        );
+        const quantity = item.quantity;
 
-      calculatedSubtotal += finalUnitAmount * quantity;
+        calculatedSubtotal += finalUnitAmount * quantity;
 
-      return {
-        price_data: {
-          currency: "aud",
-          product_data: {
-            name: hasValidDiscount
-              ? `${dbVariant.products.name} (10% Off)`
-              : dbVariant.products.name,
-            description: dbVariant.size_label,
-            images: dbVariant.products.image_url
-              ? [dbVariant.products.image_url]
-              : [],
+        return {
+          price_data: {
+            currency: "aud",
+            product_data: {
+              name: hasValidDiscount
+                ? `${dbVariant.products.name} (10% Off)`
+                : dbVariant.products.name,
+              description: dbVariant.size_label,
+              images: dbVariant.products.image_url
+                ? [dbVariant.products.image_url]
+                : [],
+              metadata: {
+                variantId: vId,
+              },
+            },
+            unit_amount: finalUnitAmount,
           },
-          unit_amount: finalUnitAmount,
-        },
-        quantity: quantity,
-      };
-    });
+          quantity: quantity,
+        };
+      });
 
     const FREE_SHIPPING_THRESHOLD_CENTS = 15000;
     const isFreeShipping = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD_CENTS;
@@ -263,6 +305,7 @@ serve(async (req: Request) => {
             name: "Flat Rate Shipping",
             description: "Standard Shipping (24hr Dispatch)",
             images: ["https://cdn-icons-png.flaticon.com/512/411/411763.png"],
+            // Metadata is now optional thanks to explicit typing above
           },
           unit_amount: 999,
         },
