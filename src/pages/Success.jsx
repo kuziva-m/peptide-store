@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CheckCircle, Download, Loader, Package } from "lucide-react";
+import {
+  CheckCircle,
+  Download,
+  Loader,
+  Package,
+  AlertCircle,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useCart } from "../lib/CartContext";
 
@@ -9,15 +15,15 @@ export default function Success() {
   const sessionId = searchParams.get("session_id");
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   // Clear cart on load
   const { cartItems, removeFromCart } = useCart();
   useEffect(() => {
     if (cartItems && cartItems.length > 0) {
-      // FIX: Ensure clean cart clearing
       cartItems.forEach((i) => removeFromCart(i.id, i.variant));
     }
-  }, []); // Run once on mount
+  }, []);
 
   useEffect(() => {
     if (!sessionId) {
@@ -27,20 +33,62 @@ export default function Success() {
 
     async function fetchOrder() {
       try {
-        // CALL BACKEND: The Edge Function will now Retrieve + SAVE the order
+        // STRATEGY 1: Try the Edge Function (Standard Way)
         const { data, error } = await supabase.functions.invoke("checkout", {
           body: { action: "retrieve", session_id: sessionId },
         });
 
-        if (error) throw error;
+        if (!error && data?.session) {
+          setOrder(data.session);
+          return; // Success!
+        }
 
-        const session = data.session;
-        setOrder(session);
+        console.warn(
+          "Edge function failed/timed out. Trying fallback...",
+          error
+        );
 
-        // NOTE: Order saving is now handled by the 'checkout' function.
-        // We no longer attempt to save from the browser to avoid permission errors.
+        // STRATEGY 2: Fallback - Fetch directly from Database
+        // (Useful if the edge function created the order but timed out sending email)
+        const { data: dbOrder, error: dbError } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("stripe_session_id", sessionId)
+          .single();
+
+        if (dbOrder) {
+          // Normalize DB data to match Stripe Session structure for the UI
+          setOrder({
+            payment_intent: dbOrder.id, // Use DB ID as fallback
+            amount_total: Math.round(dbOrder.total_amount * 100), // DB is dollars, UI expects cents
+            total_details: {
+              amount_shipping: Math.round((dbOrder.shipping_cost || 0) * 100),
+            },
+            customer_details: {
+              name: dbOrder.customer_name,
+              email: dbOrder.customer_email,
+            },
+            line_items: {
+              data: Array.isArray(dbOrder.items)
+                ? dbOrder.items.map((item) => ({
+                    id: item.name, // pseudo-id
+                    description: item.name,
+                    quantity: item.quantity,
+                    amount_total:
+                      (item.total || item.unit_price * item.quantity) * 100,
+                  }))
+                : [],
+            },
+            receipt_url: null, // Won't have stripe receipt URL in fallback mode
+          });
+        } else {
+          throw new Error("Order could not be verified.");
+        }
       } catch (err) {
-        console.error("Error fetching order:", err);
+        console.error("Critical Error fetching order:", err);
+        setErrorMsg(
+          "We received your payment, but the confirmation details are loading slowly."
+        );
       } finally {
         setLoading(false);
       }
@@ -55,26 +103,64 @@ export default function Success() {
         className="container"
         style={{ padding: "100px 20px", textAlign: "center" }}
       >
-        <Loader className="spin-anim" size={40} style={{ margin: "0 auto" }} />
-        <p style={{ marginTop: "20px", color: "var(--text-muted)" }}>
-          Finalizing order details...
+        <Loader
+          className="spin-anim"
+          size={40}
+          style={{ margin: "0 auto", color: "var(--primary)" }}
+        />
+        <h3 style={{ marginTop: "20px", color: "var(--medical-navy)" }}>
+          Verifying Payment...
+        </h3>
+        <p style={{ color: "var(--text-muted)" }}>
+          Please do not refresh the page.
         </p>
       </div>
     );
   }
 
+  // Fallback UI if order is still null but we know payment likely worked
   if (!order) {
     return (
       <div
         className="container"
-        style={{ padding: "100px 20px", textAlign: "center" }}
+        style={{
+          padding: "100px 20px",
+          textAlign: "center",
+          maxWidth: "600px",
+        }}
       >
-        <h1>Order not found</h1>
-        <p>Please check your email for confirmation.</p>
+        <AlertCircle
+          size={60}
+          color="#f59e0b"
+          style={{ margin: "0 auto 20px" }}
+        />
+        <h1 style={{ color: "var(--medical-navy)" }}>Payment Received</h1>
+        <p
+          style={{
+            fontSize: "1.1rem",
+            color: "var(--text-main)",
+            margin: "20px 0",
+          }}
+        >
+          Your order was successful, but we are taking a moment to generate your
+          receipt. Please check your email{" "}
+          <strong>{order?.customer_details?.email}</strong> for confirmation.
+        </p>
+        <div
+          style={{
+            background: "#f8fafc",
+            padding: "15px",
+            borderRadius: "8px",
+            fontSize: "0.9rem",
+            color: "#64748b",
+          }}
+        >
+          Reference: {sessionId.slice(-8)}
+        </div>
         <Link
           to="/"
           className="buy-btn"
-          style={{ maxWidth: "200px", margin: "20px auto" }}
+          style={{ maxWidth: "200px", margin: "30px auto" }}
         >
           Return Home
         </Link>
@@ -135,39 +221,50 @@ export default function Success() {
             borderBottom: "1px solid #f1f5f9",
             paddingBottom: "20px",
             marginBottom: "20px",
+            flexWrap: "wrap",
+            gap: "10px",
           }}
         >
           <div>
             <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
-              Order Number
+              Order Reference
             </span>
-            <h3 style={{ margin: 0, color: "var(--medical-navy)" }}>
-              #{order.payment_intent?.slice(-8).toUpperCase()}
+            <h3
+              style={{
+                margin: 0,
+                color: "var(--medical-navy)",
+                fontSize: "1.1rem",
+              }}
+            >
+              #
+              {order.payment_intent
+                ? order.payment_intent.slice(-8).toUpperCase()
+                : sessionId.slice(-8)}
             </h3>
           </div>
-          {order.invoice_pdf || order.receipt_url ? (
+          {order.receipt_url && (
             <a
-              href={order.invoice_pdf || order.receipt_url}
+              href={order.receipt_url}
               target="_blank"
               rel="noreferrer"
               className="buy-btn"
               style={{
                 width: "auto",
-                padding: "10px 20px",
-                fontSize: "0.9rem",
+                padding: "8px 16px",
+                fontSize: "0.85rem",
                 display: "flex",
                 gap: "8px",
               }}
             >
               <Download size={16} /> Receipt
             </a>
-          ) : null}
+          )}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {order.line_items?.data.map((item) => (
+          {order.line_items?.data.map((item, idx) => (
             <div
-              key={item.id}
+              key={idx}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
