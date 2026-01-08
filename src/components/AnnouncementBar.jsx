@@ -10,9 +10,8 @@ export default function AnnouncementBar() {
       id: 1,
       text: (
         <>
-          Flat Rate Shipping{" "}
-          <span className="announcement-highlight">$9.99 AUD</span> Australia
-          Wide
+          Standard Shipping{" "}
+          <span className="announcement-highlight">$9.99 AUD</span> (2-6 Days)
         </>
       ),
       icon: <Truck size={18} className="announcement-icon" />,
@@ -22,7 +21,7 @@ export default function AnnouncementBar() {
       text: (
         <>
           Free Express Shipping on Orders{" "}
-          <span className="announcement-highlight">Over $150</span>
+          <span className="announcement-highlight">Over $250</span>
         </>
       ),
       icon: <Package size={18} className="announcement-icon" />,
@@ -31,7 +30,7 @@ export default function AnnouncementBar() {
       id: 3,
       text: (
         <>
-          <span className="announcement-highlight">24hr Dispatch</span>{" "}
+          <span className="announcement-highlight">Express Available</span>{" "}
           &nbsp;|&nbsp; 1-3 Days Delivery
         </>
       ),

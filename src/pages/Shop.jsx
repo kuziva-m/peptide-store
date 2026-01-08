@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
+import SEO from "../components/SEO"; // Added Import
 import { LayoutGrid, FlaskConical, Layers, Droplets } from "lucide-react";
 import "./Home.css";
 import "./Shop.css";
@@ -92,6 +93,12 @@ export default function Shop({ searchQuery }) {
 
   return (
     <div className="page-wrapper">
+      <SEO
+        title="Shop Peptides"
+        description="Browse our range of high-purity peptides, blends, and mixing solutions. Stocked in Australia for fast dispatch."
+        url="https://melbournepeptides.com.au/shop"
+      />
+
       <div className="container" style={{ padding: "40px 24px" }}>
         <h1
           style={{

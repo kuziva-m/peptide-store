@@ -34,7 +34,7 @@ export default function Shipping() {
         Shipping & Returns
       </h1>
 
-      {/* 1. KEY HIGHLIGHTS GRID (Updated Colors) */}
+      {/* 1. KEY HIGHLIGHTS GRID */}
       <div
         style={{
           display: "grid",
@@ -43,7 +43,7 @@ export default function Shipping() {
           marginBottom: "50px",
         }}
       >
-        {/* Card 1: Flat Rate (Primary Purple) */}
+        {/* Card 1: Standard (Primary Purple) */}
         <div style={cardStyle}>
           <div
             style={{
@@ -53,14 +53,14 @@ export default function Shipping() {
           >
             <Truck size={28} color="var(--primary)" />
           </div>
-          <h3 style={cardTitleStyle}>Flat Rate Shipping</h3>
+          <h3 style={cardTitleStyle}>Standard Shipping</h3>
           <p style={{ ...cardValueStyle, color: "var(--primary)" }}>
             $9.99 AUD
           </p>
-          <p style={cardSubStyle}>Australia Wide</p>
+          <p style={cardSubStyle}>2-6 Days Delivery</p>
         </div>
 
-        {/* Card 2: Free Shipping (Clinical Teal) */}
+        {/* Card 2: Free Express (Clinical Teal) */}
         <div style={cardStyle}>
           <div
             style={{
@@ -70,14 +70,14 @@ export default function Shipping() {
           >
             <CheckCircle size={28} color="var(--clinical-teal)" />
           </div>
-          <h3 style={cardTitleStyle}>Free Shipping</h3>
+          <h3 style={cardTitleStyle}>Free Express</h3>
           <p style={{ ...cardValueStyle, color: "var(--clinical-teal)" }}>
-            Over $150
+            Over $250
           </p>
           <p style={cardSubStyle}>Order Value</p>
         </div>
 
-        {/* Card 3: Speed (Medical Navy) */}
+        {/* Card 3: Express Option (Medical Navy) */}
         <div style={cardStyle}>
           <div
             style={{
@@ -87,11 +87,11 @@ export default function Shipping() {
           >
             <Clock size={28} color="var(--medical-navy)" />
           </div>
-          <h3 style={cardTitleStyle}>Express Delivery</h3>
+          <h3 style={cardTitleStyle}>Express Option</h3>
           <p style={{ ...cardValueStyle, color: "var(--medical-navy)" }}>
-            24hr Dispatch
+            $14.99 AUD
           </p>
-          <p style={cardSubStyle}>1-3 Days Delivery Time</p>
+          <p style={cardSubStyle}>1-3 Days Delivery</p>
         </div>
       </div>
 
@@ -121,7 +121,7 @@ export default function Shipping() {
         </h3>
         <p style={{ whiteSpace: "pre-wrap", color: "#475569" }}>
           {policyText ||
-            "We process all orders within 24 hours of payment confirmation to ensure the fastest possible turnaround. All shipments are sent via our express courier network to ensure delivery within 1-3 business days, depending on your location in Australia. You will receive a tracking number via email immediately upon dispatch."}
+            "We aim to process all orders within 24 hours of payment confirmation. \n\nWe offer two shipping options for your convenience:\n\n1. Standard Shipping ($9.99): 2-6 business days.\n2. Express Shipping ($14.99): 1-3 business days.\n\nEnjoy FREE Express Shipping on all orders over $250.\n\nAll shipments are sent via our express courier network to ensure reliability. You will receive a tracking number via email immediately upon dispatch."}
         </p>
 
         {/* 3. RETURNS ALERT (Refined Red) */}

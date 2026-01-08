@@ -48,8 +48,14 @@ serve(async (req: Request) => {
   );
 
   try {
-    const { items, session_id, action, discountCode, customerEmail } =
-      await req.json();
+    const {
+      items,
+      session_id,
+      action,
+      discountCode,
+      customerEmail,
+      shippingMethod,
+    } = await req.json();
 
     // ---------------------------------------------------------
     // PART A: Success Page - Retrieve Session, SAVE ORDER, & Notify
@@ -59,8 +65,11 @@ serve(async (req: Request) => {
         expand: ["line_items.data.price.product", "total_details.breakdown"],
       });
 
-      if (session.payment_status === "paid") {
-        // 1. Prepare Address & Phone (NEW: Capture Phone Number)
+      if (
+        session.payment_status === "paid" ||
+        session.payment_status === "no_payment_required"
+      ) {
+        // 1. Prepare Address & Phone
         const shippingAddress = {
           ...session.shipping_details?.address,
           phone: session.customer_details?.phone || "N/A",
@@ -78,9 +87,11 @@ serve(async (req: Request) => {
               shipping_cost:
                 (session.total_details?.amount_shipping || 0) / 100,
               status: "pending",
-              shipping_address: shippingAddress, // Use the object with phone number
+              shipping_address: shippingAddress,
               items: session.line_items?.data || [],
               created_at: new Date().toISOString(),
+              // CHANGED: Save shipping method from metadata
+              shipping_method: session.metadata?.shippingMethod || "Standard",
             },
             { onConflict: "stripe_session_id" }
           )
@@ -96,15 +107,14 @@ serve(async (req: Request) => {
             .delete()
             .eq("order_id", orderData.id);
 
-          // Correctly Typed Mapping
           const orderItemsToInsert = session.line_items?.data
             .filter((item: Stripe.LineItem) => item.price?.product)
             .map((item: Stripe.LineItem) => {
-              // Cast product to Stripe.Product to access metadata safely
               const product = item.price?.product as Stripe.Product;
               const variantId = product.metadata?.variantId;
 
-              if (item.description === "Flat Rate Shipping") return null;
+              // Ensure we don't accidentally save shipping as a product
+              if (item.description?.includes("Shipping")) return null;
 
               return {
                 order_id: orderData.id,
@@ -224,24 +234,19 @@ serve(async (req: Request) => {
     // ---------------------------------------------------------
     // PART B: Create Checkout Session
     // ---------------------------------------------------------
-    if (discountCode === "WELCOME10" && customerEmail) {
-      const { data: usage } = await supabaseClient
-        .from("discount_usage")
-        .select("*")
-        .eq("email", customerEmail)
-        .eq("coupon_code", discountCode)
-        .single();
 
-      if (usage) {
-        return new Response(
-          JSON.stringify({
-            error: "You have already used the WELCOME10 discount code.",
-          }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 400,
-          }
-        );
+    // 1. FETCH DISCOUNT FROM DB (CASE INSENSITIVE)
+    let validDiscount = null;
+    if (discountCode) {
+      const { data } = await supabaseClient
+        .from("discounts")
+        .select("*")
+        .ilike("code", discountCode.trim()) // UPDATED: ilike for case-insensitive match
+        .eq("active", true)
+        .maybeSingle();
+
+      if (data) {
+        validDiscount = data;
       }
     }
 
@@ -256,7 +261,6 @@ serve(async (req: Request) => {
     if (dbError) throw new Error(dbError.message);
 
     const dbVariantMap = new Map<string, VariantData>();
-    // FIX: Cast to unknown first to avoid "no-explicit-any" error
     if (dbVariants) {
       dbVariants.forEach((v) => {
         dbVariantMap.set(v.id.toString(), v as unknown as VariantData);
@@ -264,20 +268,26 @@ serve(async (req: Request) => {
     }
 
     let calculatedSubtotal = 0;
-    const hasValidDiscount = discountCode === "WELCOME10";
-    const discountMultiplier = hasValidDiscount ? 0.9 : 1.0;
 
-    // FIX: Explicitly type this array so metadata is optional
+    // 2. BUILD LINE ITEMS (Applying Percentage Discounts)
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
       cartItems.map((item) => {
         const vId = item.variantId || item.id;
         const dbVariant = dbVariantMap.get(vId.toString());
         if (!dbVariant) throw new Error("Product variant not found");
 
-        const originalPrice = dbVariant.price;
-        const finalUnitAmount = Math.round(
-          originalPrice * discountMultiplier * 100
-        );
+        let unitPrice = dbVariant.price;
+        let itemName = dbVariant.products.name;
+
+        // Apply Percentage Discount Logic
+        if (validDiscount && validDiscount.type === "percentage") {
+          const multiplier = 1 - validDiscount.value / 100;
+          unitPrice = unitPrice * multiplier;
+          // Update name to reflect discount (e.g. "BPC-157 (10% Off)")
+          itemName = `${itemName} (${validDiscount.value}% Off)`;
+        }
+
+        const finalUnitAmount = Math.round(unitPrice * 100);
         const quantity = item.quantity;
 
         calculatedSubtotal += finalUnitAmount * quantity;
@@ -286,9 +296,7 @@ serve(async (req: Request) => {
           price_data: {
             currency: "aud",
             product_data: {
-              name: hasValidDiscount
-                ? `${dbVariant.products.name} (10% Off)`
-                : dbVariant.products.name,
+              name: itemName,
               description: dbVariant.size_label,
               images: dbVariant.products.image_url
                 ? [dbVariant.products.image_url]
@@ -303,24 +311,56 @@ serve(async (req: Request) => {
         };
       });
 
-    const FREE_SHIPPING_THRESHOLD_CENTS = 15000;
-    const isFreeShipping = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD_CENTS;
+    // ---------------------------------------------------------
+    // SHIPPING LOGIC
+    // ---------------------------------------------------------
+    const FREE_STD_THRESHOLD_CENTS = 15000; // $150.00
+    const FREE_EXP_THRESHOLD_CENTS = 25000; // $250.00
 
-    if (!isFreeShipping) {
-      lineItems.push({
-        price_data: {
-          currency: "aud",
-          product_data: {
-            name: "Flat Rate Shipping",
-            description: "Standard Shipping (24hr Dispatch)",
-            images: ["https://cdn-icons-png.flaticon.com/512/411/411763.png"],
-            // Metadata is now optional thanks to explicit typing above
-          },
-          unit_amount: 999,
-        },
-        quantity: 1,
-      });
+    let shippingCost = 0;
+    let shippingName = "";
+    let minDays = 2,
+      maxDays = 6;
+
+    // Check if the discount explicitly grants free shipping (e.g. Test Code)
+    const couponGrantsFreeShip = validDiscount?.free_shipping === true;
+
+    if (shippingMethod === "express") {
+      // Express is free if total >= $250 OR coupon grants it
+      const isFree =
+        calculatedSubtotal >= FREE_EXP_THRESHOLD_CENTS || couponGrantsFreeShip;
+      shippingCost = isFree ? 0 : 1499;
+      shippingName = isFree
+        ? "🚀 Free Express Shipping"
+        : "🚀 Express Shipping";
+      minDays = 1;
+      maxDays = 3;
+    } else {
+      // Standard is free if total >= $150 OR coupon grants it
+      const isFree =
+        calculatedSubtotal >= FREE_STD_THRESHOLD_CENTS || couponGrantsFreeShip;
+      shippingCost = isFree ? 0 : 999;
+      shippingName = isFree ? "🚚 Free Shipping" : "🚚 Standard Shipping";
     }
+
+    const shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] =
+      [
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: { amount: shippingCost, currency: "aud" },
+            display_name: shippingName,
+            delivery_estimate: {
+              minimum: { unit: "business_day", value: minDays },
+              maximum: { unit: "business_day", value: maxDays },
+            },
+          },
+        },
+      ];
+
+    // Determine clean name for DB saving
+    const shippingMethodName =
+      shippingMethod === "express" ? "Express" : "Standard";
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       line_items: lineItems,
@@ -330,11 +370,13 @@ serve(async (req: Request) => {
       )}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/shop`,
       shipping_address_collection: { allowed_countries: ["AU"] },
+      shipping_options: shippingOptions, // Only contains the selected option
       phone_number_collection: { enabled: true },
       metadata: {
-        discountCode: hasValidDiscount ? "WELCOME10" : null,
+        discountCode: validDiscount ? validDiscount.code : null,
         customerEmail: customerEmail,
         admin_notified: null,
+        shippingMethod: shippingMethodName, // <--- SAVED FOR DB RETRIEVAL
       },
     };
 

@@ -5,10 +5,12 @@ import {
   Plus,
   ShoppingBag,
   ArrowRight,
-  Tag,
   Check,
   Loader,
   Trash2,
+  Truck,
+  Zap,
+  AlertCircle,
 } from "lucide-react";
 import { useCart } from "../lib/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +29,10 @@ export default function CartDrawer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  // Shipping State
+  const [shippingMethod, setShippingMethod] = useState(null);
+  const [shippingError, setShippingError] = useState(false);
+
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountError, setDiscountError] = useState("");
@@ -42,6 +48,42 @@ export default function CartDrawer() {
     };
   }, [isCartOpen]);
 
+  // --- 1. Calculate Discount ---
+  let discountAmount = 0;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === "percentage") {
+      discountAmount = cartTotal * (appliedDiscount.value / 100);
+    } else if (appliedDiscount.type === "fixed") {
+      discountAmount = appliedDiscount.value;
+    }
+  }
+
+  const subtotalAfterDiscount = Math.max(0, cartTotal - discountAmount);
+
+  // --- 2. Shipping Threshold Logic ---
+  // Rules:
+  // > $250: BOTH Free (User chooses)
+  // > $150: Standard Free, Express Paid
+  // < $150: Both Paid
+
+  const codeGrantsFreeShip = appliedDiscount?.free_shipping === true;
+
+  const isStandardFree = subtotalAfterDiscount >= 150 || codeGrantsFreeShip;
+  const isExpressFree = subtotalAfterDiscount >= 250 || codeGrantsFreeShip;
+
+  const shippingCost = (() => {
+    if (!shippingMethod) return 0; // No cost displayed if nothing selected yet
+
+    if (shippingMethod === "express") {
+      return isExpressFree ? 0 : 14.99;
+    }
+    // Standard
+    return isStandardFree ? 0 : 9.99;
+  })();
+
+  const grandTotal = subtotalAfterDiscount + shippingCost;
+
+  // --- Helpers ---
   const getVariantLabel = (v) => {
     if (!v) return "";
     if (typeof v === "string") return v;
@@ -49,15 +91,31 @@ export default function CartDrawer() {
     return String(v);
   };
 
-  const handleApplyCoupon = (e) => {
+  const handleApplyCoupon = async (e) => {
     e.preventDefault();
     setDiscountError("");
-    if (discountCode.trim().toUpperCase() === "WELCOME10") {
-      setAppliedDiscount("WELCOME10");
-      setDiscountError("");
-    } else {
-      setDiscountError("Invalid coupon code");
-      setAppliedDiscount(null);
+
+    if (!discountCode.trim()) return;
+
+    try {
+      // UPDATED: Use .ilike() for case-insensitive matching
+      const { data, error } = await supabase
+        .from("discounts")
+        .select("*")
+        .ilike("code", discountCode.trim())
+        .eq("active", true)
+        .maybeSingle(); // Use maybeSingle to avoid 406 error if multiple matches (though code should be unique)
+
+      if (error || !data) {
+        setDiscountError("Invalid or expired coupon code");
+        setAppliedDiscount(null);
+      } else {
+        setAppliedDiscount(data);
+        setDiscountError("");
+      }
+    } catch (err) {
+      console.error(err);
+      setDiscountError("Error verifying code");
     }
   };
 
@@ -68,21 +126,24 @@ export default function CartDrawer() {
   };
 
   const handleCheckout = async () => {
+    // Validation
+    if (!shippingMethod) {
+      setShippingError(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Updated: Removed customerEmail from payload since it's collected later
       const { data, error } = await supabase.functions.invoke("checkout", {
         body: {
           items: cart,
-          discountCode: appliedDiscount,
+          discountCode: appliedDiscount?.code,
+          shippingMethod: shippingMethod,
         },
       });
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.url) window.location.href = data.url;
     } catch (error) {
@@ -91,6 +152,11 @@ export default function CartDrawer() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const selectShipping = (method) => {
+    setShippingMethod(method);
+    setShippingError(false);
   };
 
   if (!isCartOpen) return null;
@@ -123,226 +189,210 @@ export default function CartDrawer() {
           </div>
         ) : (
           <>
-            <div className="cart-items">
-              {cart.map((item, index) => {
-                const safeVariant = getVariantLabel(item.variant);
-                const itemKey = `${item.id}-${safeVariant}-${index}`;
-                return (
-                  <div key={itemKey} className="cart-item">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="cart-item-img"
-                    />
-                    <div className="cart-item-details">
-                      <div>
-                        <h4>{item.name}</h4>
-                        <p className="cart-item-variant">{safeVariant}</p>
-                      </div>
-                      <div className="cart-item-controls">
-                        <div className="qty-selector">
-                          <button
-                            onClick={() =>
-                              updateQuantity(
-                                item.id,
-                                item.quantity - 1,
-                                item.variant
-                              )
-                            }
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span>{item.quantity}</span>
-                          <button
-                            onClick={() =>
-                              updateQuantity(
-                                item.id,
-                                item.quantity + 1,
-                                item.variant
-                              )
-                            }
-                          >
-                            <Plus size={14} />
-                          </button>
+            <div className="cart-scroll-area">
+              <div className="cart-items-list">
+                {cart.map((item, index) => {
+                  const safeVariant = getVariantLabel(item.variant);
+                  const itemKey = `${item.id}-${safeVariant}-${index}`;
+                  return (
+                    <div key={itemKey} className="cart-item">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="cart-item-img"
+                      />
+                      <div className="cart-item-details">
+                        <div>
+                          <h4>{item.name}</h4>
+                          <p className="cart-item-variant">{safeVariant}</p>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                          <p className="cart-item-price">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </p>
-                          <button
-                            onClick={() =>
-                              removeFromCart(item.id, item.variant)
-                            }
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: "#ef4444",
-                              fontSize: "0.7rem",
-                              cursor: "pointer",
-                              marginTop: "4px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              marginLeft: "auto",
-                            }}
-                          >
-                            <Trash2 size={12} /> Remove
-                          </button>
+                        <div className="cart-item-controls">
+                          <div className="qty-selector">
+                            <button
+                              onClick={() =>
+                                updateQuantity(
+                                  item.id,
+                                  item.quantity - 1,
+                                  item.variant
+                                )
+                              }
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span>{item.quantity}</span>
+                            <button
+                              onClick={() =>
+                                updateQuantity(
+                                  item.id,
+                                  item.quantity + 1,
+                                  item.variant
+                                )
+                              }
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <p className="cart-item-price">
+                              ${(item.price * item.quantity).toFixed(2)}
+                            </p>
+                            <button
+                              onClick={() =>
+                                removeFromCart(item.id, item.variant)
+                              }
+                              className="remove-btn"
+                            >
+                              <Trash2 size={12} /> Remove
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+
+              <div className="cart-options-section">
+                {/* Discount Code */}
+                <div className="discount-block">
+                  {!appliedDiscount ? (
+                    <form
+                      onSubmit={handleApplyCoupon}
+                      className="discount-form"
+                    >
+                      <div className="input-wrapper">
+                        <input
+                          type="text"
+                          placeholder="Promo Code"
+                          value={discountCode}
+                          onChange={(e) => setDiscountCode(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "8px",
+                            fontSize: "0.95rem",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
+                      <button type="submit">Apply</button>
+                    </form>
+                  ) : (
+                    <div className="discount-applied">
+                      <span>
+                        <Check size={16} /> Code {appliedDiscount.code} applied!
+                      </span>
+                      <button onClick={handleRemoveCoupon}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+                  {discountError && (
+                    <p className="discount-error">{discountError}</p>
+                  )}
+                </div>
+
+                {/* Shipping Selection */}
+                <div
+                  className={`shipping-block ${
+                    shippingError ? "shake-error" : ""
+                  }`}
+                >
+                  <h4 className="section-label">
+                    Shipping Method <span style={{ color: "red" }}>*</span>
+                  </h4>
+
+                  {/* Standard Option */}
+                  <div
+                    className={`shipping-option ${
+                      shippingMethod === "standard" ? "active" : ""
+                    }`}
+                    onClick={() => selectShipping("standard")}
+                  >
+                    <div className="option-left">
+                      <Truck size={20} />
+                      <div>
+                        <span className="opt-name">Standard</span>
+                        <span className="opt-time">2-6 Days</span>
+                      </div>
+                    </div>
+                    <span className="opt-price">
+                      {isStandardFree ? (
+                        <span className="text-green">FREE</span>
+                      ) : (
+                        "$9.99"
+                      )}
+                    </span>
                   </div>
-                );
-              })}
+
+                  {/* Express Option */}
+                  <div
+                    className={`shipping-option ${
+                      shippingMethod === "express" ? "active" : ""
+                    }`}
+                    onClick={() => selectShipping("express")}
+                  >
+                    <div className="option-left">
+                      <Zap
+                        size={20}
+                        className={
+                          shippingMethod === "express" ? "text-dark" : ""
+                        }
+                      />
+                      <div>
+                        <span className="opt-name">Express</span>
+                        <span className="opt-time">1-3 Days</span>
+                      </div>
+                    </div>
+                    <span className="opt-price">
+                      {isExpressFree ? (
+                        <span className="text-green">FREE</span>
+                      ) : (
+                        "$14.99"
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Warning Message */}
+                  {shippingError && (
+                    <div className="shipping-warning">
+                      <AlertCircle size={14} /> Please select a shipping method
+                    </div>
+                  )}
+                </div>
+
+                {/* Cost Breakdown */}
+                <div className="cost-breakdown">
+                  <div className="row">
+                    <span>Subtotal</span>
+                    <span>${cartTotal.toFixed(2)}</span>
+                  </div>
+                  {appliedDiscount && (
+                    <div className="row text-green">
+                      <span>Discount ({appliedDiscount.code})</span>
+                      <span>-${discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="row">
+                    <span>Shipping</span>
+                    <span>
+                      {shippingMethod
+                        ? shippingCost === 0
+                          ? "Free"
+                          : `$${shippingCost.toFixed(2)}`
+                        : "--"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="cart-footer">
-              {/* Discount Section Only - Email Section Removed */}
-              <div style={{ marginBottom: "24px" }}>
-                {!appliedDiscount ? (
-                  <form
-                    onSubmit={handleApplyCoupon}
-                    style={{ display: "flex", gap: "8px" }}
-                  >
-                    <div style={{ position: "relative", flex: 1 }}>
-                      <Tag
-                        size={16}
-                        style={{
-                          position: "absolute",
-                          left: "12px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          color: "#94a3b8",
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Discount code"
-                        value={discountCode}
-                        onChange={(e) => setDiscountCode(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "12px 12px 12px 38px",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem",
-                          outline: "none",
-                        }}
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      style={{
-                        background: "#f1f5f9",
-                        border: "1px solid #e2e8f0",
-                        padding: "0 16px",
-                        borderRadius: "8px",
-                        fontWeight: "600",
-                        color: "#475569",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Apply
-                    </button>
-                  </form>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      background: "#ecfdf5",
-                      padding: "12px 16px",
-                      borderRadius: "8px",
-                      border: "1px solid #a7f3d0",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        color: "#059669",
-                        fontWeight: "600",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      <Check size={16} /> Code WELCOME10 applied!
-                    </span>
-                    <button
-                      onClick={handleRemoveCoupon}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#059669",
-                        cursor: "pointer",
-                        padding: "4px",
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
-                {discountError && (
-                  <p
-                    style={{
-                      color: "#ef4444",
-                      fontSize: "0.85rem",
-                      marginTop: "8px",
-                      marginLeft: "4px",
-                    }}
-                  >
-                    {discountError}
-                  </p>
-                )}
+            <div className="cart-sticky-footer">
+              <div className="footer-total">
+                <span>Total</span>
+                <span className="big-price">${grandTotal.toFixed(2)}</span>
               </div>
-
-              <div style={{ marginBottom: "20px" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "8px",
-                    color: "#64748b",
-                  }}
-                >
-                  <span>Subtotal</span>
-                  <span>${cartTotal.toFixed(2)}</span>
-                </div>
-                {appliedDiscount && (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                      color: "#059669",
-                    }}
-                  >
-                    <span>Discount (10%)</span>
-                    <span>-${(cartTotal * 0.1).toFixed(2)}</span>
-                  </div>
-                )}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "1.25rem",
-                    fontWeight: "800",
-                    color: "#0f172a",
-                    marginTop: "12px",
-                    paddingTop: "12px",
-                    borderTop: "1px dashed #e2e8f0",
-                  }}
-                >
-                  <span>Total</span>
-                  <span>
-                    $
-                    {(appliedDiscount ? cartTotal * 0.9 : cartTotal).toFixed(2)}{" "}
-                    AUD
-                  </span>
-                </div>
-              </div>
-
               <button
                 onClick={handleCheckout}
                 disabled={loading}

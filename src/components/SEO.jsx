@@ -1,7 +1,13 @@
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "react-router-dom";
 
-export default function SEO({ title, description, type = "website", image }) {
+export default function SEO({
+  title,
+  description,
+  type = "website",
+  image,
+  url,
+}) {
   const { pathname } = useLocation();
   const siteTitle = "Melbourne Peptides";
 
@@ -10,7 +16,9 @@ export default function SEO({ title, description, type = "website", image }) {
     "Buy premium peptides in stock (10mg/5mg). 99% purity guaranteed (CAS verified), fast shipping Australia. Shop BPC-157, Melanotan 2, and more.";
 
   const siteUrl = "https://melbournepeptides.com.au";
-  const canonicalUrl = `${siteUrl}${pathname}`;
+
+  // FIXED: Use the manual URL if provided, otherwise calculate it automatically
+  const canonicalUrl = url || `${siteUrl}${pathname}`;
 
   // FIXED: Logic to keep titles short (~50 chars) but keyword-rich
   let finalTitle;
@@ -33,7 +41,7 @@ export default function SEO({ title, description, type = "website", image }) {
       <title>{finalTitle}</title>
       <meta name="description" content={finalDesc} />
 
-      {/* CANONICAL TAG */}
+      {/* CANONICAL TAG - Critical for fixing the Google Console error */}
       <link rel="canonical" href={canonicalUrl} />
 
       {/* Facebook / Open Graph */}

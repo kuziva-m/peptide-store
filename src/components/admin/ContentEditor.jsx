@@ -28,7 +28,6 @@ export default function ContentEditor() {
     setSaving(key);
     await supabase.from("site_settings").upsert({ key, value });
     setSaving(null);
-    alert("Saved!");
   };
 
   if (loading)

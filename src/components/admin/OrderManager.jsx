@@ -15,6 +15,7 @@ import {
   User,
   CheckCircle,
   AlertTriangle,
+  Zap, // <--- Added Icon for Express
 } from "lucide-react";
 
 export default function OrderManager() {
@@ -229,23 +230,23 @@ function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
         phone: order.shipping_address?.phone || "N/A",
       };
 
-      // DYNAMICALLY CHOOSE THE FUNCTION
-      const functionName =
-        statusType === "delivered"
-          ? "send-delivered-update"
-          : "send-order-update";
+      // CHANGED: Use single consolidated function
+      const functionName = "send-order-update";
 
-      await supabase.functions.invoke(functionName, {
+      const { error } = await supabase.functions.invoke(functionName, {
         body: {
           orderId: order.id,
           email: order.customer_email,
           name: order.customer_name,
-          trackingNumber: tracking,
+          trackingNumber: tracking || "N/A",
           items: emailItems,
           address: emailAddress,
-          status: statusType,
+          status: statusType, // 'shipped' or 'delivered'
         },
       });
+
+      if (error) throw error;
+
       showToast(
         `${statusType === "delivered" ? "Delivery" : "Shipping"} email sent!`
       );
@@ -344,6 +345,9 @@ function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   };
   const sStyle = getStatusStyle(order.status);
 
+  // Helper to determine shipping visual
+  const isExpress = order.shipping_method === "Express";
+
   return (
     <div style={styles.orderRow}>
       {/* HEADER */}
@@ -369,6 +373,31 @@ function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
           >
             {order.status}
           </span>
+          {/* NEW SHIPPING METHOD BADGE */}
+          <div
+            style={{
+              marginTop: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              fontSize: "0.75rem",
+              color: "#64748b",
+              fontWeight: 500,
+            }}
+          >
+            {isExpress ? (
+              <>
+                <Zap size={12} fill="#f59e0b" color="#d97706" />
+                <span style={{ color: "#d97706" }}>Express</span>
+              </>
+            ) : (
+              <>
+                <Truck size={12} />
+                <span>Standard</span>
+              </>
+            )}
+          </div>
         </div>
         <div style={styles.colTotal}>${order.total_amount}</div>
         <button style={styles.iconBtn}>

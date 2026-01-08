@@ -1,5 +1,3 @@
-/* src/components/AnnouncementBar.css */
-
 .announcement-bar {
   background-color: var(--medical-navy);
   color: white;
@@ -35,9 +33,6 @@
   transform: translateY(0);
   pointer-events: auto;
 }
-
-/* The "Exiting" slide (optional if you want a specific exit animation, 
-   but strictly toggling active class usually works best for simple fades) */
 
 .announcement-highlight {
   color: #fbbf24; /* Amber-400 for prices */

@@ -8,9 +8,10 @@ import {
   MessageSquare,
   Mail,
   Users,
-  Atom, // New icon for the "science" feel
+  Atom,
   ArrowRight,
   Lock,
+  Tag, // <--- Added Icon
 } from "lucide-react";
 import ProductManager from "../components/admin/ProductManager";
 import ContentEditor from "../components/admin/ContentEditor";
@@ -18,6 +19,7 @@ import OrderManager from "../components/admin/OrderManager";
 import ReviewManager from "../components/admin/ReviewManager";
 import InquiryManager from "../components/admin/InquiryManager";
 import SubscriberManager from "../components/admin/SubscriberManager";
+import DiscountManager from "../components/admin/DiscountManager"; // <--- Added Component
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -91,7 +93,7 @@ export default function Admin() {
               </p>
             </div>
           </div>
-          {/* Background Image (Using your public assets) */}
+          {/* Background Image */}
           <img
             src="/hero-banner.jpg"
             alt="Lab Background"
@@ -162,7 +164,7 @@ export default function Admin() {
     );
   }
 
-  // 3. DASHBOARD (Your existing dashboard logic)
+  // 3. DASHBOARD
   return (
     <div
       className="container"
@@ -207,6 +209,12 @@ export default function Admin() {
           label="Inventory"
         />
         <TabButton
+          active={activeTab === "discounts"} /* <--- Added Discount Tab */
+          onClick={() => setActiveTab("discounts")}
+          icon={<Tag size={18} />}
+          label="Discounts"
+        />
+        <TabButton
           active={activeTab === "reviews"}
           onClick={() => setActiveTab("reviews")}
           icon={<MessageSquare size={18} />}
@@ -226,6 +234,8 @@ export default function Admin() {
         {activeTab === "inquiries" && <InquiryManager />}
         {activeTab === "subscribers" && <SubscriberManager />}
         {activeTab === "products" && <ProductManager />}
+        {activeTab === "discounts" && <DiscountManager />}{" "}
+        {/* <--- Added Component Render */}
         {activeTab === "reviews" && <ReviewManager />}
         {activeTab === "content" && <ContentEditor />}
       </div>
@@ -279,8 +289,6 @@ const styles = {
     justifyContent: "space-between",
     "@media (min-width: 768px)": { display: "flex" },
   },
-  // Hack to force flex on desktop since inline styles don't support media queries well without libraries
-  // In a real app, use CSS classes. For now, we'll rely on the flex: 1 to push it.
 
   bannerImage: {
     position: "absolute",
@@ -312,11 +320,7 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     background: "#fff",
-  }, // Adjust width via CSS if needed, typically 500px
-
-  // Responsive Hack: You might want to add this to your CSS file:
-  // .login-banner { display: none; }
-  // @media(min-width: 1024px) { .login-banner { display: block; flex: 1; } .login-form-wrapper { flex: 0 0 500px; } }
+  },
 
   loginCard: { width: "100%", maxWidth: "400px" },
   formHeader: { marginBottom: "32px", textAlign: "center" },
@@ -396,7 +400,7 @@ const styles = {
   contentArea: { animation: "fadeIn 0.3s ease-out" },
 };
 
-// Add this inline style tag for the media query which is hard to do in JS objects
+// CSS Injection for Media Queries & Animations
 const styleTag = document.createElement("style");
 styleTag.innerHTML = `
   @media (min-width: 1024px) {
