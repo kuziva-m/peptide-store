@@ -3,16 +3,18 @@ import { supabase } from "../../lib/supabase";
 import {
   Search,
   ExternalLink,
-  Edit2, // Added back
-  Save, // Added back
+  Edit2,
+  Save,
   ChevronDown,
   ChevronUp,
-  CheckCircle,
-  X,
-  AlertTriangle,
   Truck,
   MapPin,
   Package,
+  Phone,
+  Mail,
+  User,
+  CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function OrderManager() {
@@ -20,11 +22,8 @@ export default function OrderManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-
-  // Global Notification State
   const [notification, setNotification] = useState(null);
 
-  // Global Modal State
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     title: "",
@@ -41,7 +40,23 @@ export default function OrderManager() {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
-      .select("*")
+      .select(
+        `
+        *,
+        order_items (
+          quantity,
+          price_at_purchase,
+          product_name_snapshot,
+          variants (
+            size_label,
+            products (
+              name,
+              image_url
+            )
+          )
+        )
+      `
+      )
       .order("created_at", { ascending: false });
 
     if (error) console.error("Error fetching orders:", error);
@@ -73,19 +88,16 @@ export default function OrderManager() {
       0
     );
     const pendingCount = orders.filter((o) => o.status === "pending").length;
-    return {
-      totalRevenue,
-      pendingCount,
-      totalOrders: orders.length,
-    };
+    return { totalRevenue, pendingCount, totalOrders: orders.length };
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
+      const s = search.toLowerCase();
       const matchesSearch =
-        order.id.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer_email?.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer_name?.toLowerCase().includes(search.toLowerCase());
+        order.id.toLowerCase().includes(s) ||
+        order.customer_email?.toLowerCase().includes(s) ||
+        order.customer_name?.toLowerCase().includes(s);
 
       const matchesStatus =
         statusFilter === "all" || order.status === statusFilter;
@@ -95,7 +107,6 @@ export default function OrderManager() {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* 1. STATS BAR */}
       <div style={styles.statsContainer}>
         <div style={styles.statItem}>
           <span style={styles.statLabel}>Revenue</span>
@@ -120,7 +131,6 @@ export default function OrderManager() {
         </div>
       </div>
 
-      {/* 2. TOOLBAR */}
       <div style={styles.toolbar}>
         <div style={styles.filterGroup}>
           {["all", "pending", "shipped", "delivered"].map((status) => (
@@ -138,11 +148,10 @@ export default function OrderManager() {
             </button>
           ))}
         </div>
-
         <div style={styles.searchWrapper}>
           <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
           <input
-            placeholder="Search email, ID, or name..."
+            placeholder="Search orders..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={styles.inputReset}
@@ -150,28 +159,24 @@ export default function OrderManager() {
         </div>
       </div>
 
-      {/* 3. ORDER LIST */}
       <div style={styles.tableContainer}>
         {loading ? (
           <div style={styles.emptyState}>Loading orders...</div>
         ) : filteredOrders.length === 0 ? (
-          <div style={styles.emptyState}>
-            No orders found matching criteria.
-          </div>
+          <div style={styles.emptyState}>No orders found.</div>
         ) : (
           filteredOrders.map((order) => (
             <OrderRow
               key={order.id}
               order={order}
               onUpdate={fetchOrders}
-              promptConfirm={promptConfirm}
               showToast={showToast}
+              promptConfirm={promptConfirm}
             />
           ))
         )}
       </div>
 
-      {/* 4. COMPONENTS: Notification & Modal */}
       {notification && (
         <div style={styles.toast}>
           <CheckCircle size={16} /> {notification}
@@ -188,40 +193,91 @@ export default function OrderManager() {
   );
 }
 
-// --- SUB-COMPONENT: Individual Order Row ---
-function OrderRow({ order, onUpdate, promptConfirm, showToast }) {
+function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  // Form State for Editing
   const [formData, setFormData] = useState({
     status: order.status,
     tracking: order.tracking_number || "",
     address: { ...order.shipping_address },
   });
 
-  // Handle Quick Status Updates (Non-Edit Mode)
-  const handleQuickStatus = (newStatus) => {
-    promptConfirm(
-      "Update Order Status",
-      `Are you sure you want to mark this order as ${newStatus.toUpperCase()}?`,
-      async () => {
-        const { error } = await supabase
-          .from("orders")
-          .update({ status: newStatus })
-          .eq("id", order.id);
+  // --- Send Status Email ---
+  const sendStatusEmail = async (tracking, statusType) => {
+    try {
+      const rawItems =
+        order.order_items && order.order_items.length > 0
+          ? order.order_items
+          : order.items;
 
-        if (error) alert("Error updating status");
-        else {
-          showToast(`Order marked as ${newStatus}`);
-          onUpdate();
+      const emailItems = rawItems.map((item) => {
+        let name =
+          item.product_name_snapshot ||
+          item.description ||
+          item.name ||
+          "Unknown Product";
+        let size = "";
+        if (item.variants && item.variants.products) {
+          name = item.variants.products.name;
+          size = item.variants.size_label;
         }
-      }
-    );
+        return { name, quantity: item.quantity, size };
+      });
+
+      const emailAddress = {
+        ...order.shipping_address,
+        phone: order.shipping_address?.phone || "N/A",
+      };
+
+      // DYNAMICALLY CHOOSE THE FUNCTION
+      const functionName =
+        statusType === "delivered"
+          ? "send-delivered-update"
+          : "send-order-update";
+
+      await supabase.functions.invoke(functionName, {
+        body: {
+          orderId: order.id,
+          email: order.customer_email,
+          name: order.customer_name,
+          trackingNumber: tracking,
+          items: emailItems,
+          address: emailAddress,
+          status: statusType,
+        },
+      });
+      showToast(
+        `${statusType === "delivered" ? "Delivery" : "Shipping"} email sent!`
+      );
+    } catch (err) {
+      console.error("Failed to send email", err);
+      showToast("Error sending email, check console");
+    }
   };
 
-  // Handle Full Save (Edit Mode)
-  const handleSaveEdit = async () => {
+  // --- SAVE BUTTON (Edit Mode) ---
+  const handleSave = async () => {
+    const newStatus = formData.status;
+    const isMarkingShipped =
+      newStatus === "shipped" && order.status !== "shipped";
+    const isMarkingDelivered =
+      newStatus === "delivered" && order.status !== "delivered";
+
+    if (isMarkingShipped || isMarkingDelivered) {
+      const actionType = isMarkingShipped ? "SHIPPED" : "DELIVERED";
+      promptConfirm(
+        `Confirm ${actionType}`,
+        `You are marking this order as ${actionType}. This will automatically send an email notification to ${order.customer_email}. Proceed?`,
+        async () => {
+          await executeUpdate(true, newStatus);
+        }
+      );
+    } else {
+      await executeUpdate(false, newStatus);
+    }
+  };
+
+  const executeUpdate = async (shouldSendEmail, statusType) => {
     const { error } = await supabase
       .from("orders")
       .update({
@@ -232,12 +288,44 @@ function OrderRow({ order, onUpdate, promptConfirm, showToast }) {
       .eq("id", order.id);
 
     if (error) {
-      alert("Failed to save order: " + error.message);
+      alert(error.message);
     } else {
-      showToast("Order details updated");
+      showToast("Order updated");
+      if (shouldSendEmail) {
+        await sendStatusEmail(formData.tracking, statusType);
+      }
       setIsEditing(false);
       onUpdate();
     }
+  };
+
+  // --- QUICK BUTTONS (View Mode) ---
+  const handleQuickStatus = (newStatus) => {
+    const isMarkingShipped = newStatus === "shipped";
+    const isMarkingDelivered = newStatus === "delivered";
+
+    let message = `Are you sure you want to mark this order as ${newStatus.toUpperCase()}?`;
+
+    if (isMarkingShipped) {
+      message = `Mark as SHIPPED? ⚠️ This will send a 'Shipped' email to ${order.customer_email}. Ensure tracking is correct.`;
+    } else if (isMarkingDelivered) {
+      message = `Mark as DELIVERED? ⚠️ This will send a 'Delivered' email to ${order.customer_email}.`;
+    }
+
+    promptConfirm("Update Order Status", message, async () => {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: newStatus })
+        .eq("id", order.id);
+      if (error) alert("Error updating status");
+      else {
+        showToast(`Order marked as ${newStatus}`);
+        if (isMarkingShipped || isMarkingDelivered) {
+          await sendStatusEmail(order.tracking_number, newStatus);
+        }
+        onUpdate();
+      }
+    });
   };
 
   const getStatusStyle = (s) => {
@@ -258,25 +346,18 @@ function OrderRow({ order, onUpdate, promptConfirm, showToast }) {
 
   return (
     <div style={styles.orderRow}>
-      {/* Header */}
+      {/* HEADER */}
       <div
         style={styles.rowHeader}
         onClick={() => !isEditing && setIsExpanded(!isExpanded)}
       >
         <div style={styles.colInfo}>
-          <div style={styles.primaryText}>
-            {order.customer_name || "Guest"}
-            <span style={styles.emailText}> ({order.customer_email})</span>
-          </div>
+          <div style={styles.primaryText}>{order.customer_name || "Guest"}</div>
           <div style={styles.metaText}>
-            ID:{" "}
-            <span style={{ fontFamily: "monospace" }}>
-              {order.id.slice(0, 8)}
-            </span>{" "}
-            • {new Date(order.created_at).toLocaleDateString()}
+            #{order.id.slice(0, 8)} •{" "}
+            {new Date(order.created_at).toLocaleDateString()}
           </div>
         </div>
-
         <div style={styles.colStatus}>
           <span
             style={{
@@ -289,239 +370,88 @@ function OrderRow({ order, onUpdate, promptConfirm, showToast }) {
             {order.status}
           </span>
         </div>
-
         <div style={styles.colTotal}>${order.total_amount}</div>
-
         <button style={styles.iconBtn}>
           {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
       </div>
 
-      {/* Expanded Details */}
+      {/* EXPANDED DETAILS */}
       {isExpanded && (
         <div style={styles.expandedPanel}>
-          {isEditing ? (
-            /* --- EDIT MODE --- */
-            <div style={styles.panelGrid}>
-              {/* 1. Status & Tracking Edit */}
-              <div style={styles.detailCol}>
-                <label style={styles.label}>Order Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                  style={styles.input}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-
-                <label style={{ ...styles.label, marginTop: 12 }}>
-                  Tracking Number
-                </label>
-                <input
-                  value={formData.tracking}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tracking: e.target.value })
-                  }
-                  style={styles.input}
-                  placeholder="e.g. AusPost ID"
-                />
-              </div>
-
-              {/* 2. Address Edit */}
-              <div style={styles.detailCol}>
-                <label style={styles.label}>Shipping Address</label>
-                <input
-                  value={formData.address?.line1 || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      address: { ...formData.address, line1: e.target.value },
-                    })
-                  }
-                  style={{ ...styles.input, marginBottom: 8 }}
-                  placeholder="Street Address"
-                />
-                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                  <input
-                    value={formData.address?.city || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: { ...formData.address, city: e.target.value },
-                      })
-                    }
-                    style={styles.input}
-                    placeholder="City"
-                  />
-                  <input
-                    value={formData.address?.state || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: { ...formData.address, state: e.target.value },
-                      })
-                    }
-                    style={styles.input}
-                    placeholder="State"
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    value={formData.address?.postal_code || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          postal_code: e.target.value,
-                        },
-                      })
-                    }
-                    style={styles.input}
-                    placeholder="Postcode"
-                  />
-                  <input
-                    value={formData.address?.country || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          country: e.target.value,
-                        },
-                      })
-                    }
-                    style={styles.input}
-                    placeholder="Country"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Save/Cancel Actions */}
-              <div style={{ ...styles.detailCol, justifyContent: "flex-end" }}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  <button onClick={handleSaveEdit} style={styles.saveBtn}>
-                    <Save size={14} /> Save Changes
-                  </button>
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    style={styles.cancelBtn}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+          <div style={styles.sectionTitle}>
+            <User size={14} /> Customer Details
+          </div>
+          <div style={styles.customerGrid}>
+            <div style={styles.customerItem}>
+              <Mail size={14} color="#64748b" />
+              <span style={{ fontWeight: 500 }}>{order.customer_email}</span>
             </div>
-          ) : (
-            /* --- VIEW MODE (Default) --- */
-            <div style={styles.panelGrid}>
-              {/* 1. Tracking */}
-              <div style={styles.detailCol}>
-                <label style={styles.label}>
-                  <Truck size={12} /> Tracking (AusPost)
-                </label>
-                <div style={styles.trackingContainer}>
-                  {order.tracking_number ? (
-                    <a
-                      href={`https://auspost.com.au/mypost/track/#/details/${order.tracking_number}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={styles.trackingLink}
-                    >
-                      {order.tracking_number} <ExternalLink size={12} />
-                    </a>
-                  ) : (
-                    <span style={styles.mutedText}>Not shipped yet</span>
-                  )}
-                </div>
-              </div>
-
-              {/* 2. Address */}
-              <div style={styles.detailCol}>
-                <label style={styles.label}>
-                  <MapPin size={12} /> Shipping Address
-                </label>
-                <div style={styles.addressBox}>
-                  {order.shipping_address ? (
-                    <>
-                      {order.shipping_address.line1},{" "}
-                      {order.shipping_address.city}
-                      <br />
-                      {order.shipping_address.state}{" "}
-                      {order.shipping_address.postal_code},{" "}
-                      {order.shipping_address.country}
-                    </>
-                  ) : (
-                    <span style={styles.mutedText}>No address provided</span>
-                  )}
-                </div>
-              </div>
-
-              {/* 3. Actions */}
-              <div
-                style={{ ...styles.detailCol, justifyContent: "space-between" }}
-              >
-                <div>
-                  <label style={styles.label}>Quick Status</label>
-                  <div
-                    style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
-                  >
-                    {order.status === "pending" && (
-                      <button
-                        onClick={() => handleQuickStatus("shipped")}
-                        style={styles.actionBtn}
-                      >
-                        Mark Shipped
-                      </button>
-                    )}
-                    {order.status === "shipped" && (
-                      <button
-                        onClick={() => handleQuickStatus("delivered")}
-                        style={styles.actionBtn}
-                      >
-                        Mark Delivered
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* THE MISSING EDIT BUTTON */}
-                <button
-                  onClick={() => setIsEditing(true)}
-                  style={styles.secondaryBtn}
-                >
-                  <Edit2 size={14} /> Edit Order Details
-                </button>
-              </div>
+            <div style={styles.customerItem}>
+              <Phone size={14} color="#64748b" />
+              <span>
+                {order.shipping_address?.phone || "No phone provided"}
+              </span>
             </div>
-          )}
+            <div style={{ ...styles.customerItem, gridColumn: "span 2" }}>
+              <MapPin size={14} color="#64748b" />
+              <span>
+                {order.shipping_address
+                  ? `${order.shipping_address.line1}, ${order.shipping_address.city} ${order.shipping_address.postal_code}, ${order.shipping_address.state}`
+                  : "No address provided"}
+              </span>
+            </div>
+          </div>
 
-          {/* 4. Items List (With Price Fix) */}
-          {order.items && order.items.length > 0 && (
-            <div style={styles.itemsSection}>
-              <label style={styles.label}>
-                <Package size={12} /> Order Items
-              </label>
+          <div
+            style={{ margin: "20px 0", borderTop: "1px solid #e2e8f0" }}
+          ></div>
+
+          <div style={styles.panelGrid}>
+            {/* ITEMS LIST */}
+            <div style={{ gridColumn: "span 2" }}>
+              <div style={styles.sectionTitle}>
+                <Package size={14} /> Items Ordered
+              </div>
               <div style={styles.itemsTable}>
-                {order.items.map((item, idx) => {
-                  let price = 0;
-                  if (item.amount_total) price = item.amount_total / 100;
-                  else price = item.total || 0;
+                <div style={styles.tableHeader}>
+                  <span style={{ width: 50 }}>Qty</span>
+                  <span style={{ flex: 1 }}>Product</span>
+                  <span style={{ width: 80, textAlign: "right" }}>Price</span>
+                </div>
+                {(order.order_items && order.order_items.length > 0
+                  ? order.order_items
+                  : order.items
+                ).map((item, i) => {
+                  let name =
+                    item.product_name_snapshot ||
+                    item.description ||
+                    item.name ||
+                    "Unknown Product";
+                  let size = "";
+                  if (item.variants && item.variants.products) {
+                    name = item.variants.products.name;
+                    size = item.variants.size_label;
+                  }
 
                   return (
-                    <div key={idx} style={styles.itemRow}>
+                    <div key={i} style={styles.itemRow}>
                       <span style={styles.itemQty}>{item.quantity}x</span>
-                      <span style={styles.itemName}>
-                        {item.description || item.name}
+                      <div style={styles.itemInfo}>
+                        <span style={styles.itemName}>{name}</span>
+                        {size && (
+                          <span style={styles.variantLabel}>{size}</span>
+                        )}
+                      </div>
+                      <span style={styles.itemPrice}>
+                        $
+                        {(
+                          item.price_at_purchase ||
+                          item.unit_price ||
+                          item.amount_total / 100 ||
+                          0
+                        ).toFixed(2)}
                       </span>
-                      <span style={styles.itemPrice}>${price.toFixed(2)}</span>
                     </div>
                   );
                 })}
@@ -531,14 +461,112 @@ function OrderRow({ order, onUpdate, promptConfirm, showToast }) {
                 </div>
               </div>
             </div>
-          )}
+
+            {/* ACTIONS */}
+            <div style={styles.detailCol}>
+              <div style={styles.sectionTitle}>
+                <Edit2 size={14} /> Manage
+              </div>
+              {isEditing ? (
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                >
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({ ...formData, status: e.target.value })
+                    }
+                    style={styles.input}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                  <input
+                    placeholder="Tracking #"
+                    value={formData.tracking}
+                    onChange={(e) =>
+                      setFormData({ ...formData, tracking: e.target.value })
+                    }
+                    style={styles.input}
+                  />
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <button onClick={handleSave} style={styles.saveBtn}>
+                      <Save size={14} /> Save
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      style={styles.cancelBtn}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    height: "100%",
+                  }}
+                >
+                  <div style={styles.trackingBox}>
+                    {order.tracking_number ? (
+                      <a
+                        href={`https://auspost.com.au/mypost/track/#/details/${order.tracking_number}`}
+                        target="_blank"
+                        style={styles.trackingLink}
+                      >
+                        {order.tracking_number} <ExternalLink size={12} />
+                      </a>
+                    ) : (
+                      <span style={{ color: "#94a3b8", fontStyle: "italic" }}>
+                        No Tracking
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: "auto" }}>
+                    <label style={styles.label}>Quick Status</label>
+                    <div
+                      style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                    >
+                      {order.status === "pending" && (
+                        <button
+                          onClick={() => handleQuickStatus("shipped")}
+                          style={styles.actionBtn}
+                        >
+                          Mark Shipped
+                        </button>
+                      )}
+                      {order.status === "shipped" && (
+                        <button
+                          onClick={() => handleQuickStatus("delivered")}
+                          style={styles.actionBtn}
+                        >
+                          Mark Delivered
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      style={styles.secondaryBtn}
+                    >
+                      Edit Details
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// --- SUB-COMPONENT: Custom Modal ---
 function ConfirmationModal({ config, onClose }) {
   return (
     <div style={styles.modalOverlay}>
@@ -570,7 +598,6 @@ function ConfirmationModal({ config, onClose }) {
   );
 }
 
-// --- STYLES ---
 const styles = {
   statsContainer: {
     display: "flex",
@@ -580,7 +607,6 @@ const styles = {
     padding: "16px 24px",
     marginBottom: "24px",
     alignItems: "center",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
   },
   statItem: { display: "flex", flexDirection: "column", gap: "2px" },
   statDivider: {
@@ -594,15 +620,8 @@ const styles = {
     color: "#64748b",
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
   },
-  statValue: {
-    fontSize: "1.25rem",
-    fontWeight: "700",
-    color: "#0f172a",
-    lineHeight: "1.2",
-  },
-
+  statValue: { fontSize: "1.25rem", fontWeight: "700", color: "#0f172a" },
   toolbar: {
     display: "flex",
     justifyContent: "space-between",
@@ -618,7 +637,6 @@ const styles = {
     borderRadius: "6px",
     fontSize: "0.85rem",
     cursor: "pointer",
-    transition: "all 0.2s",
     fontWeight: "500",
   },
   searchWrapper: {
@@ -636,18 +654,14 @@ const styles = {
     background: "transparent",
     width: "100%",
     fontSize: "0.9rem",
-    color: "#0f172a",
   },
-
   tableContainer: { display: "flex", flexDirection: "column", gap: "12px" },
   emptyState: { padding: "40px", textAlign: "center", color: "#64748b" },
-
   orderRow: {
     background: "white",
     border: "1px solid #e2e8f0",
     borderRadius: "8px",
     overflow: "hidden",
-    transition: "box-shadow 0.2s",
   },
   rowHeader: {
     padding: "16px",
@@ -658,7 +672,6 @@ const styles = {
   },
   colInfo: { flex: 1 },
   primaryText: { fontWeight: "600", color: "#0f172a", fontSize: "0.95rem" },
-  emailText: { fontWeight: "400", color: "#64748b", fontSize: "0.9rem" },
   metaText: { fontSize: "0.8rem", color: "#94a3b8", marginTop: "4px" },
   colStatus: { width: "120px", textAlign: "center" },
   badge: {
@@ -668,7 +681,6 @@ const styles = {
     border: "1px solid",
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: "0.5px",
   },
   colTotal: {
     width: "100px",
@@ -683,49 +695,102 @@ const styles = {
     cursor: "pointer",
     padding: "4px",
   },
-
   expandedPanel: {
     background: "#f8fafc",
     borderTop: "1px solid #e2e8f0",
     padding: "24px",
   },
-  panelGrid: {
+  panelGrid: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" },
+  customerGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "24px",
-    marginBottom: "20px",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "15px",
+    background: "white",
+    padding: "15px",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
   },
-  detailCol: { display: "flex", flexDirection: "column" },
-  label: {
+  customerItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "0.9rem",
+    color: "#334155",
+  },
+  sectionTitle: {
     fontSize: "0.75rem",
     fontWeight: "700",
     color: "#64748b",
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    marginBottom: "8px",
+    marginBottom: "10px",
     display: "flex",
     alignItems: "center",
     gap: "6px",
   },
 
-  trackingContainer: { display: "flex", alignItems: "center", gap: "8px" },
+  itemsTable: {
+    background: "white",
+    border: "1px solid #e2e8f0",
+    borderRadius: "6px",
+    overflow: "hidden",
+  },
+  tableHeader: {
+    display: "flex",
+    padding: "8px 16px",
+    background: "#f1f5f9",
+    fontSize: "0.75rem",
+    fontWeight: "700",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+
+  itemRow: {
+    display: "grid",
+    gridTemplateColumns: "50px 1fr 80px",
+    padding: "12px 16px",
+    borderBottom: "1px solid #f1f5f9",
+    fontSize: "0.9rem",
+    alignItems: "center",
+  },
+
+  itemQty: { color: "#64748b", fontWeight: "500" },
+  itemInfo: { display: "flex", flexDirection: "column" },
+  itemName: { fontWeight: "500", color: "#334155" },
+  variantLabel: {
+    fontSize: "0.75rem",
+    color: "#64748b",
+    fontWeight: 600,
+    marginTop: 2,
+  },
+  itemPrice: { fontWeight: "600", color: "#0f172a", textAlign: "right" },
+
+  summaryRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "10px 16px",
+    background: "#f8fafc",
+    fontWeight: "600",
+    fontSize: "0.9rem",
+    color: "#64748b",
+  },
   input: {
-    padding: "8px 10px",
+    padding: "8px",
     borderRadius: "4px",
     border: "1px solid #cbd5e1",
     fontSize: "0.85rem",
     width: "100%",
-    background: "white",
   },
   saveBtn: {
     background: "#0f172a",
     color: "white",
     border: "none",
     borderRadius: "4px",
-    padding: "8px 16px",
+    padding: "8px 12px",
     fontSize: "0.85rem",
     cursor: "pointer",
     fontWeight: "600",
+    flex: 1,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -736,32 +801,21 @@ const styles = {
     color: "#64748b",
     border: "1px solid #cbd5e1",
     borderRadius: "4px",
-    padding: "8px 16px",
+    padding: "8px 12px",
     fontSize: "0.85rem",
     cursor: "pointer",
-    fontWeight: "500",
+    flex: 1,
   },
-  trackingLink: {
-    color: "#2563eb",
-    textDecoration: "none",
-    fontWeight: "600",
-    fontSize: "0.9rem",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-
-  addressBox: {
-    fontSize: "0.9rem",
-    color: "#334155",
-    lineHeight: "1.5",
+  secondaryBtn: {
+    width: "100%",
+    padding: "8px",
     background: "white",
-    padding: "10px",
+    border: "1px solid #cbd5e1",
     borderRadius: "4px",
-    border: "1px solid #e2e8f0",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    marginTop: 8,
   },
-  mutedText: { fontStyle: "italic", color: "#94a3b8" },
-
   actionBtn: {
     background: "white",
     border: "1px solid #cbd5e1",
@@ -773,48 +827,22 @@ const styles = {
     fontWeight: "500",
     transition: "all 0.1s hover",
   },
-  secondaryBtn: {
+  trackingBox: {
+    padding: "10px",
+    background: "#f1f5f9",
+    borderRadius: "4px",
+    textAlign: "center",
+    fontSize: "0.9rem",
+  },
+  trackingLink: {
+    color: "#2563eb",
+    textDecoration: "none",
+    fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: 6,
-    background: "none",
-    border: "1px solid #64748b",
-    color: "#64748b",
-    borderRadius: "4px",
-    padding: "6px 12px",
-    fontSize: "0.8rem",
-    cursor: "pointer",
-    fontWeight: "500",
-    marginTop: 8,
+    justifyContent: "center",
+    gap: "4px",
   },
-
-  itemsSection: { borderTop: "1px solid #e2e8f0", paddingTop: "20px" },
-  itemsTable: {
-    background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    overflow: "hidden",
-  },
-  itemRow: {
-    display: "flex",
-    padding: "10px 16px",
-    borderBottom: "1px solid #f1f5f9",
-    fontSize: "0.9rem",
-  },
-  itemQty: { width: "40px", color: "#64748b" },
-  itemName: { flex: 1, fontWeight: "500", color: "#334155" },
-  itemPrice: { fontWeight: "500", color: "#0f172a" },
-  summaryRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "10px 16px",
-    background: "#f8fafc",
-    fontWeight: "600",
-    fontSize: "0.9rem",
-    color: "#64748b",
-  },
-
-  // Modal & Toast Styles
   toast: {
     position: "fixed",
     bottom: "24px",
@@ -830,6 +858,18 @@ const styles = {
     fontWeight: "500",
     zIndex: 100,
   },
+  label: {
+    fontSize: "0.75rem",
+    fontWeight: "700",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    marginBottom: "8px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  detailCol: { display: "flex", flexDirection: "column" },
   modalOverlay: {
     position: "fixed",
     inset: 0,

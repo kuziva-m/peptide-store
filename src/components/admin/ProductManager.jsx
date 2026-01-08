@@ -61,7 +61,7 @@ export default function ProductManager() {
         category: newProductCategory,
         image_url: newProductImage,
         description: newProductDesc,
-        in_stock: true, // Default to in stock
+        in_stock: true,
       })
       .select()
       .single();
@@ -74,7 +74,6 @@ export default function ProductManager() {
       setNewProductName("");
       setNewProductImage("");
       setNewProductDesc("");
-      // Expand the new product so they can add variants immediately
       setExpandedProductId(data.id);
     }
   };
@@ -281,7 +280,6 @@ function ProductRow({
         product_id: product.id,
         size_label: "5mg",
         price: 50,
-        in_stock: true,
       })
       .select()
       .single();
@@ -289,11 +287,9 @@ function ProductRow({
   };
 
   const updateVariant = async (id, field, value) => {
-    // Optimistic UI update
     setVariants(
       variants.map((v) => (v.id === id ? { ...v, [field]: value } : v))
     );
-    // DB Update
     await supabase
       .from("variants")
       .update({ [field]: value })
@@ -348,7 +344,6 @@ function ProductRow({
       {/* EXPANDED EDIT MODE */}
       {isExpanded && (
         <div style={styles.expandedPanel}>
-          {/* Edit Product Details */}
           <div style={{ marginBottom: "20px", display: "grid", gap: "15px" }}>
             <div>
               <label style={styles.label}>Product Name</label>
@@ -375,8 +370,7 @@ function ProductRow({
                       const url = await handleImageUpload(e.target.files[0]);
                       if (url) {
                         updateProduct("image_url", url);
-                        // Force refresh image preview by updating state or just alerting (simplification)
-                        window.location.reload(); // Simple way to refresh for now
+                        window.location.reload();
                       }
                     }}
                   />
@@ -392,14 +386,15 @@ function ProductRow({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "80px 80px 1fr 30px",
+                gridTemplateColumns: "80px 80px 1fr 1fr 30px", // Adjusted columns
                 gap: "10px",
                 paddingLeft: "10px",
               }}
             >
               <small>Size</small>
               <small>Price ($)</small>
-              <small>Status</small>
+              <small>Image URL</small>
+              <small>Upload</small>
               <small></small>
             </div>
             {variants.map((v) => (
@@ -408,6 +403,7 @@ function ProductRow({
                 data={v}
                 update={updateVariant}
                 onDelete={() => deleteVariant(v.id)}
+                handleImageUpload={handleImageUpload} // Passed function
               />
             ))}
             <button onClick={addVariant} style={styles.addVariantBtn}>
@@ -420,12 +416,12 @@ function ProductRow({
   );
 }
 
-function VariantRow({ data, update, onDelete }) {
+function VariantRow({ data, update, onDelete, handleImageUpload }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "80px 80px 1fr 30px",
+        gridTemplateColumns: "80px 80px 1fr 1fr 30px", // Adjusted grid
         gap: "10px",
         alignItems: "center",
       }}
@@ -434,14 +430,38 @@ function VariantRow({ data, update, onDelete }) {
         value={data.size_label}
         onChange={(e) => update(data.id, "size_label", e.target.value)}
         style={styles.inputSmall}
+        placeholder="Size"
       />
       <input
         type="number"
         value={data.price}
         onChange={(e) => update(data.id, "price", e.target.value)}
         style={styles.inputSmall}
+        placeholder="$$"
       />
-      <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Auto-saves</div>
+      {/* Variant Image URL Input */}
+      <input
+        value={data.image_url || ""}
+        onChange={(e) => update(data.id, "image_url", e.target.value)}
+        style={styles.inputSmall}
+        placeholder="Image URL"
+      />
+      {/* Variant Upload Button */}
+      <label style={styles.uploadBtnSmall}>
+        <Upload size={14} style={{ marginRight: 4 }} />
+        <span style={{ fontSize: "0.75rem" }}>Upload</span>
+        <input
+          type="file"
+          hidden
+          onChange={async (e) => {
+            const url = await handleImageUpload(e.target.files[0]);
+            if (url) {
+              update(data.id, "image_url", url);
+            }
+          }}
+        />
+      </label>
+
       <button
         onClick={onDelete}
         style={{
@@ -477,11 +497,7 @@ const styles = {
     gap: "8px",
     fontWeight: "600",
   },
-  controls: {
-    display: "flex",
-    gap: "15px",
-    marginBottom: "20px",
-  },
+  controls: { display: "flex", gap: "15px", marginBottom: "20px" },
   searchBox: {
     flex: 1,
     display: "flex",
@@ -554,11 +570,7 @@ const styles = {
     fontWeight: "bold",
     width: "100%",
   },
-  list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "15px",
-  },
+  list: { display: "flex", flexDirection: "column", gap: "15px" },
   productCard: {
     background: "white",
     borderRadius: "12px",
@@ -581,11 +593,7 @@ const styles = {
     justifyContent: "center",
     overflow: "hidden",
   },
-  img: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
+  img: { width: "100%", height: "100%", objectFit: "cover" },
   badge: {
     background: "#f1f5f9",
     color: "#64748b",
@@ -637,5 +645,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     fontWeight: "600",
+    height: "35px",
   },
 };

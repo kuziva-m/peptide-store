@@ -60,7 +60,13 @@ serve(async (req: Request) => {
       });
 
       if (session.payment_status === "paid") {
-        // 1. Save Order to Database
+        // 1. Prepare Address & Phone (NEW: Capture Phone Number)
+        const shippingAddress = {
+          ...session.shipping_details?.address,
+          phone: session.customer_details?.phone || "N/A",
+        };
+
+        // 2. Save Order to Database
         const { data: orderData, error: orderError } = await supabaseClient
           .from("orders")
           .upsert(
@@ -72,7 +78,7 @@ serve(async (req: Request) => {
               shipping_cost:
                 (session.total_details?.amount_shipping || 0) / 100,
               status: "pending",
-              shipping_address: session.shipping_details?.address,
+              shipping_address: shippingAddress, // Use the object with phone number
               items: session.line_items?.data || [],
               created_at: new Date().toISOString(),
             },
@@ -84,7 +90,7 @@ serve(async (req: Request) => {
         if (orderError) {
           console.error("FAILED TO SAVE ORDER:", orderError);
         } else if (orderData) {
-          // 2. Update order_items table (Inventory Linking)
+          // 3. Update order_items table (Inventory Linking)
           await supabaseClient
             .from("order_items")
             .delete()
@@ -119,7 +125,7 @@ serve(async (req: Request) => {
           }
         }
 
-        // 3. Record Discount Usage
+        // 4. Record Discount Usage
         if (session.metadata?.discountCode) {
           const usedEmail =
             session.customer_details?.email || session.metadata.customerEmail;
@@ -135,7 +141,7 @@ serve(async (req: Request) => {
           }
         }
 
-        // 4. Admin Notification
+        // 5. Admin Notification
         if (!session.metadata?.admin_notified) {
           console.log("Sending admin notification...");
 
@@ -174,6 +180,9 @@ serve(async (req: Request) => {
                     }</p>
                     <p><strong>Email:</strong> ${
                       customerInfo?.email || "N/A"
+                    }</p>
+                    <p><strong>Phone:</strong> ${
+                      customerInfo?.phone || "N/A"
                     }</p>
                     <p><strong>Total:</strong> $${totalAmount.toFixed(
                       2
