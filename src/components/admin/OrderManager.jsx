@@ -1,9 +1,9 @@
-// OrderManager.jsx
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { downloadAusPostCSV } from "../../utils/exportToAusPost";
 import { styles } from "./OrderManagerStyles";
-import { OrderRow, ConfirmationModal } from "./OrderRow";
+// FIXED: Removed ConfirmationModal from import
+import { OrderRow } from "./OrderRow";
 import {
   Search,
   Download,
@@ -17,7 +17,7 @@ export default function OrderManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("live"); // 'live' or 'abandoned'
+  const [activeTab, setActiveTab] = useState("live");
   const [notification, setNotification] = useState(null);
 
   const [modalConfig, setModalConfig] = useState({
@@ -34,7 +34,6 @@ export default function OrderManager() {
 
   const fetchOrders = async () => {
     setLoading(true);
-    // Fetch EVERYTHING. We will filter client-side for performance and speed.
     const { data, error } = await supabase
       .from("orders")
       .select(
@@ -73,9 +72,9 @@ export default function OrderManager() {
 
       // 2. Tab Logic
       if (activeTab === "abandoned") {
-        if (!isGhost) return false; // In abandoned tab, only show ghosts
+        if (!isGhost) return false;
       } else {
-        if (isGhost) return false; // In live tab, hide ghosts
+        if (isGhost) return false;
       }
 
       // 3. Search Logic
@@ -85,7 +84,7 @@ export default function OrderManager() {
         order.customer_email?.toLowerCase().includes(s) ||
         order.customer_name?.toLowerCase().includes(s);
 
-      // 4. Status Logic (Only applies to Live tab)
+      // 4. Status Logic
       const matchesStatus =
         statusFilter === "all" || order.status === statusFilter;
 
@@ -93,7 +92,7 @@ export default function OrderManager() {
     });
   }, [orders, search, statusFilter, activeTab]);
 
-  // --- STATS LOGIC (Ignore ghosts in revenue) ---
+  // --- STATS LOGIC ---
   const stats = useMemo(() => {
     const liveOrders = orders.filter(
       (o) => !(o.status === "pending" && !o.customer_name)
@@ -167,7 +166,6 @@ export default function OrderManager() {
             ...(activeTab === "live" ? styles.activeTab : styles.inactiveTab),
           }}
         >
-          {/* REMOVED manual style prop */}
           <Package size={16} />
           Live Orders
         </button>
@@ -180,7 +178,6 @@ export default function OrderManager() {
               : styles.inactiveTab),
           }}
         >
-          {/* REMOVED manual style prop */}
           <AlertTriangle size={16} />
           Abandoned Checkouts
         </button>
@@ -259,6 +256,34 @@ export default function OrderManager() {
           onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
         />
       )}
+    </div>
+  );
+}
+
+// FIXED: Moved Component Definition HERE
+function ConfirmationModal({ config, onClose }) {
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.modalContent}>
+        <div style={styles.modalHeader}>
+          {config.isDestructive && <AlertTriangle size={20} color="#ef4444" />}
+          <h3 style={styles.modalTitle}>{config.title}</h3>
+        </div>
+        <p style={styles.modalMessage}>{config.message}</p>
+        <div style={styles.modalActions}>
+          <button onClick={onClose} style={styles.modalCancel}>
+            Cancel
+          </button>
+          <button
+            onClick={config.onConfirm}
+            style={
+              config.isDestructive ? styles.modalDelete : styles.modalConfirm
+            }
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

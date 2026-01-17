@@ -22,8 +22,17 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { email, name, orderId, trackingNumber, items, address, status } =
-      await req.json();
+    // UPDATED: Added 'message' to the destructuring
+    const {
+      email,
+      name,
+      orderId,
+      trackingNumber,
+      items,
+      address,
+      status,
+      message,
+    } = await req.json();
 
     if (!RESEND_API_KEY) {
       throw new Error("Missing RESEND_API_KEY");
@@ -37,8 +46,15 @@ serve(async (req: Request) => {
     let subject = "";
     let messageBody = "";
 
-    // LOGIC UPDATE: Handle "Label Created" vs "Shipped" vs "Delivered"
-    if (status === "label_created") {
+    if (status === "custom") {
+      // --- NEW CUSTOM EMAIL LOGIC ---
+      title = "Update Regarding Your Order";
+      subject = `Message regarding Order #${orderId.slice(0, 8)}`;
+      // Convert newlines to HTML line breaks so the formatting looks right
+      messageBody = message
+        ? message.replace(/\n/g, "<br>")
+        : "Please check your order details.";
+    } else if (status === "label_created") {
       title = "Shipping Label Created";
       subject = `Update: Label Created for Order #${orderId.slice(0, 8)}`;
       messageBody =

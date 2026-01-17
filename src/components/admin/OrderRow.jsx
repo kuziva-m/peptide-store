@@ -1,4 +1,3 @@
-// OrderRow.jsx
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { downloadAusPostCSV } from "../../utils/exportToAusPost";
@@ -19,12 +18,18 @@ import {
   Download,
   MessageCircle,
   AlertTriangle,
+  Send,
 } from "lucide-react";
 
 export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [noteText, setNoteText] = useState(order.notes || "");
+
+  const [emailMode, setEmailMode] = useState(false);
+  const [customEmailText, setCustomEmailText] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   const [formData, setFormData] = useState({
     status: order.status,
     tracking: order.tracking_number || "",
@@ -87,6 +92,55 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
     } catch (err) {
       console.error(err);
       showToast("Error sending email");
+    }
+  };
+
+  const handleSendCustomEmail = async () => {
+    if (!customEmailText.trim()) return showToast("Please enter a message");
+
+    setSendingEmail(true);
+    try {
+      const rawItems =
+        order.order_items && order.order_items.length > 0
+          ? order.order_items
+          : order.items;
+      const emailItems = rawItems.map((item) => {
+        let name =
+          item.product_name_snapshot ||
+          item.description ||
+          item.name ||
+          "Unknown Product";
+        let size = "";
+        if (item.variants && item.variants.products) {
+          name = item.variants.products.name;
+          size = item.variants.size_label;
+        }
+        return { name, quantity: item.quantity, size };
+      });
+
+      const { error } = await supabase.functions.invoke("send-order-update", {
+        body: {
+          orderId: order.id,
+          email: order.customer_email,
+          name: order.customer_name,
+          trackingNumber: order.tracking_number || "N/A",
+          items: emailItems,
+          address: order.shipping_address,
+          status: "custom",
+          message: customEmailText,
+        },
+      });
+
+      if (error) throw error;
+
+      showToast("Custom email sent successfully!");
+      setCustomEmailText("");
+      setEmailMode(false);
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to send custom email");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -271,6 +325,74 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             </div>
           </div>
 
+          <div style={{ marginTop: "20px" }}>
+            <div style={styles.sectionTitle}>
+              <Mail size={14} /> Communication
+            </div>
+
+            {!emailMode ? (
+              <button
+                onClick={() => setEmailMode(true)}
+                style={{
+                  ...styles.secondaryBtn,
+                  width: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Send size={14} /> Send Custom Email
+              </button>
+            ) : (
+              <div
+                style={{
+                  background: "white",
+                  padding: "15px",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <div
+                  style={{
+                    marginBottom: "8px",
+                    fontSize: "0.85rem",
+                    color: "#64748b",
+                  }}
+                >
+                  To: <strong>{order.customer_email}</strong>
+                </div>
+                <textarea
+                  value={customEmailText}
+                  onChange={(e) => setCustomEmailText(e.target.value)}
+                  placeholder="Write your message here... (e.g., 'Hi, we noticed your address was incomplete...')"
+                  style={{
+                    ...styles.noteInput,
+                    minHeight: "100px",
+                    marginBottom: "10px",
+                  }}
+                />
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    onClick={handleSendCustomEmail}
+                    disabled={sendingEmail}
+                    style={{
+                      ...styles.saveBtn,
+                      opacity: sendingEmail ? 0.7 : 1,
+                    }}
+                  >
+                    {sendingEmail ? "Sending..." : "Send Email"}
+                  </button>
+                  <button
+                    onClick={() => setEmailMode(false)}
+                    style={styles.cancelBtn}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div
             style={{ margin: "20px 0", borderTop: "1px solid #e2e8f0" }}
           ></div>
@@ -422,33 +544,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-export function ConfirmationModal({ config, onClose }) {
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={styles.modalContent}>
-        <div style={styles.modalHeader}>
-          {config.isDestructive && <AlertTriangle size={20} color="#ef4444" />}
-          <h3 style={styles.modalTitle}>{config.title}</h3>
-        </div>
-        <p style={styles.modalMessage}>{config.message}</p>
-        <div style={styles.modalActions}>
-          <button onClick={onClose} style={styles.modalCancel}>
-            Cancel
-          </button>
-          <button
-            onClick={config.onConfirm}
-            style={
-              config.isDestructive ? styles.modalDelete : styles.modalConfirm
-            }
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
