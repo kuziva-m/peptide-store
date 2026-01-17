@@ -123,15 +123,13 @@ serve(async (req: Request) => {
             session.metadata?.discountCode &&
             session.customer_details?.email
           ) {
-            await supabaseClient
-              .from("discount_usage")
-              .upsert(
-                {
-                  email: session.customer_details.email,
-                  coupon_code: session.metadata.discountCode,
-                },
-                { onConflict: "email, coupon_code" }
-              );
+            await supabaseClient.from("discount_usage").upsert(
+              {
+                email: session.customer_details.email,
+                coupon_code: session.metadata.discountCode,
+              },
+              { onConflict: "email, coupon_code" }
+            );
           }
 
           if (session.metadata?.admin_notified !== "true") {
@@ -340,6 +338,7 @@ serve(async (req: Request) => {
   } catch (error) {
     console.error("Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
+    // FIXED: Return headers with error response so frontend can read it
     return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,

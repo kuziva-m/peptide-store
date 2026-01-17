@@ -17,7 +17,6 @@ import {
   Zap,
   Download,
   MessageCircle,
-  AlertTriangle,
   Send,
 } from "lucide-react";
 
@@ -30,10 +29,19 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const [customEmailText, setCustomEmailText] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
+  // Initialize form with all editable fields
   const [formData, setFormData] = useState({
     status: order.status,
     tracking: order.tracking_number || "",
-    address: { ...order.shipping_address },
+    name: order.customer_name || "",
+    email: order.customer_email || "",
+    phone: order.shipping_address?.phone || "",
+    line1: order.shipping_address?.line1 || "",
+    line2: order.shipping_address?.line2 || "",
+    city: order.shipping_address?.city || "",
+    state: order.shipping_address?.state || "",
+    postal_code: order.shipping_address?.postal_code || "",
+    country: order.shipping_address?.country || "AU",
   });
 
   const handleSingleExport = (e) => {
@@ -78,11 +86,17 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
       const { error } = await supabase.functions.invoke("send-order-update", {
         body: {
           orderId: order.id,
-          email: order.customer_email,
-          name: order.customer_name,
+          email: formData.email, // Use updated email
+          name: formData.name, // Use updated name
           trackingNumber: tracking || "N/A",
           items: emailItems,
-          address: order.shipping_address,
+          address: {
+            line1: formData.line1,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postal_code,
+            country: formData.country,
+          },
           status: statusType,
         },
       });
@@ -121,11 +135,16 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
       const { error } = await supabase.functions.invoke("send-order-update", {
         body: {
           orderId: order.id,
-          email: order.customer_email,
-          name: order.customer_name,
-          trackingNumber: order.tracking_number || "N/A",
+          email: formData.email,
+          name: formData.name,
+          trackingNumber: formData.tracking || "N/A",
           items: emailItems,
-          address: order.shipping_address,
+          address: {
+            line1: formData.line1,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postal_code,
+          },
           status: "custom",
           message: customEmailText,
         },
@@ -163,18 +182,31 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   };
 
   const executeUpdate = async (shouldSendEmail, statusType) => {
+    // Construct the address object to save
+    const updatedAddress = {
+      line1: formData.line1,
+      line2: formData.line2,
+      city: formData.city,
+      state: formData.state,
+      postal_code: formData.postal_code,
+      country: formData.country,
+      phone: formData.phone,
+    };
+
     const { error } = await supabase
       .from("orders")
       .update({
         status: formData.status,
         tracking_number: formData.tracking,
-        shipping_address: formData.address,
+        customer_name: formData.name,
+        customer_email: formData.email,
+        shipping_address: updatedAddress,
       })
       .eq("id", order.id);
 
     if (error) alert(error.message);
     else {
-      showToast("Order updated");
+      showToast("Order Details Updated");
       if (shouldSendEmail) await sendStatusEmail(formData.tracking, statusType);
       setIsEditing(false);
       onUpdate();
@@ -182,14 +214,20 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   };
 
   const handleQuickStatus = (newStatus) => {
-    promptConfirm("Update Status", `Mark as ${newStatus}?`, async () => {
+    let promptMsg = `Mark as ${newStatus}?`;
+    if (newStatus === "paid")
+      promptMsg = "Mark as PAID? This will move it to the Live Orders tab.";
+
+    promptConfirm("Update Status", promptMsg, async () => {
       const { error } = await supabase
         .from("orders")
         .update({ status: newStatus })
         .eq("id", order.id);
       if (!error) {
         showToast(`Updated to ${newStatus}`);
-        await sendStatusEmail(order.tracking_number, newStatus);
+        if (newStatus !== "paid") {
+          await sendStatusEmail(order.tracking_number, newStatus);
+        }
         onUpdate();
       }
     });
@@ -199,6 +237,8 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
     switch (s) {
       case "pending":
         return { bg: "#fff7ed", color: "#c2410c", border: "#ffedd5" };
+      case "paid":
+        return { bg: "#ecfccb", color: "#365314", border: "#d9f99d" };
       case "label_created":
         return { bg: "#f3e8ff", color: "#7e22ce", border: "#e9d5ff" };
       case "shipped":
@@ -216,8 +256,18 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const isExpress = order.shipping_method === "Express";
   const hasNote = order.notes && order.notes.trim().length > 0;
 
+  // Helper styles for inputs in the customer grid
+  const editInputStyle = {
+    ...styles.input,
+    padding: "4px 8px",
+    fontSize: "0.85rem",
+    width: "100%",
+    marginBottom: "4px",
+  };
+
   return (
     <div style={styles.orderRow}>
+      {/* HEADER ROW */}
       <div
         style={styles.rowHeader}
         onClick={() => !isEditing && setIsExpanded(!isExpanded)}
@@ -286,28 +336,133 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
         </button>
       </div>
 
+      {/* EXPANDED PANEL */}
       {isExpanded && (
         <div style={styles.expandedPanel}>
-          <div style={styles.sectionTitle}>
-            <User size={14} /> Customer Details
-          </div>
-          <div style={styles.customerGrid}>
-            <div style={styles.customerItem}>
-              <Mail size={14} color="#64748b" /> {order.customer_email}
+          {/* 1. CUSTOMER DETAILS (EDITABLE) */}
+          <div
+            style={{
+              borderBottom: "1px solid #e2e8f0",
+              paddingBottom: "15px",
+              marginBottom: "15px",
+            }}
+          >
+            <div style={styles.sectionTitle}>
+              <User size={14} /> Customer Details
             </div>
-            <div style={styles.customerItem}>
-              <Phone size={14} color="#64748b" />{" "}
-              {order.shipping_address?.phone || "N/A"}
-            </div>
-            <div style={{ ...styles.customerItem, gridColumn: "span 2" }}>
-              <MapPin size={14} color="#64748b" />{" "}
-              {order.shipping_address
-                ? `${order.shipping_address.line1}, ${order.shipping_address.city} ${order.shipping_address.postal_code}`
-                : "N/A"}
-            </div>
+
+            {isEditing ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                }}
+              >
+                <div>
+                  <label style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                    Name
+                  </label>
+                  <input
+                    style={editInputStyle}
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                    Email
+                  </label>
+                  <input
+                    style={editInputStyle}
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                    Phone
+                  </label>
+                  <input
+                    style={editInputStyle}
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                    Street Address
+                  </label>
+                  <input
+                    style={editInputStyle}
+                    value={formData.line1}
+                    placeholder="Line 1"
+                    onChange={(e) =>
+                      setFormData({ ...formData, line1: e.target.value })
+                    }
+                  />
+                </div>
+                <div
+                  style={{
+                    gridColumn: "span 2",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "5px",
+                  }}
+                >
+                  <input
+                    style={editInputStyle}
+                    value={formData.city}
+                    placeholder="City"
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
+                  />
+                  <input
+                    style={editInputStyle}
+                    value={formData.state}
+                    placeholder="State"
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
+                  />
+                  <input
+                    style={editInputStyle}
+                    value={formData.postal_code}
+                    placeholder="Postcode"
+                    onChange={(e) =>
+                      setFormData({ ...formData, postal_code: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            ) : (
+              <div style={styles.customerGrid}>
+                <div style={styles.customerItem}>
+                  <Mail size={14} color="#64748b" /> {order.customer_email}
+                </div>
+                <div style={styles.customerItem}>
+                  <Phone size={14} color="#64748b" />{" "}
+                  {order.shipping_address?.phone || "N/A"}
+                </div>
+                <div style={{ ...styles.customerItem, gridColumn: "span 2" }}>
+                  <MapPin size={14} color="#64748b" />{" "}
+                  {order.shipping_address
+                    ? `${order.shipping_address.line1}, ${order.shipping_address.city} ${order.shipping_address.postal_code}`
+                    : "N/A"}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div style={{ marginTop: "20px" }}>
+          {/* 2. NOTES SECTION */}
+          <div style={{ marginTop: "10px" }}>
             <div style={styles.sectionTitle}>
               <MessageCircle size={14} /> Admin Notes
             </div>
@@ -325,6 +480,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             </div>
           </div>
 
+          {/* 3. COMMUNICATION */}
           <div style={{ marginTop: "20px" }}>
             <div style={styles.sectionTitle}>
               <Mail size={14} /> Communication
@@ -364,7 +520,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                 <textarea
                   value={customEmailText}
                   onChange={(e) => setCustomEmailText(e.target.value)}
-                  placeholder="Write your message here... (e.g., 'Hi, we noticed your address was incomplete...')"
+                  placeholder="Message..."
                   style={{
                     ...styles.noteInput,
                     minHeight: "100px",
@@ -397,6 +553,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             style={{ margin: "20px 0", borderTop: "1px solid #e2e8f0" }}
           ></div>
 
+          {/* 4. ITEMS & MANAGE COLUMNS */}
           <div style={styles.panelGrid}>
             <div style={{ gridColumn: "span 2" }}>
               <div style={styles.sectionTitle}>
@@ -441,6 +598,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
               </div>
             </div>
 
+            {/* MANAGE COLUMN */}
             <div style={styles.detailCol}>
               <div style={styles.sectionTitle}>
                 <Edit2 size={14} /> Manage
@@ -449,6 +607,9 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}
                 >
+                  <label style={{ fontSize: "0.75rem", fontWeight: "bold" }}>
+                    Status
+                  </label>
                   <select
                     value={formData.status}
                     onChange={(e) =>
@@ -457,11 +618,16 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     style={styles.input}
                   >
                     <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
                     <option value="label_created">Label Created</option>
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
+
+                  <label style={{ fontSize: "0.75rem", fontWeight: "bold" }}>
+                    Tracking Number
+                  </label>
                   <input
                     placeholder="Tracking #"
                     value={formData.tracking}
@@ -470,9 +636,10 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     }
                     style={styles.input}
                   />
-                  <div style={{ display: "flex", gap: 5 }}>
+
+                  <div style={{ display: "flex", gap: 5, marginTop: 10 }}>
                     <button onClick={handleSave} style={styles.saveBtn}>
-                      <Save size={14} /> Save
+                      <Save size={14} /> Save All
                     </button>
                     <button
                       onClick={() => setIsEditing(false)}
@@ -515,14 +682,27 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     >
                       {order.status === "pending" && (
                         <button
-                          onClick={() => handleQuickStatus("label_created")}
-                          style={styles.actionBtn}
+                          onClick={() => handleQuickStatus("paid")}
+                          style={{
+                            ...styles.actionBtn,
+                            borderColor: "#84cc16",
+                            color: "#3f6212",
+                            background: "#f7fee7",
+                          }}
                         >
-                          Mark Label Created
+                          Mark as Paid
                         </button>
                       )}
                       {(order.status === "pending" ||
-                        order.status === "label_created") && (
+                        order.status === "paid") && (
+                        <button
+                          onClick={() => handleQuickStatus("label_created")}
+                          style={styles.actionBtn}
+                        >
+                          Label Created
+                        </button>
+                      )}
+                      {order.status === "label_created" && (
                         <button
                           onClick={() => handleQuickStatus("shipped")}
                           style={styles.actionBtn}
@@ -535,7 +715,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                       onClick={() => setIsEditing(true)}
                       style={styles.secondaryBtn}
                     >
-                      Edit Details
+                      <Edit2 size={14} /> Edit Order Details
                     </button>
                   </div>
                 </div>
