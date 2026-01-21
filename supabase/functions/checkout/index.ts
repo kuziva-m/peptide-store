@@ -63,7 +63,7 @@ serve(async (req: Request) => {
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
+    { auth: { persistSession: false } },
   );
 
   try {
@@ -77,10 +77,12 @@ serve(async (req: Request) => {
       let event;
 
       try {
-        event = stripe.webhooks.constructEvent(
+        // --- CRITICAL FIX: Use constructEventAsync instead of constructEvent ---
+        // This fixes the "SubtleCryptoProvider" error
+        event = await stripe.webhooks.constructEventAsync(
           body,
           signature,
-          STRIPE_WEBHOOK_SECRET
+          STRIPE_WEBHOOK_SECRET,
         );
       } catch (err) {
         const errorMessage =
@@ -113,6 +115,8 @@ serve(async (req: Request) => {
               total_amount: (session.amount_total || 0) / 100,
               shipping_cost:
                 (session.total_details?.amount_shipping || 0) / 100,
+              // --- CHANGE 1: Save Discount Code on Update ---
+              discount_code: session.metadata?.discountCode || null,
             })
             .eq("id", orderId);
 
@@ -128,7 +132,7 @@ serve(async (req: Request) => {
                 email: session.customer_details.email,
                 coupon_code: session.metadata.discountCode,
               },
-              { onConflict: "email, coupon_code" }
+              { onConflict: "email, coupon_code" },
             );
           }
 
@@ -290,6 +294,8 @@ serve(async (req: Request) => {
         total_amount: (calculatedSubtotal + shippingCost) / 100,
         shipping_cost: shippingCost / 100,
         shipping_method: shippingMethod === "express" ? "Express" : "Standard",
+        // --- CHANGE 2: Save Discount Code on Create ---
+        discount_code: validDiscount ? validDiscount.code : null,
         created_at: new Date().toISOString(),
       })
       .select("id")
@@ -312,7 +318,7 @@ serve(async (req: Request) => {
       line_items: lineItems,
       mode: "payment",
       success_url: `${req.headers.get(
-        "origin"
+        "origin",
       )}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/shop`,
       shipping_address_collection: { allowed_countries: ["AU"] },
@@ -350,12 +356,15 @@ serve(async (req: Request) => {
 // FIX 2: Correctly typed SupabaseClient to remove 'any'
 async function sendAdminEmail(
   session: Stripe.Checkout.Session,
-  supabaseClient: SupabaseClient
+  supabaseClient: SupabaseClient,
 ) {
   if (!RESEND_API_KEY) return;
 
   const totalAmount = (session.amount_total || 0) / 100;
   const customerInfo = session.customer_details;
+
+  // --- CHANGE 3: Get Discount Code for Email ---
+  const discountUsed = session.metadata?.discountCode || "None";
 
   const orderId = session.metadata?.supabase_order_id;
   const { data: dbItems } = await supabaseClient
@@ -373,7 +382,7 @@ async function sendAdminEmail(
           `<li style="margin-bottom: 8px;">
        <strong>${item.product_name_snapshot}</strong> 
        x ${item.quantity} - $${item.price_at_purchase.toFixed(2)}
-     </li>`
+     </li>`,
       )
       .join("") || "<li>Items listed in dashboard</li>";
 
@@ -391,6 +400,7 @@ async function sendAdminEmail(
         <div style="font-family: sans-serif; color: #333;">
           <h2>New Order Alert</h2>
           <p><strong>Customer:</strong> ${customerInfo?.name || "Guest"}</p>
+          <p><strong>Discount Code:</strong> <strong>${discountUsed}</strong></p> 
           <p><strong>Email:</strong> ${customerInfo?.email || "N/A"}</p>
           <p><strong>Phone:</strong> ${customerInfo?.phone || "N/A"}</p>
           <p><strong>Total:</strong> $${totalAmount.toFixed(2)} AUD</p>
@@ -403,8 +413,8 @@ async function sendAdminEmail(
             ${customerInfo?.address?.line1 || ""}<br>
             ${customerInfo?.address?.line2 || ""}<br>
             ${customerInfo?.address?.city || ""}, ${
-        customerInfo?.address?.state || ""
-      } ${customerInfo?.address?.postal_code || ""}<br>
+              customerInfo?.address?.state || ""
+            } ${customerInfo?.address?.postal_code || ""}<br>
             ${customerInfo?.address?.country || ""}
           </p>
         </div>
