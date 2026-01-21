@@ -35,10 +35,9 @@ interface VariantData {
   id: number;
   price: number;
   size_label: string;
-  products: ProductData; // Fixed nesting
+  products: ProductData;
 }
 
-// Define structure for database insertion
 interface OrderItemInsert {
   variant_id: number;
   quantity: number;
@@ -47,7 +46,6 @@ interface OrderItemInsert {
   order_id?: string;
 }
 
-// Interface for Admin Email Items
 interface AdminEmailItem {
   quantity: number;
   product_name_snapshot: string;
@@ -55,7 +53,6 @@ interface AdminEmailItem {
 }
 
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -77,8 +74,6 @@ serve(async (req: Request) => {
       let event;
 
       try {
-        // --- CRITICAL FIX: Use constructEventAsync instead of constructEvent ---
-        // This fixes the "SubtleCryptoProvider" error
         event = await stripe.webhooks.constructEventAsync(
           body,
           signature,
@@ -98,31 +93,62 @@ serve(async (req: Request) => {
         if (orderId) {
           console.log(`Webhook received for Order ID: ${orderId}`);
 
-          const shippingAddress = {
-            ...session.shipping_details?.address,
-            phone: session.customer_details?.phone || "N/A",
-          };
+          // --- FIX: SMART ADDRESS EXTRACTION ---
+          // 1. Get both candidates
+          const shipping = session.shipping_details?.address;
+          const billing = session.customer_details?.address;
 
+          // 2. Pick the one that actually has a street address (line1)
+          // If shipping has line1, use it. If not, check billing. Fallback to shipping if both empty.
+          let rawAddress = shipping;
+          if (!shipping?.line1 && billing?.line1) {
+            rawAddress = billing;
+          }
+          if (!rawAddress) {
+            rawAddress = shipping || billing;
+          }
+
+          // 3. Clean the data (Convert nulls to empty strings)
+          const cleanAddress = {
+            line1: rawAddress?.line1 || "",
+            line2: rawAddress?.line2 || "",
+            city: rawAddress?.city || "",
+            state: rawAddress?.state || "",
+            postal_code: rawAddress?.postal_code || "",
+            country: rawAddress?.country || "AU",
+            phone:
+              session.customer_details?.phone ||
+              session.shipping_details?.phone ||
+              "N/A",
+            name:
+              session.shipping_details?.name ||
+              session.customer_details?.name ||
+              "Guest",
+          };
+          // --------------------------------------
+
+          // 1. Update Order Status
           const { error: updateError } = await supabaseClient
             .from("orders")
             .update({
               status: "paid",
               stripe_session_id: session.id,
-              customer_name: session.customer_details?.name || "Guest",
+              customer_name: cleanAddress.name,
               customer_email: session.customer_details?.email,
-              shipping_address: shippingAddress,
+              shipping_address: cleanAddress, // Save the clean object
               updated_at: new Date().toISOString(),
               total_amount: (session.amount_total || 0) / 100,
               shipping_cost:
                 (session.total_details?.amount_shipping || 0) / 100,
-              // --- CHANGE 1: Save Discount Code on Update ---
               discount_code: session.metadata?.discountCode || null,
             })
             .eq("id", orderId);
 
-          if (updateError)
+          if (updateError) {
             console.error("Failed to update order in webhook:", updateError);
+          }
 
+          // 2. Save Discount Usage
           if (
             session.metadata?.discountCode &&
             session.customer_details?.email
@@ -136,6 +162,7 @@ serve(async (req: Request) => {
             );
           }
 
+          // 3. Send Admin Email
           if (session.metadata?.admin_notified !== "true") {
             await sendAdminEmail(session, supabaseClient);
           }
@@ -144,11 +171,12 @@ serve(async (req: Request) => {
 
       return new Response(JSON.stringify({ received: true }), {
         headers: { "Content-Type": "application/json" },
+        status: 200,
       });
     }
 
     // =========================================================================
-    // PART 2: REGULAR API REQUESTS
+    // PART 2: REGULAR API REQUESTS (Checkout Initialization)
     // =========================================================================
     const {
       items,
@@ -191,10 +219,8 @@ serve(async (req: Request) => {
 
     if (dbError) throw new Error(dbError.message);
 
-    // FIX 1: Explicit casting for dbVariants to avoid 'any' error
     const dbVariantMap = new Map<string, VariantData>();
     if (dbVariants) {
-      // Cast the result to unknown first, then to the array of VariantData
       const variants = dbVariants as unknown as VariantData[];
       variants.forEach((v) => dbVariantMap.set(v.id.toString(), v));
     }
@@ -294,7 +320,6 @@ serve(async (req: Request) => {
         total_amount: (calculatedSubtotal + shippingCost) / 100,
         shipping_cost: shippingCost / 100,
         shipping_method: shippingMethod === "express" ? "Express" : "Standard",
-        // --- CHANGE 2: Save Discount Code on Create ---
         discount_code: validDiscount ? validDiscount.code : null,
         created_at: new Date().toISOString(),
       })
@@ -344,7 +369,6 @@ serve(async (req: Request) => {
   } catch (error) {
     console.error("Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    // FIXED: Return headers with error response so frontend can read it
     return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
@@ -353,7 +377,6 @@ serve(async (req: Request) => {
 });
 
 // --- HELPER: Send Admin Email ---
-// FIX 2: Correctly typed SupabaseClient to remove 'any'
 async function sendAdminEmail(
   session: Stripe.Checkout.Session,
   supabaseClient: SupabaseClient,
@@ -362,9 +385,26 @@ async function sendAdminEmail(
 
   const totalAmount = (session.amount_total || 0) / 100;
   const customerInfo = session.customer_details;
-
-  // --- CHANGE 3: Get Discount Code for Email ---
   const discountUsed = session.metadata?.discountCode || "None";
+
+  // Update admin email logic to use the same smart extraction or just use customer info as fallback
+  // Since we don't return the clean address from the main function, we reconstruct it briefly here
+  const shipping = session.shipping_details?.address;
+  const billing = session.customer_details?.address;
+  let rawAddress = shipping;
+  if (!shipping?.line1 && billing?.line1) {
+    rawAddress = billing;
+  }
+  if (!rawAddress) rawAddress = shipping || billing;
+
+  const addressData = {
+    line1: rawAddress?.line1 || "",
+    line2: rawAddress?.line2 || "",
+    city: rawAddress?.city || "",
+    state: rawAddress?.state || "",
+    postal_code: rawAddress?.postal_code || "",
+    country: rawAddress?.country || "AU",
+  };
 
   const orderId = session.metadata?.supabase_order_id;
   const { data: dbItems } = await supabaseClient
@@ -372,7 +412,6 @@ async function sendAdminEmail(
     .select("quantity, product_name_snapshot, price_at_purchase")
     .eq("order_id", orderId);
 
-  // FIX 3: Cast to typed interface instead of any
   const items = (dbItems as unknown as AdminEmailItem[]) || [];
 
   const itemsHtml =
@@ -410,12 +449,10 @@ async function sendAdminEmail(
           
           <h3>Shipping Details:</h3>
           <p>
-            ${customerInfo?.address?.line1 || ""}<br>
-            ${customerInfo?.address?.line2 || ""}<br>
-            ${customerInfo?.address?.city || ""}, ${
-              customerInfo?.address?.state || ""
-            } ${customerInfo?.address?.postal_code || ""}<br>
-            ${customerInfo?.address?.country || ""}
+            ${addressData.line1}<br>
+            ${addressData.line2}<br>
+            ${addressData.city}, ${addressData.state} ${addressData.postal_code}<br>
+            ${addressData.country}
           </p>
         </div>
       `,
