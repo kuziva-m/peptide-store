@@ -33,7 +33,7 @@ export default function ProductCard({ product, loading }) {
     );
   }
 
-  // Determine Image to Show: Variant Image > Product Default > Fallback
+  // Determine Image to Show
   const displayImage =
     selectedVariant?.image_url ||
     product.image_url ||
@@ -48,7 +48,9 @@ export default function ProductCard({ product, loading }) {
 
   const isInStock = product.in_stock !== false;
 
-  // --- CRITICAL FIX: Secure Add To Cart ---
+  // Identify if this is an accessory (Syringes/Prep Pads)
+  const isAccessory = product.category === "Accessories";
+
   const handleAddToCart = (e) => {
     e.preventDefault();
 
@@ -59,10 +61,10 @@ export default function ProductCard({ product, loading }) {
           id: product.id,
           price: selectedVariant.price,
           image: selectedVariant.image_url || product.image_url,
-          variantId: selectedVariant.id, // Secure ID for backend
+          variantId: selectedVariant.id,
         },
-        1, // Quantity
-        selectedVariant.size_label // PASS STRING ONLY (Prevents Crash)
+        1,
+        selectedVariant.size_label,
       );
     }
   };
@@ -97,10 +99,13 @@ export default function ProductCard({ product, loading }) {
             <h3 className="product-name">{product.name}</h3>
           </Link>
 
-          <div className="science-meta">
-            <span>PURITY: &gt;99%</span>
-            <span>CAS: 123-45-X</span>
-          </div>
+          {/* HIDE PURITY/CAS FOR SYRINGES & PREP PADS */}
+          {!isAccessory && (
+            <div className="science-meta">
+              <span>PURITY: &gt;99%</span>
+              <span>CAS: 123-45-X</span>
+            </div>
+          )}
         </div>
 
         {/* PRICE & SELECTOR ROW */}

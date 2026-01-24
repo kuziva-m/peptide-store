@@ -18,6 +18,7 @@ import {
   Download,
   MessageCircle,
   Send,
+  Tag,
 } from "lucide-react";
 
 export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
@@ -86,8 +87,8 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
       const { error } = await supabase.functions.invoke("send-order-update", {
         body: {
           orderId: order.id,
-          email: formData.email, // Use updated email
-          name: formData.name, // Use updated name
+          email: formData.email,
+          name: formData.name,
           trackingNumber: tracking || "N/A",
           items: emailItems,
           address: {
@@ -166,7 +167,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const handleSave = async () => {
     const newStatus = formData.status;
     const isNotifyStatus = ["label_created", "shipped", "delivered"].includes(
-      newStatus
+      newStatus,
     );
     const hasStatusChanged = newStatus !== order.status;
 
@@ -174,7 +175,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
       promptConfirm(
         `Confirm ${newStatus}`,
         `Mark as ${newStatus}? This sends an email.`,
-        async () => await executeUpdate(true, newStatus)
+        async () => await executeUpdate(true, newStatus),
       );
     } else {
       await executeUpdate(false, newStatus);
@@ -182,7 +183,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   };
 
   const executeUpdate = async (shouldSendEmail, statusType) => {
-    // Construct the address object to save
     const updatedAddress = {
       line1: formData.line1,
       line2: formData.line2,
@@ -215,9 +215,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
 
   const handleQuickStatus = (newStatus) => {
     let promptMsg = `Mark as ${newStatus}?`;
-    if (newStatus === "paid")
-      promptMsg = "Mark as PAID? This will move it to the Live Orders tab.";
-
     promptConfirm("Update Status", promptMsg, async () => {
       const { error } = await supabase
         .from("orders")
@@ -225,9 +222,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
         .eq("id", order.id);
       if (!error) {
         showToast(`Updated to ${newStatus}`);
-        if (newStatus !== "paid") {
-          await sendStatusEmail(order.tracking_number, newStatus);
-        }
+        await sendStatusEmail(order.tracking_number, newStatus);
         onUpdate();
       }
     });
@@ -235,10 +230,9 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
 
   const getStatusStyle = (s) => {
     switch (s) {
-      case "pending":
-        return { bg: "#fff7ed", color: "#c2410c", border: "#ffedd5" };
+      case "pending": // Fallback if any exist
       case "paid":
-        return { bg: "#ecfccb", color: "#365314", border: "#d9f99d" };
+        return { bg: "#ecfccb", color: "#365314", border: "#d9f99d" }; // Green
       case "label_created":
         return { bg: "#f3e8ff", color: "#7e22ce", border: "#e9d5ff" };
       case "shipped":
@@ -256,7 +250,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const isExpress = order.shipping_method === "Express";
   const hasNote = order.notes && order.notes.trim().length > 0;
 
-  // Helper styles for inputs in the customer grid
   const editInputStyle = {
     ...styles.input,
     padding: "4px 8px",
@@ -283,6 +276,24 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                 <span style={styles.noteText}>Note</span>
               </div>
             )}
+
+            {order.discount_code && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "#f0fdf4",
+                  color: "#15803d",
+                  fontSize: "0.75rem",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  border: "1px solid #dcfce7",
+                }}
+              >
+                <Tag size={10} /> {order.discount_code}
+              </div>
+            )}
           </div>
           <div style={styles.metaText}>
             #{order.id.slice(0, 8)} •{" "}
@@ -298,7 +309,12 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
               borderColor: sStyle.border,
             }}
           >
-            {order.status === "label_created" ? "Label Created" : order.status}
+            {/* Rename Pending/Paid to just Paid */}
+            {order.status === "paid" || order.status === "pending"
+              ? "Paid"
+              : order.status === "label_created"
+                ? "Label Created"
+                : order.status}
           </span>
           <div
             style={{
@@ -339,7 +355,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
       {/* EXPANDED PANEL */}
       {isExpanded && (
         <div style={styles.expandedPanel}>
-          {/* 1. CUSTOMER DETAILS (EDITABLE) */}
+          {/* CUSTOMER DETAILS (NO CHANGES) */}
           <div
             style={{
               borderBottom: "1px solid #e2e8f0",
@@ -350,7 +366,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             <div style={styles.sectionTitle}>
               <User size={14} /> Customer Details
             </div>
-
             {isEditing ? (
               <div
                 style={{
@@ -461,7 +476,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             )}
           </div>
 
-          {/* 2. NOTES SECTION */}
           <div style={{ marginTop: "10px" }}>
             <div style={styles.sectionTitle}>
               <MessageCircle size={14} /> Admin Notes
@@ -480,12 +494,10 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             </div>
           </div>
 
-          {/* 3. COMMUNICATION */}
           <div style={{ marginTop: "20px" }}>
             <div style={styles.sectionTitle}>
               <Mail size={14} /> Communication
             </div>
-
             {!emailMode ? (
               <button
                 onClick={() => setEmailMode(true)}
@@ -553,7 +565,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             style={{ margin: "20px 0", borderTop: "1px solid #e2e8f0" }}
           ></div>
 
-          {/* 4. ITEMS & MANAGE COLUMNS */}
           <div style={styles.panelGrid}>
             <div style={{ gridColumn: "span 2" }}>
               <div style={styles.sectionTitle}>
@@ -586,11 +597,30 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     <span style={styles.itemPrice}>
                       $
                       {(item.price_at_purchase || item.unit_price || 0).toFixed(
-                        2
+                        2,
                       )}
                     </span>
                   </div>
                 ))}
+
+                {order.discount_code && (
+                  <div style={styles.summaryRow}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        color: "#16a34a",
+                      }}
+                    >
+                      <Tag size={12} /> Discount Used:
+                    </span>
+                    <span style={{ fontWeight: "bold", color: "#16a34a" }}>
+                      {order.discount_code}
+                    </span>
+                  </div>
+                )}
+
                 <div style={styles.summaryRow}>
                   <span>Shipping</span>
                   <span>${order.shipping_cost || "0.00"}</span>
@@ -598,7 +628,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
               </div>
             </div>
 
-            {/* MANAGE COLUMN */}
             <div style={styles.detailCol}>
               <div style={styles.sectionTitle}>
                 <Edit2 size={14} /> Manage
@@ -617,14 +646,13 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     }
                     style={styles.input}
                   >
-                    <option value="pending">Pending</option>
+                    {/* REMOVED PENDING OPTION */}
                     <option value="paid">Paid</option>
                     <option value="label_created">Label Created</option>
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
-
                   <label style={{ fontSize: "0.75rem", fontWeight: "bold" }}>
                     Tracking Number
                   </label>
@@ -636,7 +664,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     }
                     style={styles.input}
                   />
-
                   <div style={{ display: "flex", gap: 5, marginTop: 10 }}>
                     <button onClick={handleSave} style={styles.saveBtn}>
                       <Save size={14} /> Save All
@@ -680,19 +707,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                         marginBottom: 8,
                       }}
                     >
-                      {order.status === "pending" && (
-                        <button
-                          onClick={() => handleQuickStatus("paid")}
-                          style={{
-                            ...styles.actionBtn,
-                            borderColor: "#84cc16",
-                            color: "#3f6212",
-                            background: "#f7fee7",
-                          }}
-                        >
-                          Mark as Paid
-                        </button>
-                      )}
+                      {/* CHANGED: Removed Mark as Paid Button. Now starts at Label Created. */}
                       {(order.status === "pending" ||
                         order.status === "paid") && (
                         <button

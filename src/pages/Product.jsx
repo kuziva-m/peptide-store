@@ -17,7 +17,7 @@ import {
 import "./Product.css";
 
 export default function Product() {
-  const { id } = useParams(); // Matches /product/:id in App.jsx
+  const { id } = useParams();
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
@@ -28,10 +28,7 @@ export default function Product() {
 
   useEffect(() => {
     async function fetchProduct() {
-      console.log("Loading Product Page for ID:", id); // DEBUG LOG
-
       if (!id || id === "undefined") {
-        console.error("Invalid ID detected in URL");
         setErrorMsg("Invalid Product ID");
         setLoading(false);
         return;
@@ -44,12 +41,10 @@ export default function Product() {
         .single();
 
       if (error) {
-        console.error("Supabase Error:", error); // DEBUG LOG
         setErrorMsg(error.message);
       }
 
       if (data) {
-        console.log("Product Loaded:", data); // DEBUG LOG
         setProduct(data);
         if (data.variants && data.variants.length > 0) {
           const sorted = data.variants.sort((a, b) => a.price - b.price);
@@ -73,7 +68,7 @@ export default function Product() {
         variantId: selectedVariant.id,
       },
       quantity,
-      selectedVariant.size_label
+      selectedVariant.size_label,
     );
   };
 
@@ -102,7 +97,6 @@ export default function Product() {
       >
         <h2>Product Not Found</h2>
         <p style={{ color: "red" }}>Debug Error: {errorMsg}</p>
-        <p>Checked ID: {id}</p>
         <Link
           to="/shop"
           className="back-link"
@@ -119,16 +113,17 @@ export default function Product() {
     "https://via.placeholder.com/600";
 
   const isInStock = product.in_stock !== false;
-
   const activeLabUrl =
     selectedVariant?.lab_result_url || product.lab_result_url;
 
-  // SEO Description Logic
+  const isAccessory =
+    product.category === "Accessories" ||
+    product.category === "Syringes" ||
+    product.category === "Prep Pads";
+
   const metaDescription = product.description
-    ? `${product.description.substring(0, 150)}... Buy ${
-        product.name
-      } online in Australia.`
-    : `Buy ${product.name} research peptides in Australia. High purity, lab tested.`;
+    ? `${product.description.substring(0, 150)}... Buy ${product.name} online.`
+    : `Buy ${product.name} research supplies in Australia.`;
 
   return (
     <div className="container product-page">
@@ -197,32 +192,38 @@ export default function Product() {
                 fontWeight: "bold",
               }}
             >
-              Peptides
+              {product.category || "Product"}
             </span>
-            <span
-              className="p-cas"
-              style={{
-                background: "#f1f5f9",
-                padding: "4px 10px",
-                borderRadius: "4px",
-                fontSize: "0.8rem",
-                color: "#64748b",
-              }}
-            >
-              CAS: 123-45-X
-            </span>
-            <span
-              className="p-purity"
-              style={{
-                background: "#f1f5f9",
-                padding: "4px 10px",
-                borderRadius: "4px",
-                fontSize: "0.8rem",
-                color: "#64748b",
-              }}
-            >
-              Purity: &gt;99% (HPLC)
-            </span>
+
+            {/* HIDE CAS & PURITY IF ACCESSORY */}
+            {!isAccessory && (
+              <>
+                <span
+                  className="p-cas"
+                  style={{
+                    background: "#f1f5f9",
+                    padding: "4px 10px",
+                    borderRadius: "4px",
+                    fontSize: "0.8rem",
+                    color: "#64748b",
+                  }}
+                >
+                  CAS: 123-45-X
+                </span>
+                <span
+                  className="p-purity"
+                  style={{
+                    background: "#f1f5f9",
+                    padding: "4px 10px",
+                    borderRadius: "4px",
+                    fontSize: "0.8rem",
+                    color: "#64748b",
+                  }}
+                >
+                  Purity: &gt;99% (HPLC)
+                </span>
+              </>
+            )}
           </div>
 
           <div className="p-price-box" style={{ marginBottom: "25px" }}>
@@ -353,15 +354,14 @@ export default function Product() {
             >
               {isInStock
                 ? selectedVariant
-                  ? `Add to Cart - ${formatPrice(
-                      selectedVariant.price * quantity
-                    )}`
+                  ? `Add to Cart - ${formatPrice(selectedVariant.price * quantity)}`
                   : "Select a Variant"
                 : "Out of Stock"}
             </button>
           </div>
 
-          {activeLabUrl && (
+          {/* HIDE LAB RESULTS FOR ACCESSORIES */}
+          {activeLabUrl && !isAccessory && (
             <details className="lab-accordion" open={false}>
               <summary className="lab-summary">
                 Lab Results & COA{" "}
@@ -446,7 +446,7 @@ export default function Product() {
               }}
             >
               <ShieldCheck size={20} color="#0d9488" />
-              <span>Third-party Tested</span>
+              <span>Verified Quality</span>
             </div>
             <div
               className="trust-item"
@@ -461,19 +461,23 @@ export default function Product() {
               <Truck size={20} color="#0d9488" />
               <span>Same-day Shipping</span>
             </div>
-            <div
-              className="trust-item warning"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                fontSize: "0.9rem",
-                color: "#b91c1c",
-              }}
-            >
-              <AlertTriangle size={20} color="#b91c1c" />
-              <span>Peptides</span>
-            </div>
+
+            {/* HIDE PEPTIDE WARNING FOR ACCESSORIES */}
+            {!isAccessory && (
+              <div
+                className="trust-item warning"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  fontSize: "0.9rem",
+                  color: "#b91c1c",
+                }}
+              >
+                <AlertTriangle size={20} color="#b91c1c" />
+                <span>Research Only</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

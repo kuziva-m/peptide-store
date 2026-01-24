@@ -2,8 +2,13 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
-import SEO from "../components/SEO"; // Added Import
-import { LayoutGrid, FlaskConical, Layers, Droplets } from "lucide-react";
+import SEO from "../components/SEO";
+import {
+  LayoutGrid,
+  FlaskConical,
+  Layers,
+  BriefcaseMedical, // <--- FIXED: Added this import
+} from "lucide-react";
 import "./Home.css";
 import "./Shop.css";
 
@@ -14,14 +19,14 @@ export default function Shop({ searchQuery }) {
 
   // Initialize category from URL or default to "All"
   const [activeCategory, setActiveCategory] = useState(
-    searchParams.get("category") || "All"
+    searchParams.get("category") || "All",
   );
 
   const categories = [
     { name: "All", icon: <LayoutGrid size={20} /> },
     { name: "Peptides", icon: <FlaskConical size={20} /> },
     { name: "Peptide Blends", icon: <Layers size={20} /> },
-    { name: "Mixing Solution", icon: <Droplets size={20} /> },
+    { name: "Accessories", icon: <BriefcaseMedical size={20} /> }, // Now works
   ];
 
   useEffect(() => {
@@ -58,7 +63,7 @@ export default function Shop({ searchQuery }) {
     if (searchQuery && searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter((product) =>
-        product.name.toLowerCase().includes(lowerQuery)
+        product.name.toLowerCase().includes(lowerQuery),
       );
     }
 
@@ -76,7 +81,7 @@ export default function Shop({ searchQuery }) {
     }, {});
 
     // 4. Sort the Categories
-    const sortOrder = ["Peptides", "Peptide Blends", "Mixing Solution"];
+    const sortOrder = ["Peptides", "Peptide Blends", "Accessories"];
 
     const sortedGrouped = Object.entries(grouped).sort(([catA], [catB]) => {
       const indexA = sortOrder.indexOf(catA);
@@ -86,6 +91,24 @@ export default function Shop({ searchQuery }) {
       if (indexA !== -1) return -1;
       if (indexB !== -1) return 1;
       return catA.localeCompare(catB);
+    });
+
+    // 5. NEW: Sort Items Within "Accessories" (Force Water First)
+    sortedGrouped.forEach(([category, items]) => {
+      if (category === "Accessories") {
+        items.sort((a, b) => {
+          const nameA = a.name.toLowerCase();
+          const nameB = b.name.toLowerCase();
+
+          // Check for "Water" or "Mixing" keywords
+          const isWaterA = nameA.includes("water") || nameA.includes("mixing");
+          const isWaterB = nameB.includes("water") || nameB.includes("mixing");
+
+          if (isWaterA && !isWaterB) return -1; // A goes to top
+          if (!isWaterA && isWaterB) return 1; // B goes to top
+          return nameA.localeCompare(nameB); // Alphabetical for everything else
+        });
+      }
     });
 
     return sortedGrouped;

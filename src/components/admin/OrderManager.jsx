@@ -2,22 +2,16 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { downloadAusPostCSV } from "../../utils/exportToAusPost";
 import { styles } from "./OrderManagerStyles";
-// FIXED: Removed ConfirmationModal from import
 import { OrderRow } from "./OrderRow";
-import {
-  Search,
-  Download,
-  CheckCircle,
-  Package,
-  AlertTriangle,
-} from "lucide-react";
+import { Search, Download, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function OrderManager() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("live");
+
+  // CHANGED: Default filter is now 'paid' instead of 'pending'
+  const [statusFilter, setStatusFilter] = useState("paid");
   const [notification, setNotification] = useState(null);
 
   const [modalConfig, setModalConfig] = useState({
@@ -37,7 +31,7 @@ export default function OrderManager() {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        `*, order_items (quantity, price_at_purchase, product_name_snapshot, variants (size_label, products (name, image_url)))`
+        `*, order_items (quantity, price_at_purchase, product_name_snapshot, variants (size_label, products (name, image_url)))`,
       )
       .order("created_at", { ascending: false });
 
@@ -67,53 +61,49 @@ export default function OrderManager() {
   // --- FILTERING LOGIC ---
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      // 1. Identify "Ghost" (Abandoned) Orders
+      // 1. EXCLUDE "Ghost" (Abandoned) Orders
       const isGhost = order.status === "pending" && !order.customer_name;
+      if (isGhost) return false;
 
-      // 2. Tab Logic
-      if (activeTab === "abandoned") {
-        if (!isGhost) return false;
-      } else {
-        if (isGhost) return false;
-      }
-
-      // 3. Search Logic
+      // 2. Search Logic
       const s = search.toLowerCase();
       const matchesSearch =
         order.id.toLowerCase().includes(s) ||
         order.customer_email?.toLowerCase().includes(s) ||
         order.customer_name?.toLowerCase().includes(s);
 
-      // 4. Status Logic
+      // 3. Status Logic
+      // CHANGED: If filter is 'paid', we match 'paid' OR 'pending' (just in case one slips through)
       const matchesStatus =
-        statusFilter === "all" || order.status === statusFilter;
+        statusFilter === "all" ||
+        (statusFilter === "paid" &&
+          (order.status === "paid" || order.status === "pending")) ||
+        order.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [orders, search, statusFilter, activeTab]);
+  }, [orders, search, statusFilter]);
 
   // --- STATS LOGIC ---
   const stats = useMemo(() => {
     const liveOrders = orders.filter(
-      (o) => !(o.status === "pending" && !o.customer_name)
+      (o) => !(o.status === "pending" && !o.customer_name),
     );
 
     const totalRevenue = liveOrders.reduce(
       (sum, o) => sum + (o.total_amount || 0),
-      0
+      0,
     );
-    const pendingCount = liveOrders.filter(
-      (o) => o.status === "pending"
-    ).length;
-    const abandonedCount = orders.filter(
-      (o) => o.status === "pending" && !o.customer_name
+
+    // CHANGED: "Pending Actions" now counts PAID orders (waiting for label)
+    const actionNeededCount = liveOrders.filter(
+      (o) => o.status === "paid" || o.status === "pending",
     ).length;
 
     return {
       totalRevenue,
-      pendingCount,
+      actionNeededCount,
       totalOrders: liveOrders.length,
-      abandonedCount,
     };
   }, [orders]);
 
@@ -142,69 +132,37 @@ export default function OrderManager() {
           <span
             style={{
               ...styles.statValue,
-              color: stats.pendingCount > 0 ? "#d97706" : "inherit",
+              color: stats.actionNeededCount > 0 ? "#d97706" : "inherit",
             }}
           >
-            {stats.pendingCount}
+            {stats.actionNeededCount}
           </span>
         </div>
-        <div style={styles.statDivider} />
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Abandoned</span>
-          <span style={{ ...styles.statValue, color: "#64748b" }}>
-            {stats.abandonedCount}
-          </span>
-        </div>
-      </div>
-
-      {/* TAB SWITCHER */}
-      <div style={styles.tabContainer}>
-        <button
-          onClick={() => setActiveTab("live")}
-          style={{
-            ...styles.tabBtn,
-            ...(activeTab === "live" ? styles.activeTab : styles.inactiveTab),
-          }}
-        >
-          <Package size={16} />
-          Live Orders
-        </button>
-        <button
-          onClick={() => setActiveTab("abandoned")}
-          style={{
-            ...styles.tabBtn,
-            ...(activeTab === "abandoned"
-              ? styles.activeTab
-              : styles.inactiveTab),
-          }}
-        >
-          <AlertTriangle size={16} />
-          Abandoned Checkouts
-        </button>
       </div>
 
       <div style={styles.toolbar}>
         <div style={styles.filterGroup}>
-          {activeTab === "live" &&
-            ["all", "pending", "label_created", "shipped", "delivered"].map(
-              (status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  style={{
-                    ...styles.filterBtn,
-                    background: statusFilter === status ? "#0f172a" : "white",
-                    color: statusFilter === status ? "white" : "#64748b",
-                    borderColor:
-                      statusFilter === status ? "#0f172a" : "#e2e8f0",
-                  }}
-                >
-                  {status === "label_created"
+          {/* CHANGED: Removed 'pending', added 'paid' as the first option after 'all' */}
+          {["all", "paid", "label_created", "shipped", "delivered"].map(
+            (status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                style={{
+                  ...styles.filterBtn,
+                  background: statusFilter === status ? "#0f172a" : "white",
+                  color: statusFilter === status ? "white" : "#64748b",
+                  borderColor: statusFilter === status ? "#0f172a" : "#e2e8f0",
+                }}
+              >
+                {status === "paid"
+                  ? "Paid (To Do)"
+                  : status === "label_created"
                     ? "Label Created"
                     : status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              )
-            )}
+              </button>
+            ),
+          )}
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -227,11 +185,7 @@ export default function OrderManager() {
         {loading ? (
           <div style={styles.emptyState}>Loading orders...</div>
         ) : filteredOrders.length === 0 ? (
-          <div style={styles.emptyState}>
-            {activeTab === "live"
-              ? "No live orders found."
-              : "No abandoned checkouts found."}
-          </div>
+          <div style={styles.emptyState}>No orders found.</div>
         ) : (
           filteredOrders.map((order) => (
             <OrderRow
@@ -260,7 +214,6 @@ export default function OrderManager() {
   );
 }
 
-// FIXED: Moved Component Definition HERE
 function ConfirmationModal({ config, onClose }) {
   return (
     <div style={styles.modalOverlay}>

@@ -11,20 +11,29 @@ import {
   Atom,
   ArrowRight,
   Lock,
-  Tag, // <--- Added Icon
+  Tag,
+  Settings,
+  Menu,
+  X,
 } from "lucide-react";
+
+// Components
 import ProductManager from "../components/admin/ProductManager";
 import ContentEditor from "../components/admin/ContentEditor";
 import OrderManager from "../components/admin/OrderManager";
 import ReviewManager from "../components/admin/ReviewManager";
 import InquiryManager from "../components/admin/InquiryManager";
 import SubscriberManager from "../components/admin/SubscriberManager";
-import DiscountManager from "../components/admin/DiscountManager"; // <--- Added Component
+import DiscountManager from "../components/admin/DiscountManager";
+import SettingsManager from "../components/admin/SettingsManager";
 
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Dashboard State
   const [activeTab, setActiveTab] = useState("orders");
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Login State
   const [email, setEmail] = useState("");
@@ -59,7 +68,18 @@ export default function Admin() {
 
   const handleLogout = () => supabase.auth.signOut();
 
-  // 1. LOADING SCREEN
+  // Navigation Config
+  const MENU_ITEMS = [
+    { id: "orders", label: "Orders", icon: ShoppingBag },
+    { id: "inquiries", label: "Inquiries", icon: Mail },
+    { id: "subscribers", label: "Subscribers", icon: Users },
+    { id: "products", label: "Inventory", icon: Package },
+    { id: "discounts", label: "Discounts", icon: Tag },
+    { id: "reviews", label: "Reviews", icon: MessageSquare },
+    { id: "content", label: "Content", icon: FileText },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
   if (loading)
     return (
       <div style={styles.centerScreen}>
@@ -67,11 +87,9 @@ export default function Admin() {
       </div>
     );
 
-  // 2. NEW LOGIN SCREEN DESIGN
   if (!session) {
     return (
       <div style={styles.loginContainer}>
-        {/* Left Side: Visual/Branding */}
         <div style={styles.loginBanner}>
           <div style={styles.bannerOverlay}>
             <div style={styles.logoArea}>
@@ -93,15 +111,12 @@ export default function Admin() {
               </p>
             </div>
           </div>
-          {/* Background Image */}
           <img
             src="/hero-banner.jpg"
             alt="Lab Background"
             style={styles.bannerImage}
           />
         </div>
-
-        {/* Right Side: Form */}
         <div style={styles.loginFormWrapper}>
           <div style={styles.loginCard}>
             <div style={styles.formHeader}>
@@ -113,7 +128,6 @@ export default function Admin() {
                 Please enter your details to sign in.
               </p>
             </div>
-
             <form onSubmit={handleLogin} style={styles.form}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Email Address</label>
@@ -126,7 +140,6 @@ export default function Admin() {
                   style={styles.input}
                 />
               </div>
-
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Password</label>
                 <input
@@ -138,13 +151,9 @@ export default function Admin() {
                   style={styles.input}
                 />
               </div>
-
               <button
                 disabled={authLoading}
-                style={{
-                  ...styles.submitBtn,
-                  opacity: authLoading ? 0.7 : 1,
-                }}
+                style={{ ...styles.submitBtn, opacity: authLoading ? 0.7 : 1 }}
               >
                 {authLoading ? (
                   "Signing In..."
@@ -164,109 +173,97 @@ export default function Admin() {
     );
   }
 
-  // 3. DASHBOARD
   return (
-    <div
-      className="container"
-      style={{ padding: "40px 24px", minHeight: "100vh" }}
-    >
-      <div style={styles.header}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "1.8rem" }}>Dashboard</h1>
-          <p style={{ color: "#64748b", margin: "4px 0 0" }}>
-            Welcome back, Admin
-          </p>
+    <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+      {/* TOP NAVIGATION BAR */}
+      <nav style={styles.navbar}>
+        <div style={styles.navContainer}>
+          {/* Logo Section */}
+          <div style={styles.logoSection}>
+            <Atom size={24} color="white" className="spin-anim" />
+            <span style={styles.navTitle}>Admin</span>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="desktop-nav" style={styles.desktopNav}>
+            {MENU_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                style={{
+                  ...styles.navLink,
+                  ...(activeTab === item.id ? styles.navLinkActive : {}),
+                }}
+              >
+                <item.icon size={16} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Right Section */}
+          <div style={styles.rightSection}>
+            <button
+              onClick={handleLogout}
+              className="logout-btn"
+              style={styles.logoutBtnNav}
+              title="Sign Out"
+            >
+              <LogOut size={18} /> <span className="logout-text">Logout</span>
+            </button>
+
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
+              style={styles.mobileToggle}
+            >
+              {isMobileMenuOpen ? (
+                <X size={24} color="white" />
+              ) : (
+                <Menu size={24} color="white" />
+              )}
+            </button>
+          </div>
         </div>
-        <button onClick={handleLogout} style={styles.logoutBtn}>
-          <LogOut size={18} /> Sign Out
-        </button>
-      </div>
 
-      {/* TABS */}
-      <div style={styles.tabContainer}>
-        <TabButton
-          active={activeTab === "orders"}
-          onClick={() => setActiveTab("orders")}
-          icon={<ShoppingBag size={18} />}
-          label="Orders"
-        />
-        <TabButton
-          active={activeTab === "inquiries"}
-          onClick={() => setActiveTab("inquiries")}
-          icon={<Mail size={18} />}
-          label="Inquiries"
-        />
-        <TabButton
-          active={activeTab === "subscribers"}
-          onClick={() => setActiveTab("subscribers")}
-          icon={<Users size={18} />}
-          label="Subscribers"
-        />
-        <TabButton
-          active={activeTab === "products"}
-          onClick={() => setActiveTab("products")}
-          icon={<Package size={18} />}
-          label="Inventory"
-        />
-        <TabButton
-          active={activeTab === "discounts"} /* <--- Added Discount Tab */
-          onClick={() => setActiveTab("discounts")}
-          icon={<Tag size={18} />}
-          label="Discounts"
-        />
-        <TabButton
-          active={activeTab === "reviews"}
-          onClick={() => setActiveTab("reviews")}
-          icon={<MessageSquare size={18} />}
-          label="Reviews"
-        />
-        <TabButton
-          active={activeTab === "content"}
-          onClick={() => setActiveTab("content")}
-          icon={<FileText size={18} />}
-          label="Site Content"
-        />
-      </div>
+        {/* Mobile Dropdown Menu */}
+        {isMobileMenuOpen && (
+          <div style={styles.mobileMenu}>
+            {MENU_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setMobileMenuOpen(false);
+                }}
+                style={{
+                  ...styles.mobileNavLink,
+                  ...(activeTab === item.id ? styles.mobileNavLinkActive : {}),
+                }}
+              >
+                <item.icon size={18} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </nav>
 
-      {/* CONTENT AREA */}
-      <div style={styles.contentArea}>
-        {activeTab === "orders" && <OrderManager />}
-        {activeTab === "inquiries" && <InquiryManager />}
-        {activeTab === "subscribers" && <SubscriberManager />}
-        {activeTab === "products" && <ProductManager />}
-        {activeTab === "discounts" && <DiscountManager />}{" "}
-        {/* <--- Added Component Render */}
-        {activeTab === "reviews" && <ReviewManager />}
-        {activeTab === "content" && <ContentEditor />}
-      </div>
+      {/* MAIN CONTENT */}
+      <main style={styles.mainContent}>
+        {/* CHANGED: Removed background and border from this container */}
+        <div style={styles.contentCard}>
+          {activeTab === "orders" && <OrderManager />}
+          {activeTab === "inquiries" && <InquiryManager />}
+          {activeTab === "subscribers" && <SubscriberManager />}
+          {activeTab === "products" && <ProductManager />}
+          {activeTab === "discounts" && <DiscountManager />}
+          {activeTab === "reviews" && <ReviewManager />}
+          {activeTab === "content" && <ContentEditor />}
+          {activeTab === "settings" && <SettingsManager />}
+        </div>
+      </main>
     </div>
-  );
-}
-
-function TabButton({ active, onClick, icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "12px 20px",
-        background: "none",
-        border: "none",
-        borderBottom: active
-          ? "3px solid var(--primary)"
-          : "3px solid transparent",
-        color: active ? "var(--primary)" : "#64748b",
-        fontWeight: active ? "700" : "500",
-        cursor: "pointer",
-        fontSize: "0.95rem",
-        whiteSpace: "nowrap",
-        transition: "all 0.2s",
-      }}
-    >
-      {icon} {label}
-    </button>
   );
 }
 
@@ -279,7 +276,127 @@ const styles = {
     background: "#f8fafc",
   },
 
-  // Login Styles
+  navbar: {
+    background: "#0f172a",
+    color: "white",
+    position: "sticky",
+    top: 0,
+    zIndex: 50,
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+  },
+  navContainer: {
+    maxWidth: "1400px",
+    margin: "0 auto",
+    padding: "0 20px",
+    height: "64px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "relative",
+  },
+  logoSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    fontWeight: "bold",
+    fontSize: "1.2rem",
+  },
+  navTitle: { letterSpacing: "0.5px" },
+
+  desktopNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    height: "100%",
+  },
+  navLink: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "transparent",
+    border: "none",
+    color: "#94a3b8",
+    padding: "8px 16px",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+    cursor: "pointer",
+    borderRadius: "6px",
+    transition: "all 0.2s",
+    height: "40px",
+  },
+  navLinkActive: { background: "#1e293b", color: "white", fontWeight: "600" },
+
+  rightSection: { display: "flex", alignItems: "center", gap: "16px" },
+  logoutBtnNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#ef4444",
+    border: "none",
+    color: "white",
+    padding: "8px 16px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    transition: "background 0.2s",
+  },
+
+  mobileToggle: {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: "4px",
+  },
+
+  mobileMenu: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    background: "#1e293b",
+    borderTop: "1px solid #334155",
+    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+    zIndex: 100,
+  },
+  mobileNavLink: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    width: "100%",
+    padding: "12px",
+    background: "transparent",
+    border: "none",
+    color: "#cbd5e1",
+    textAlign: "left",
+    fontSize: "1rem",
+    fontWeight: "500",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  mobileNavLinkActive: {
+    background: "#334155",
+    color: "white",
+    fontWeight: "600",
+  },
+
+  mainContent: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
+
+  // --- CHANGED: Made Transparent ---
+  contentCard: {
+    background: "transparent", // Was white
+    borderRadius: "0",
+    boxShadow: "none",
+    border: "none",
+    minHeight: "500px",
+    overflow: "visible", // Allow cards to shadow correctly
+  },
+
+  // Login Styles (Unchanged)
   loginContainer: { display: "flex", minHeight: "100vh", background: "#fff" },
   loginBanner: {
     flex: 1,
@@ -289,7 +406,6 @@ const styles = {
     justifyContent: "space-between",
     "@media (min-width: 768px)": { display: "flex" },
   },
-
   bannerImage: {
     position: "absolute",
     inset: 0,
@@ -310,7 +426,6 @@ const styles = {
   },
   logoArea: { display: "flex", alignItems: "center", gap: "16px" },
   bannerText: { maxWidth: "500px" },
-
   loginFormWrapper: {
     flex: "0 0 100%",
     maxWidth: "100%",
@@ -321,7 +436,6 @@ const styles = {
     alignItems: "center",
     background: "#fff",
   },
-
   loginCard: { width: "100%", maxWidth: "400px" },
   formHeader: { marginBottom: "32px", textAlign: "center" },
   iconCircle: {
@@ -334,7 +448,6 @@ const styles = {
     justifyContent: "center",
     margin: "0 auto 20px",
   },
-
   form: { display: "flex", flexDirection: "column", gap: "20px" },
   inputGroup: { display: "flex", flexDirection: "column", gap: "8px" },
   label: { fontSize: "0.9rem", fontWeight: "600", color: "#0f172a" },
@@ -346,7 +459,6 @@ const styles = {
     transition: "border-color 0.2s",
     outline: "none",
   },
-
   submitBtn: {
     display: "flex",
     alignItems: "center",
@@ -368,43 +480,21 @@ const styles = {
     color: "#94a3b8",
     textAlign: "center",
   },
-
-  // Dashboard Styles
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "40px",
-  },
-  logoutBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 16px",
-    background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-    color: "#ef4444",
-    transition: "all 0.2s",
-  },
-  tabContainer: {
-    display: "flex",
-    gap: "20px",
-    marginBottom: "30px",
-    borderBottom: "1px solid #e2e8f0",
-    overflowX: "auto",
-    paddingBottom: "2px",
-  },
-  contentArea: { animation: "fadeIn 0.3s ease-out" },
 };
 
-// CSS Injection for Media Queries & Animations
+// CSS Injection
 const styleTag = document.createElement("style");
 styleTag.innerHTML = `
   @media (min-width: 1024px) {
     .login-form-wrapper { flex: 0 0 500px !important; border-left: 1px solid #f1f5f9; }
+    .mobile-menu-btn { display: none !important; }
+  }
+  @media (max-width: 1024px) {
+    .desktop-nav { display: none !important; }
+    .mobile-menu-btn { display: block !important; }
+    .logout-text { display: none; }
+    .logout-btn { padding: 8px !important; }
+    main { padding: 16px !important; }
   }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 `;

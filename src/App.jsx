@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom"; // <--- Added useLocation
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -16,7 +16,6 @@ import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
 import Shipping from "./pages/Shipping";
 import Privacy from "./pages/Privacy";
-// import Terms from "./pages/Terms";  <-- REMOVED IMPORT
 import FAQ from "./pages/FAQ";
 import Product from "./pages/Product";
 import Success from "./pages/Success";
@@ -26,15 +25,25 @@ import WriteReview from "./pages/WriteReview";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
+  const location = useLocation();
+
+  // Check if we are currently in the Admin Panel
+  const isAdmin = location.pathname.startsWith("/admin");
 
   return (
     <div
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
     >
-      <AnnouncementBar />
+      {/* HIDE Announcement Bar on Admin */}
+      {!isAdmin && <AnnouncementBar />}
 
       <ScrollToTop />
-      <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+
+      {/* HIDE Navbar (Header/Search) on Admin */}
+      {!isAdmin && (
+        <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      )}
+
       <CartDrawer />
 
       <div style={{ flex: 1 }}>
@@ -51,18 +60,19 @@ function App() {
           <Route path="/shipping" element={<Shipping />} />
           <Route path="/privacy" element={<Privacy />} />
 
-          {/* REMOVED TERMS ROUTE */}
-          {/* <Route path="/terms" element={<Terms />} /> */}
-
           <Route path="/faq" element={<FAQ />} />
           <Route path="/success" element={<Success />} />
         </Routes>
       </div>
 
       <Toast />
-      <WhatsAppButton />
-      <DiscountPopup />
-      <Footer />
+
+      {/* HIDE Chat & Popups on Admin */}
+      {!isAdmin && <WhatsAppButton />}
+      {!isAdmin && <DiscountPopup />}
+
+      {/* HIDE Footer on Admin */}
+      {!isAdmin && <Footer />}
     </div>
   );
 }

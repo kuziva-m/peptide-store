@@ -12,7 +12,8 @@ import {
   Loader,
 } from "lucide-react";
 
-const CATEGORIES = ["Peptides", "Peptide Blends", "Mixing Solution"];
+// --- UPDATED CATEGORIES LIST ---
+const CATEGORIES = ["Peptides", "Peptide Blends", "Accessories"];
 const STORAGE_BUCKET = "product-images";
 
 export default function ProductManager() {
@@ -21,8 +22,6 @@ export default function ProductManager() {
   const [expandedProductId, setExpandedProductId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-
-  // New Product Form
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newProductName, setNewProductName] = useState("");
   const [newProductCategory, setNewProductCategory] = useState("Peptides");
@@ -250,7 +249,7 @@ export default function ProductManager() {
               isExpanded={expandedProductId === product.id}
               onToggle={() =>
                 setExpandedProductId(
-                  expandedProductId === product.id ? null : product.id
+                  expandedProductId === product.id ? null : product.id,
                 )
               }
               onDelete={() => handleDeleteProduct(product.id)}
@@ -278,8 +277,8 @@ function ProductRow({
       .from("variants")
       .insert({
         product_id: product.id,
-        size_label: "5mg",
-        price: 50,
+        size_label: "10 Pack",
+        price: 10,
       })
       .select()
       .single();
@@ -288,7 +287,7 @@ function ProductRow({
 
   const updateVariant = async (id, field, value) => {
     setVariants(
-      variants.map((v) => (v.id === id ? { ...v, [field]: value } : v))
+      variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
     );
     await supabase
       .from("variants")
