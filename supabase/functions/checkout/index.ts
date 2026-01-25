@@ -93,20 +93,12 @@ serve(async (req: Request) => {
         if (orderId) {
           console.log(`Webhook received for Order ID: ${orderId}`);
 
-          // --- FIX: SMART ADDRESS EXTRACTION ---
-          // 1. Get both candidates
-          const shipping = session.shipping_details?.address;
-          const billing = session.customer_details?.address;
-
-          // 2. Pick the one that actually has a street address (line1)
-          // If shipping has line1, use it. If not, check billing. Fallback to shipping if both empty.
-          let rawAddress = shipping;
-          if (!shipping?.line1 && billing?.line1) {
-            rawAddress = billing;
-          }
-          if (!rawAddress) {
-            rawAddress = shipping || billing;
-          }
+          // --- FIX: STRICT SHIPPING ADDRESS ---
+          // Always prioritize the shipping address.
+          // Only look at customer_details (billing) if shipping_details is completely null.
+          const rawAddress =
+            session.shipping_details?.address ||
+            session.customer_details?.address;
 
           // 3. Clean the data (Convert nulls to empty strings)
           const cleanAddress = {
@@ -117,11 +109,11 @@ serve(async (req: Request) => {
             postal_code: rawAddress?.postal_code || "",
             country: rawAddress?.country || "AU",
             phone:
+              session.shipping_details?.phone || // Prioritize shipping phone
               session.customer_details?.phone ||
-              session.shipping_details?.phone ||
               "N/A",
             name:
-              session.shipping_details?.name ||
+              session.shipping_details?.name || // Prioritize shipping name
               session.customer_details?.name ||
               "Guest",
           };
@@ -387,15 +379,9 @@ async function sendAdminEmail(
   const customerInfo = session.customer_details;
   const discountUsed = session.metadata?.discountCode || "None";
 
-  // Update admin email logic to use the same smart extraction or just use customer info as fallback
-  // Since we don't return the clean address from the main function, we reconstruct it briefly here
-  const shipping = session.shipping_details?.address;
-  const billing = session.customer_details?.address;
-  let rawAddress = shipping;
-  if (!shipping?.line1 && billing?.line1) {
-    rawAddress = billing;
-  }
-  if (!rawAddress) rawAddress = shipping || billing;
+  // Strict Shipping Logic for Email
+  const rawAddress =
+    session.shipping_details?.address || session.customer_details?.address;
 
   const addressData = {
     line1: rawAddress?.line1 || "",

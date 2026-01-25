@@ -7,7 +7,7 @@ import {
   LayoutGrid,
   FlaskConical,
   Layers,
-  BriefcaseMedical, // <--- FIXED: Added this import
+  BriefcaseMedical, // <--- FIXED: Added this missing import
 } from "lucide-react";
 import "./Home.css";
 import "./Shop.css";
@@ -26,7 +26,7 @@ export default function Shop({ searchQuery }) {
     { name: "All", icon: <LayoutGrid size={20} /> },
     { name: "Peptides", icon: <FlaskConical size={20} /> },
     { name: "Peptide Blends", icon: <Layers size={20} /> },
-    { name: "Accessories", icon: <BriefcaseMedical size={20} /> }, // Now works
+    { name: "Accessories", icon: <BriefcaseMedical size={20} /> },
   ];
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function Shop({ searchQuery }) {
       return catA.localeCompare(catB);
     });
 
-    // 5. NEW: Sort Items Within "Accessories" (Force Water First)
+    // 5. Sort Items Within "Accessories" (Force Water First)
     sortedGrouped.forEach(([category, items]) => {
       if (category === "Accessories") {
         items.sort((a, b) => {
