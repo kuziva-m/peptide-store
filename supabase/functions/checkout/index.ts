@@ -88,38 +88,37 @@ serve(async (req: Request) => {
 
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
-        const orderId = session.metadata?.supabase_order_id;
+        let orderId = session.metadata?.supabase_order_id; // changed to let
+
+        console.log(
+          `Webhook received. Session ID: ${session.id}, Order ID: ${orderId || "N/A"}`,
+        );
+
+        // --- FIX: STRICT SHIPPING ADDRESS ---
+        const rawAddress =
+          session.shipping_details?.address ||
+          session.customer_details?.address;
+
+        const cleanAddress = {
+          line1: rawAddress?.line1 || "",
+          line2: rawAddress?.line2 || "",
+          city: rawAddress?.city || "",
+          state: rawAddress?.state || "",
+          postal_code: rawAddress?.postal_code || "",
+          country: rawAddress?.country || "AU",
+          phone:
+            session.shipping_details?.phone ||
+            session.customer_details?.phone ||
+            "N/A",
+          name:
+            session.shipping_details?.name ||
+            session.customer_details?.name ||
+            "Guest",
+        };
 
         if (orderId) {
-          console.log(`Webhook received for Order ID: ${orderId}`);
-
-          // --- FIX: STRICT SHIPPING ADDRESS ---
-          // Always prioritize the shipping address.
-          // Only look at customer_details (billing) if shipping_details is completely null.
-          const rawAddress =
-            session.shipping_details?.address ||
-            session.customer_details?.address;
-
-          // 3. Clean the data (Convert nulls to empty strings)
-          const cleanAddress = {
-            line1: rawAddress?.line1 || "",
-            line2: rawAddress?.line2 || "",
-            city: rawAddress?.city || "",
-            state: rawAddress?.state || "",
-            postal_code: rawAddress?.postal_code || "",
-            country: rawAddress?.country || "AU",
-            phone:
-              session.shipping_details?.phone || // Prioritize shipping phone
-              session.customer_details?.phone ||
-              "N/A",
-            name:
-              session.shipping_details?.name || // Prioritize shipping name
-              session.customer_details?.name ||
-              "Guest",
-          };
-          // --------------------------------------
-
-          // 1. Update Order Status
+          // --- SCENARIO A: UPDATE EXISTING ORDER ---
+          console.log(`Updating existing Order ID: ${orderId}`);
           const { error: updateError } = await supabaseClient
             .from("orders")
             .update({
@@ -127,7 +126,7 @@ serve(async (req: Request) => {
               stripe_session_id: session.id,
               customer_name: cleanAddress.name,
               customer_email: session.customer_details?.email,
-              shipping_address: cleanAddress, // Save the clean object
+              shipping_address: cleanAddress,
               updated_at: new Date().toISOString(),
               total_amount: (session.amount_total || 0) / 100,
               shipping_cost:
@@ -139,25 +138,85 @@ serve(async (req: Request) => {
           if (updateError) {
             console.error("Failed to update order in webhook:", updateError);
           }
+        } else {
+          // --- SCENARIO B: HANDLE "ORPHAN" PAYMENT LINKS ---
+          console.log(
+            "No Order ID found. Creating new order from Stripe data...",
+          );
 
-          // 2. Save Discount Usage
-          if (
-            session.metadata?.discountCode &&
-            session.customer_details?.email
-          ) {
-            await supabaseClient.from("discount_usage").upsert(
-              {
-                email: session.customer_details.email,
-                coupon_code: session.metadata.discountCode,
-              },
-              { onConflict: "email, coupon_code" },
-            );
-          }
+          const expandedSession = await stripe.checkout.sessions.retrieve(
+            session.id,
+            { expand: ["line_items"] },
+          );
 
-          // 3. Send Admin Email
-          if (session.metadata?.admin_notified !== "true") {
-            await sendAdminEmail(session, supabaseClient);
+          const lineItems = expandedSession.line_items?.data || [];
+
+          // 1. Prepare Items JSON for the 'orders' table (Fixes NULL items bug)
+          // deno-lint-ignore no-explicit-any
+          const itemsJson = lineItems.map((item: any) => ({
+            name: item.description || "Unknown Item",
+            quantity: item.quantity,
+            unit_price: (item.price?.unit_amount || 0) / 100,
+            description: item.description,
+          }));
+
+          // 2. Create the Order in Supabase
+          const { data: newOrder, error: createError } = await supabaseClient
+            .from("orders")
+            .insert({
+              customer_email: session.customer_details?.email,
+              customer_name: cleanAddress.name,
+              status: "paid",
+              total_amount: (session.amount_total || 0) / 100,
+              shipping_cost:
+                (session.total_details?.amount_shipping || 0) / 100,
+              shipping_address: cleanAddress,
+              stripe_session_id: session.id,
+              shipping_method: "Standard",
+              created_at: new Date().toISOString(),
+              notes: "Created via Direct Payment Link",
+              items: itemsJson, // <--- ADDED THIS to populate the column
+            })
+            .select("id")
+            .single();
+
+          if (createError) {
+            console.error("Failed to create orphan order:", createError);
+          } else {
+            orderId = newOrder.id;
+
+            // 3. Create Order Items (Table rows)
+            // deno-lint-ignore no-explicit-any
+            const itemsToInsert = lineItems.map((item: any) => ({
+              order_id: newOrder.id,
+              quantity: item.quantity,
+              price_at_purchase: (item.price?.unit_amount || 0) / 100,
+              product_name_snapshot: item.description || "Unknown Item",
+              variant_id: null,
+            }));
+
+            if (itemsToInsert.length > 0) {
+              await supabaseClient.from("order_items").insert(itemsToInsert);
+            }
           }
+        }
+
+        // --- COMMON: SAVE DISCOUNT & SEND EMAIL ---
+        if (session.metadata?.discountCode && session.customer_details?.email) {
+          await supabaseClient.from("discount_usage").upsert(
+            {
+              email: session.customer_details.email,
+              coupon_code: session.metadata.discountCode,
+            },
+            { onConflict: "email, coupon_code" },
+          );
+        }
+
+        if (orderId && session.metadata?.admin_notified !== "true") {
+          if (!session.metadata) session.metadata = {};
+          session.metadata.supabase_order_id = orderId;
+
+          await sendAdminEmail(session, supabaseClient);
         }
       }
 
