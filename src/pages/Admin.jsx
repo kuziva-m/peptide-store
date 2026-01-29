@@ -15,6 +15,7 @@ import {
   Settings,
   Menu,
   X,
+  Inbox, // Added Inbox icon
 } from "lucide-react";
 
 // Components
@@ -26,6 +27,7 @@ import InquiryManager from "../components/admin/InquiryManager";
 import SubscriberManager from "../components/admin/SubscriberManager";
 import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
+import EmailManager from "../components/admin/EmailManager"; // Added Import
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -71,6 +73,7 @@ export default function Admin() {
   // Navigation Config
   const MENU_ITEMS = [
     { id: "orders", label: "Orders", icon: ShoppingBag },
+    { id: "email", label: "Email Center", icon: Inbox }, // Added Email Center
     { id: "inquiries", label: "Inquiries", icon: Mail },
     { id: "subscribers", label: "Subscribers", icon: Users },
     { id: "products", label: "Inventory", icon: Package },
@@ -251,9 +254,10 @@ export default function Admin() {
 
       {/* MAIN CONTENT */}
       <main style={styles.mainContent}>
-        {/* CHANGED: Removed background and border from this container */}
         <div style={styles.contentCard}>
           {activeTab === "orders" && <OrderManager />}
+          {activeTab === "email" && <EmailManager />}{" "}
+          {/* Render Email Manager */}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}
           {activeTab === "products" && <ProductManager />}
@@ -386,17 +390,16 @@ const styles = {
 
   mainContent: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
 
-  // --- CHANGED: Made Transparent ---
   contentCard: {
-    background: "transparent", // Was white
+    background: "transparent",
     borderRadius: "0",
     boxShadow: "none",
     border: "none",
     minHeight: "500px",
-    overflow: "visible", // Allow cards to shadow correctly
+    overflow: "visible",
   },
 
-  // Login Styles (Unchanged)
+  // Login Styles
   loginContainer: { display: "flex", minHeight: "100vh", background: "#fff" },
   loginBanner: {
     flex: 1,

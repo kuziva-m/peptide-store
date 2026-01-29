@@ -102,10 +102,10 @@ export default function Contact() {
                     For general inquiries & order status
                   </p>
                   <a
-                    href="mailto:melbournepeptides1@gmail.com"
+                    href="inf0@melbournepeptides.com.au"
                     style={linkStyle}
                   >
-                    melbournepeptides1@gmail.com
+                    inf0@melbournepeptides.com.au
                   </a>
                 </div>
               </div>
@@ -119,12 +119,12 @@ export default function Contact() {
                   <h3 style={cardTitleStyle}>Instagram Support</h3>
                   <p style={cardTextStyle}>Quick questions & updates</p>
                   <a
-                    href="https://ig.me/m/melbournepeptides"
+                    href="https://ig.me/m/mpresearch.au"
                     target="_blank"
                     rel="noreferrer"
                     style={linkStyle}
                   >
-                    @melbournepeptides
+                    @mpresearch.au
                   </a>
                 </div>
               </div>

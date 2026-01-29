@@ -5,7 +5,7 @@ export default function WhatsAppButton() {
   const [isVisible, setIsVisible] = useState(true);
 
   // Your Instagram username from the link provided
-  const INSTAGRAM_USERNAME = "melbournepeptides";
+  const INSTAGRAM_USERNAME = "mpresearch.au";
 
   if (!isVisible) return null;
 

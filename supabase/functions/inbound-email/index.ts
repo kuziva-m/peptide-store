@@ -1,35 +1,30 @@
-// Now we can use clean imports because deno.json handles the URLs
-import { serve } from "std/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
+// deno-lint-ignore-file no-import-prefix
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const FORWARD_TO_EMAIL = "Hadyc10@yahoo.com";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+);
 
 serve(async (req) => {
   try {
     const payload = await req.json();
     console.log("Webhook Received:", JSON.stringify(payload, null, 2));
 
-    // 1. Handle Resend Verification Event
-    if (payload.type === "webhook.verification") {
-      return new Response("Verified", { status: 200 });
-    }
+    const data = payload.data || payload;
+    const emailId = data.email_id || data.id;
 
-    const emailId = payload.data?.email_id || payload.email_id;
+    if (!emailId) throw new Error("No email_id found in payload");
 
-    if (!emailId) {
-      console.error("No email_id found");
-      return new Response("No email_id found", { status: 400 });
-    }
+    console.log(`Fetching email ID: ${emailId}`);
 
-    console.log(`Fetching full content for ID: ${emailId}`);
-
-    // 2. Fetch the actual email content from Resend
+    // 1. Fetch Email Content using CORRECT endpoint for INBOUND emails
     const resendResponse = await fetch(
-      `https://api.resend.com/emails/${emailId}`,
+      `https://api.resend.com/emails/receiving/${emailId}`,
       {
         method: "GET",
         headers: {
@@ -40,23 +35,17 @@ serve(async (req) => {
     );
 
     if (!resendResponse.ok) {
-      const err = await resendResponse.text();
-      console.error("Resend API Error:", err);
-      return new Response("Failed to fetch from Resend", { status: 500 });
+      const errorText = await resendResponse.text();
+      console.error(`Resend API Failed (${resendResponse.status}):`, errorText);
+      throw new Error(`Resend API Error: ${errorText}`);
     }
 
     const emailData = await resendResponse.json();
+    console.log("Email content fetched successfully");
 
-    // 3. Extract Data
-    const sender =
-      typeof emailData.from === "object"
-        ? emailData.from.email
-        : emailData.from;
-    const subject = emailData.subject || "(No Subject)";
+    // 2. Extract Data
     const html = emailData.html || "";
     const text = emailData.text || "";
-
-    // Fallback: If text is empty, strip HTML tags for a preview
     let bodyText = text;
     if (!bodyText && html) {
       bodyText = html
@@ -64,21 +53,62 @@ serve(async (req) => {
         .replace(/\s+/g, " ")
         .trim();
     }
+    const sender = emailData.from || data.from || "(Unknown)";
+    const subject = emailData.subject || data.subject || "(No Subject)";
 
-    console.log(`Saving email from: ${sender}`);
+    console.log("Extracted:", {
+      sender,
+      subject,
+      hasHtml: !!html,
+      hasText: !!bodyText,
+    });
 
-    // 4. Insert into Supabase
+    // 3. Save to Admin Panel
     const { error: dbError } = await supabase.from("inbox_messages").insert({
       sender: sender,
       subject: subject,
-      body_text: bodyText,
-      body_html: html,
+      body_text: bodyText || "(No content)",
+      body_html: html || bodyText,
       is_read: false,
     });
 
-    if (dbError) {
-      console.error("Database Insert Error:", dbError);
-      return new Response("Database Error", { status: 500 });
+    if (dbError) throw dbError;
+    console.log("Saved to Database");
+
+    // 4. FORWARD to Yahoo
+    if (FORWARD_TO_EMAIL) {
+      const forwardResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Melbourne Peptides <info@melbournepeptides.com.au>",
+          to: FORWARD_TO_EMAIL,
+          subject: `[New Inquiry] ${subject}`,
+          html: `
+              <div style="background: #f4f4f5; padding: 20px; font-family: sans-serif;">
+                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                  <p style="color: #666; font-size: 12px;"><strong>From:</strong> ${sender}</p>
+                  <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                  ${html || bodyText.replace(/\n/g, "<br>")}
+                </div>
+                <p style="text-align: center; color: #999; font-size: 11px; margin-top: 20px;">
+                  Reply to this email to answer the customer.
+                </p>
+              </div>
+            `,
+          reply_to: sender,
+        }),
+      });
+
+      if (!forwardResponse.ok) {
+        const errorText = await forwardResponse.text();
+        console.error("Forward failed:", errorText);
+      } else {
+        console.log(`Forwarded to ${FORWARD_TO_EMAIL}`);
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -87,7 +117,10 @@ serve(async (req) => {
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("Function Error:", msg);
-    return new Response(JSON.stringify({ error: msg }), { status: 500 });
+    console.error("Critical Error:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
+      headers: { "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });
