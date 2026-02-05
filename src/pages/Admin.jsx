@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Added Link
 import { supabase } from "../lib/supabase";
 import {
   Package,
@@ -15,7 +16,8 @@ import {
   Settings,
   Menu,
   X,
-  Inbox, // Added Inbox icon
+  Inbox,
+  Home, // Added Home Icon
 } from "lucide-react";
 
 // Components
@@ -27,7 +29,7 @@ import InquiryManager from "../components/admin/InquiryManager";
 import SubscriberManager from "../components/admin/SubscriberManager";
 import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
-import EmailManager from "../components/admin/EmailManager"; // Added Import
+import EmailManager from "../components/admin/EmailManager";
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -73,7 +75,7 @@ export default function Admin() {
   // Navigation Config
   const MENU_ITEMS = [
     { id: "orders", label: "Orders", icon: ShoppingBag },
-    { id: "email", label: "Email Center", icon: Inbox }, // Added Email Center
+    { id: "email", label: "Email Center", icon: Inbox },
     { id: "inquiries", label: "Inquiries", icon: Mail },
     { id: "subscribers", label: "Subscribers", icon: Users },
     { id: "products", label: "Inventory", icon: Package },
@@ -178,34 +180,22 @@ export default function Admin() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      {/* TOP NAVIGATION BAR */}
+      {/* --- NEW 2-ROW NAVIGATION BAR --- */}
       <nav style={styles.navbar}>
-        <div style={styles.navContainer}>
-          {/* Logo Section */}
+        {/* ROW 1: Branding & Actions */}
+        <div style={styles.topRow}>
           <div style={styles.logoSection}>
             <Atom size={24} color="white" className="spin-anim" />
-            <span style={styles.navTitle}>Admin</span>
+            <span style={styles.navTitle}>Admin Panel</span>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="desktop-nav" style={styles.desktopNav}>
-            {MENU_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                style={{
-                  ...styles.navLink,
-                  ...(activeTab === item.id ? styles.navLinkActive : {}),
-                }}
-              >
-                <item.icon size={16} />
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Right Section */}
           <div style={styles.rightSection}>
+            {/* Back to Website Button */}
+            <Link to="/" style={styles.homeBtn}>
+              <Home size={16} />{" "}
+              <span className="hide-mobile">Back to Website</span>
+            </Link>
+
             <button
               onClick={handleLogout}
               className="logout-btn"
@@ -229,9 +219,32 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* ROW 2: Navigation Tabs (Hidden on Mobile) */}
+        <div className="desktop-nav" style={styles.bottomRow}>
+          {MENU_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              style={{
+                ...styles.navLink,
+                ...(activeTab === item.id ? styles.navLinkActive : {}),
+              }}
+            >
+              <item.icon size={16} />
+              {item.label}
+            </button>
+          ))}
+        </div>
+
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
           <div style={styles.mobileMenu}>
+            <Link to="/" style={styles.mobileNavLink}>
+              <Home size={18} /> Back to Website
+            </Link>
+            <div
+              style={{ borderBottom: "1px solid #334155", margin: "4px 0" }}
+            ></div>
             {MENU_ITEMS.map((item) => (
               <button
                 key={item.id}
@@ -256,8 +269,7 @@ export default function Admin() {
       <main style={styles.mainContent}>
         <div style={styles.contentCard}>
           {activeTab === "orders" && <OrderManager />}
-          {activeTab === "email" && <EmailManager />}{" "}
-          {/* Render Email Manager */}
+          {activeTab === "email" && <EmailManager />}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}
           {activeTab === "products" && <ProductManager />}
@@ -287,17 +299,36 @@ const styles = {
     top: 0,
     zIndex: 50,
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+    display: "flex",
+    flexDirection: "column", // Vertical Stack
   },
-  navContainer: {
+
+  // Row 1 Styles
+  topRow: {
     maxWidth: "1400px",
     margin: "0 auto",
-    padding: "0 20px",
-    height: "64px",
+    width: "100%",
+    padding: "10px 24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    position: "relative",
+    borderBottom: "1px solid #1e293b",
+    height: "60px",
   },
+
+  // Row 2 Styles
+  bottomRow: {
+    maxWidth: "1400px",
+    margin: "0 auto",
+    width: "100%",
+    padding: "0 24px",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    height: "50px", // Tab height
+    overflowX: "auto", // Allow horizontal scroll if really needed
+  },
+
   logoSection: {
     display: "flex",
     alignItems: "center",
@@ -307,12 +338,6 @@ const styles = {
   },
   navTitle: { letterSpacing: "0.5px" },
 
-  desktopNav: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    height: "100%",
-  },
   navLink: {
     display: "flex",
     alignItems: "center",
@@ -320,25 +345,46 @@ const styles = {
     background: "transparent",
     border: "none",
     color: "#94a3b8",
-    padding: "8px 16px",
+    padding: "0 16px",
     fontSize: "0.9rem",
     fontWeight: "500",
     cursor: "pointer",
-    borderRadius: "6px",
+    height: "100%", // Fill row height
+    borderBottom: "2px solid transparent",
     transition: "all 0.2s",
-    height: "40px",
+    whiteSpace: "nowrap",
   },
-  navLinkActive: { background: "#1e293b", color: "white", fontWeight: "600" },
+  navLinkActive: {
+    color: "white",
+    fontWeight: "600",
+    borderBottom: "2px solid var(--primary)",
+    background: "rgba(255,255,255,0.03)",
+  },
 
-  rightSection: { display: "flex", alignItems: "center", gap: "16px" },
+  rightSection: { display: "flex", alignItems: "center", gap: "12px" },
+
+  homeBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#334155",
+    color: "white",
+    textDecoration: "none",
+    padding: "8px 14px",
+    borderRadius: "6px",
+    fontSize: "0.85rem",
+    fontWeight: "500",
+    transition: "background 0.2s",
+  },
+
   logoutBtnNav: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "#ef4444",
+    background: "#b91c1c", // Darker Red
     border: "none",
     color: "white",
-    padding: "8px 16px",
+    padding: "8px 14px",
     borderRadius: "6px",
     cursor: "pointer",
     fontSize: "0.85rem",
@@ -381,6 +427,7 @@ const styles = {
     fontWeight: "500",
     borderRadius: "8px",
     cursor: "pointer",
+    textDecoration: "none", // For Link
   },
   mobileNavLinkActive: {
     background: "#334155",
@@ -399,7 +446,7 @@ const styles = {
     overflow: "visible",
   },
 
-  // Login Styles
+  // Login Styles (Unchanged)
   loginContainer: { display: "flex", minHeight: "100vh", background: "#fff" },
   loginBanner: {
     flex: 1,
@@ -497,6 +544,7 @@ styleTag.innerHTML = `
     .mobile-menu-btn { display: block !important; }
     .logout-text { display: none; }
     .logout-btn { padding: 8px !important; }
+    .hide-mobile { display: none !important; }
     main { padding: 16px !important; }
   }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

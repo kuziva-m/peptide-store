@@ -22,6 +22,7 @@ import Success from "./pages/Success";
 import Calculator from "./pages/Calculator";
 import TrackOrder from "./pages/TrackOrder";
 import WriteReview from "./pages/WriteReview";
+import Terms from "./pages/Terms"; // <--- 1. ADDED IMPORT HERE
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,12 +55,12 @@ function App() {
           <Route path="/calculator" element={<Calculator />} />
           <Route path="/track" element={<TrackOrder />} />
           <Route path="/write-review" element={<WriteReview />} />
-
           <Route path="/admin" element={<Admin />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/shipping" element={<Shipping />} />
           <Route path="/privacy" element={<Privacy />} />
-
+          <Route path="/terms" element={<Terms />} />{" "}
+          {/* <--- 2. ADDED ROUTE HERE */}
           <Route path="/faq" element={<FAQ />} />
           <Route path="/success" element={<Success />} />
         </Routes>

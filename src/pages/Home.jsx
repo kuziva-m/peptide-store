@@ -13,6 +13,7 @@ import {
   User,
   Heart,
   Video,
+  Syringe, // Added Syringe icon
 } from "lucide-react";
 import "./Home.css";
 
@@ -159,12 +160,14 @@ export default function Home() {
               <h3>Peptide Blends</h3>
               <p>Pre-mixed stacks</p>
             </Link>
-            <Link to="/shop?category=Mixing Solution" className="cat-card">
+
+            {/* UPDATED: Changed Icon to Syringe and Text Description */}
+            <Link to="/shop?category=Accessories" className="cat-card">
               <div className="cat-icon">
-                <Truck size={32} />
+                <Syringe size={32} />
               </div>
-              <h3>Solutions</h3>
-              <p>Bacteriostatic water & more</p>
+              <h3>Accessories</h3>
+              <p>Water, Syringes & Alcohol Pads</p>
             </Link>
           </div>
         </div>

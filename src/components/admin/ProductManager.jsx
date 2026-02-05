@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Upload,
   Loader,
+  Save, // Added Save Icon
 } from "lucide-react";
 
 // --- UPDATED CATEGORIES LIST ---
@@ -272,6 +273,34 @@ function ProductRow({
 }) {
   const [variants, setVariants] = useState(product.variants || []);
 
+  // NEW: Controlled state for Product Details
+  const [name, setName] = useState(product.name);
+  const [image, setImage] = useState(product.image_url);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state if product prop updates (e.g. from parent refresh)
+  useEffect(() => {
+    setName(product.name);
+    setImage(product.image_url);
+  }, [product]);
+
+  // Save Function for Name/Image
+  const handleSaveDetails = async () => {
+    setIsSaving(true);
+    const { error } = await supabase
+      .from("products")
+      .update({ name: name, image_url: image })
+      .eq("id", product.id);
+
+    setIsSaving(false);
+
+    if (error) {
+      alert("Failed to save: " + error.message);
+    } else {
+      // Optional: you could add a toast here
+    }
+  };
+
   const addVariant = async () => {
     const { data } = await supabase
       .from("variants")
@@ -300,30 +329,21 @@ function ProductRow({
     await supabase.from("variants").delete().eq("id", id);
   };
 
-  const updateProduct = async (field, value) => {
-    await supabase
-      .from("products")
-      .update({ [field]: value })
-      .eq("id", product.id);
-  };
-
   return (
     <div style={styles.productCard}>
       <div style={styles.productHeader}>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <div style={styles.imgThumbnail}>
-            {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                style={styles.img}
-              />
+            {/* Use local state 'image' for immediate feedback */}
+            {image ? (
+              <img src={image} alt={name} style={styles.img} />
             ) : (
               <ImageIcon size={20} color="#cbd5e1" />
             )}
           </div>
           <div>
-            <h4 style={{ margin: 0, fontSize: "1rem" }}>{product.name}</h4>
+            {/* Use local state 'name' for immediate feedback */}
+            <h4 style={{ margin: 0, fontSize: "1rem" }}>{name}</h4>
             <span style={styles.badge}>{product.category}</span>
           </div>
         </div>
@@ -347,8 +367,8 @@ function ProductRow({
             <div>
               <label style={styles.label}>Product Name</label>
               <input
-                defaultValue={product.name}
-                onBlur={(e) => updateProduct("name", e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 style={styles.input}
               />
             </div>
@@ -356,8 +376,8 @@ function ProductRow({
               <label style={styles.label}>Main Image URL</label>
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
-                  defaultValue={product.image_url}
-                  onBlur={(e) => updateProduct("image_url", e.target.value)}
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
                   style={styles.input}
                 />
                 <label style={styles.uploadBtnSmall}>
@@ -368,24 +388,55 @@ function ProductRow({
                     onChange={async (e) => {
                       const url = await handleImageUpload(e.target.files[0]);
                       if (url) {
-                        updateProduct("image_url", url);
-                        window.location.reload();
+                        setImage(url); // Update local state immediately
                       }
                     }}
                   />
                 </label>
               </div>
             </div>
+
+            {/* NEW SAVE BUTTON */}
+            <button
+              onClick={handleSaveDetails}
+              style={{
+                ...styles.saveBtn,
+                width: "fit-content",
+                padding: "8px 20px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                opacity: isSaving ? 0.7 : 1,
+              }}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save size={16} /> Save Changes
+                </>
+              )}
+            </button>
           </div>
 
-          <h5 style={{ margin: "0 0 10px 0", color: "#64748b" }}>VARIANTS</h5>
+          <h5
+            style={{
+              margin: "20px 0 10px 0",
+              color: "#64748b",
+              borderTop: "1px solid #e2e8f0",
+              paddingTop: "20px",
+            }}
+          >
+            VARIANTS
+          </h5>
           <div
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "80px 80px 1fr 1fr 30px", // Adjusted columns
+                gridTemplateColumns: "80px 80px 1fr 1fr 30px",
                 gap: "10px",
                 paddingLeft: "10px",
               }}
@@ -402,7 +453,7 @@ function ProductRow({
                 data={v}
                 update={updateVariant}
                 onDelete={() => deleteVariant(v.id)}
-                handleImageUpload={handleImageUpload} // Passed function
+                handleImageUpload={handleImageUpload}
               />
             ))}
             <button onClick={addVariant} style={styles.addVariantBtn}>

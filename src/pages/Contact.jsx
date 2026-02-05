@@ -101,11 +101,8 @@ export default function Contact() {
                   <p style={cardTextStyle}>
                     For general inquiries & order status
                   </p>
-                  <a
-                    href="inf0@melbournepeptides.com.au"
-                    style={linkStyle}
-                  >
-                    inf0@melbournepeptides.com.au
+                  <a href="inf0@melbournepeptides.com.au" style={linkStyle}>
+                    info@melbournepeptides.com.au
                   </a>
                 </div>
               </div>

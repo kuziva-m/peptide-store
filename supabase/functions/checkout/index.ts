@@ -87,17 +87,30 @@ serve(async (req: Request) => {
       }
 
       if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
-        let orderId = session.metadata?.supabase_order_id; // changed to let
+        const eventSession = event.data.object as Stripe.Checkout.Session;
 
-        console.log(
-          `Webhook received. Session ID: ${session.id}, Order ID: ${orderId || "N/A"}`,
+        // --- FIX: FORCE REFRESH FROM STRIPE ---
+        console.log(`Refreshing session data for: ${eventSession.id}`);
+
+        // CORRECTED LINE: Removed "shipping_details" from expand array
+        const session = await stripe.checkout.sessions.retrieve(
+          eventSession.id,
+          { expand: ["line_items"] },
         );
 
-        // --- FIX: STRICT SHIPPING ADDRESS ---
-        const rawAddress =
-          session.shipping_details?.address ||
-          session.customer_details?.address;
+        let orderId = session.metadata?.supabase_order_id;
+
+        console.log(
+          `Webhook processing. Session ID: ${session.id}, Order ID: ${orderId || "N/A"}`,
+        );
+
+        // --- ADDRESS EXTRACTION LOGIC ---
+        const shippingObj = session.shipping_details;
+        const customerObj = session.customer_details;
+
+        const rawAddress = shippingObj?.address || customerObj?.address;
+        const phone = shippingObj?.phone || customerObj?.phone || "N/A";
+        const name = shippingObj?.name || customerObj?.name || "Guest";
 
         const cleanAddress = {
           line1: rawAddress?.line1 || "",
@@ -106,14 +119,8 @@ serve(async (req: Request) => {
           state: rawAddress?.state || "",
           postal_code: rawAddress?.postal_code || "",
           country: rawAddress?.country || "AU",
-          phone:
-            session.shipping_details?.phone ||
-            session.customer_details?.phone ||
-            "N/A",
-          name:
-            session.shipping_details?.name ||
-            session.customer_details?.name ||
-            "Guest",
+          phone: phone,
+          name: name,
         };
 
         if (orderId) {
@@ -124,7 +131,7 @@ serve(async (req: Request) => {
             .update({
               status: "paid",
               stripe_session_id: session.id,
-              customer_name: cleanAddress.name,
+              customer_name: name,
               customer_email: session.customer_details?.email,
               shipping_address: cleanAddress,
               updated_at: new Date().toISOString(),
@@ -144,14 +151,9 @@ serve(async (req: Request) => {
             "No Order ID found. Creating new order from Stripe data...",
           );
 
-          const expandedSession = await stripe.checkout.sessions.retrieve(
-            session.id,
-            { expand: ["line_items"] },
-          );
+          const lineItems = session.line_items?.data || [];
 
-          const lineItems = expandedSession.line_items?.data || [];
-
-          // 1. Prepare Items JSON for the 'orders' table (Fixes NULL items bug)
+          // 1. Prepare Items JSON for the 'orders' table
           // deno-lint-ignore no-explicit-any
           const itemsJson = lineItems.map((item: any) => ({
             name: item.description || "Unknown Item",
@@ -165,7 +167,7 @@ serve(async (req: Request) => {
             .from("orders")
             .insert({
               customer_email: session.customer_details?.email,
-              customer_name: cleanAddress.name,
+              customer_name: name,
               status: "paid",
               total_amount: (session.amount_total || 0) / 100,
               shipping_cost:
@@ -175,7 +177,7 @@ serve(async (req: Request) => {
               shipping_method: "Standard",
               created_at: new Date().toISOString(),
               notes: "Created via Direct Payment Link",
-              items: itemsJson, // <--- ADDED THIS to populate the column
+              items: itemsJson,
             })
             .select("id")
             .single();
@@ -212,11 +214,13 @@ serve(async (req: Request) => {
           );
         }
 
+        // Pass the REFRESHED session (with correct address) to the email function
         if (orderId && session.metadata?.admin_notified !== "true") {
           if (!session.metadata) session.metadata = {};
           session.metadata.supabase_order_id = orderId;
 
-          await sendAdminEmail(session, supabaseClient);
+          // We pass the clean address explicitly to helper so we don't have to re-parse
+          await sendAdminEmail(session, supabaseClient, cleanAddress);
         }
       }
 
@@ -431,27 +435,25 @@ serve(async (req: Request) => {
 async function sendAdminEmail(
   session: Stripe.Checkout.Session,
   supabaseClient: SupabaseClient,
+  cleanAddress: any, // Receive clean address directly
 ) {
   if (!RESEND_API_KEY) return;
 
   const totalAmount = (session.amount_total || 0) / 100;
   const customerInfo = session.customer_details;
   const discountUsed = session.metadata?.discountCode || "None";
+  const orderId = session.metadata?.supabase_order_id;
 
-  // Strict Shipping Logic for Email
-  const rawAddress =
-    session.shipping_details?.address || session.customer_details?.address;
-
-  const addressData = {
-    line1: rawAddress?.line1 || "",
-    line2: rawAddress?.line2 || "",
-    city: rawAddress?.city || "",
-    state: rawAddress?.state || "",
-    postal_code: rawAddress?.postal_code || "",
-    country: rawAddress?.country || "AU",
+  // Use the clean address passed from the main handler
+  const addressData = cleanAddress || {
+    line1: "N/A",
+    line2: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "AU",
   };
 
-  const orderId = session.metadata?.supabase_order_id;
   const { data: dbItems } = await supabaseClient
     .from("order_items")
     .select("quantity, product_name_snapshot, price_at_purchase")
@@ -483,10 +485,10 @@ async function sendAdminEmail(
       html: `
         <div style="font-family: sans-serif; color: #333;">
           <h2>New Order Alert</h2>
-          <p><strong>Customer:</strong> ${customerInfo?.name || "Guest"}</p>
+          <p><strong>Customer:</strong> ${cleanAddress.name || "Guest"}</p>
           <p><strong>Discount Code:</strong> <strong>${discountUsed}</strong></p> 
           <p><strong>Email:</strong> ${customerInfo?.email || "N/A"}</p>
-          <p><strong>Phone:</strong> ${customerInfo?.phone || "N/A"}</p>
+          <p><strong>Phone:</strong> ${cleanAddress.phone || "N/A"}</p>
           <p><strong>Total:</strong> $${totalAmount.toFixed(2)} AUD</p>
           
           <h3>Order Items:</h3>
@@ -495,7 +497,7 @@ async function sendAdminEmail(
           <h3>Shipping Details:</h3>
           <p>
             ${addressData.line1}<br>
-            ${addressData.line2}<br>
+            ${addressData.line2 ? addressData.line2 + "<br>" : ""}
             ${addressData.city}, ${addressData.state} ${addressData.postal_code}<br>
             ${addressData.country}
           </p>

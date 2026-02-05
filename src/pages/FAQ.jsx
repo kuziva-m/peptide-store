@@ -150,7 +150,7 @@ export default function FAQ() {
           </p>
 
           <a
-            href="https://ig.me/m/melbournepeptides"
+            href="https://ig.me/m/mpresearch.au"
             target="_blank"
             rel="noopener noreferrer"
             className="support-btn"
