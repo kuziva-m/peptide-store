@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // Added Link
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import {
   Package,
@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   Inbox,
-  Home, // Added Home Icon
+  Home,
+  BarChart3,
 } from "lucide-react";
 
 // Components
@@ -30,16 +31,13 @@ import SubscriberManager from "../components/admin/SubscriberManager";
 import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
 import EmailManager from "../components/admin/EmailManager";
+import AnalyticsDashboard from "../components/admin/AnalyticsDashboard";
 
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Dashboard State
   const [activeTab, setActiveTab] = useState("orders");
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Login State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -49,13 +47,11 @@ export default function Admin() {
       setSession(session);
       setLoading(false);
     });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -72,14 +68,18 @@ export default function Admin() {
 
   const handleLogout = () => supabase.auth.signOut();
 
-  // Navigation Config
-  const MENU_ITEMS = [
+  // --- REORGANIZED MENUS ---
+  const PRIMARY_MENU = [
     { id: "orders", label: "Orders", icon: ShoppingBag },
-    { id: "email", label: "Email Center", icon: Inbox },
-    { id: "inquiries", label: "Inquiries", icon: Mail },
-    { id: "subscribers", label: "Subscribers", icon: Users },
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "email", label: "Email", icon: Inbox },
     { id: "products", label: "Inventory", icon: Package },
-    { id: "discounts", label: "Discounts", icon: Tag },
+    { id: "discounts", label: "Codes", icon: Tag },
+    { id: "subscribers", label: "Users", icon: Users },
+    { id: "inquiries", label: "Inbox", icon: Mail },
+  ];
+
+  const SECONDARY_MENU = [
     { id: "reviews", label: "Reviews", icon: MessageSquare },
     { id: "content", label: "Content", icon: FileText },
     { id: "settings", label: "Settings", icon: Settings },
@@ -180,9 +180,8 @@ export default function Admin() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      {/* --- NEW 2-ROW NAVIGATION BAR --- */}
       <nav style={styles.navbar}>
-        {/* ROW 1: Branding & Actions */}
+        {/* ROW 1: Branding & Secondary Actions */}
         <div style={styles.topRow}>
           <div style={styles.logoSection}>
             <Atom size={24} color="white" className="spin-anim" />
@@ -190,21 +189,36 @@ export default function Admin() {
           </div>
 
           <div style={styles.rightSection}>
-            {/* Back to Website Button */}
-            <Link to="/" style={styles.homeBtn}>
-              <Home size={16} />{" "}
-              <span className="hide-mobile">Back to Website</span>
-            </Link>
+            {/* Secondary Menu (Top Right) */}
+            <div
+              className="hide-mobile"
+              style={{ display: "flex", gap: "4px", marginRight: "16px" }}
+            >
+              {SECONDARY_MENU.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  style={{
+                    ...styles.navLinkSmall,
+                    ...(activeTab === item.id ? styles.navLinkActiveSmall : {}),
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
+            <Link to="/" style={styles.homeBtn}>
+              <Home size={16} /> <span className="hide-mobile">Site</span>
+            </Link>
             <button
               onClick={handleLogout}
               className="logout-btn"
               style={styles.logoutBtnNav}
               title="Sign Out"
             >
-              <LogOut size={18} /> <span className="logout-text">Logout</span>
+              <LogOut size={18} />
             </button>
-
             <button
               className="mobile-menu-btn"
               onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
@@ -219,9 +233,9 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* ROW 2: Navigation Tabs (Hidden on Mobile) */}
+        {/* ROW 2: Primary Navigation Tabs */}
         <div className="desktop-nav" style={styles.bottomRow}>
-          {MENU_ITEMS.map((item) => (
+          {PRIMARY_MENU.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
@@ -236,7 +250,7 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* Mobile Dropdown Menu */}
+        {/* Mobile Dropdown */}
         {isMobileMenuOpen && (
           <div style={styles.mobileMenu}>
             <Link to="/" style={styles.mobileNavLink}>
@@ -245,7 +259,7 @@ export default function Admin() {
             <div
               style={{ borderBottom: "1px solid #334155", margin: "4px 0" }}
             ></div>
-            {MENU_ITEMS.map((item) => (
+            {[...PRIMARY_MENU, ...SECONDARY_MENU].map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -257,8 +271,7 @@ export default function Admin() {
                   ...(activeTab === item.id ? styles.mobileNavLinkActive : {}),
                 }}
               >
-                <item.icon size={18} />
-                {item.label}
+                <item.icon size={18} /> {item.label}
               </button>
             ))}
           </div>
@@ -269,6 +282,7 @@ export default function Admin() {
       <main style={styles.mainContent}>
         <div style={styles.contentCard}>
           {activeTab === "orders" && <OrderManager />}
+          {activeTab === "analytics" && <AnalyticsDashboard />}
           {activeTab === "email" && <EmailManager />}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}
@@ -291,7 +305,6 @@ const styles = {
     alignItems: "center",
     background: "#f8fafc",
   },
-
   navbar: {
     background: "#0f172a",
     color: "white",
@@ -300,10 +313,8 @@ const styles = {
     zIndex: 50,
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
     display: "flex",
-    flexDirection: "column", // Vertical Stack
+    flexDirection: "column",
   },
-
-  // Row 1 Styles
   topRow: {
     maxWidth: "1400px",
     margin: "0 auto",
@@ -315,8 +326,6 @@ const styles = {
     borderBottom: "1px solid #1e293b",
     height: "60px",
   },
-
-  // Row 2 Styles
   bottomRow: {
     maxWidth: "1400px",
     margin: "0 auto",
@@ -325,10 +334,9 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "4px",
-    height: "50px", // Tab height
-    overflowX: "auto", // Allow horizontal scroll if really needed
+    height: "50px",
+    overflowX: "auto",
   },
-
   logoSection: {
     display: "flex",
     alignItems: "center",
@@ -338,6 +346,7 @@ const styles = {
   },
   navTitle: { letterSpacing: "0.5px" },
 
+  // Primary Tabs
   navLink: {
     display: "flex",
     alignItems: "center",
@@ -349,7 +358,7 @@ const styles = {
     fontSize: "0.9rem",
     fontWeight: "500",
     cursor: "pointer",
-    height: "100%", // Fill row height
+    height: "100%",
     borderBottom: "2px solid transparent",
     transition: "all 0.2s",
     whiteSpace: "nowrap",
@@ -361,8 +370,21 @@ const styles = {
     background: "rgba(255,255,255,0.03)",
   },
 
-  rightSection: { display: "flex", alignItems: "center", gap: "12px" },
+  // Secondary Tabs (Top Right)
+  navLinkSmall: {
+    background: "transparent",
+    border: "none",
+    color: "#64748b",
+    padding: "6px 12px",
+    fontSize: "0.85rem",
+    fontWeight: "500",
+    cursor: "pointer",
+    borderRadius: "6px",
+    transition: "all 0.2s",
+  },
+  navLinkActiveSmall: { color: "white", background: "#1e293b" },
 
+  rightSection: { display: "flex", alignItems: "center", gap: "12px" },
   homeBtn: {
     display: "flex",
     alignItems: "center",
@@ -376,12 +398,11 @@ const styles = {
     fontWeight: "500",
     transition: "background 0.2s",
   },
-
   logoutBtnNav: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "#b91c1c", // Darker Red
+    background: "#b91c1c",
     border: "none",
     color: "white",
     padding: "8px 14px",
@@ -391,14 +412,12 @@ const styles = {
     fontWeight: "600",
     transition: "background 0.2s",
   },
-
   mobileToggle: {
     background: "transparent",
     border: "none",
     cursor: "pointer",
     padding: "4px",
   },
-
   mobileMenu: {
     position: "absolute",
     top: "100%",
@@ -427,16 +446,14 @@ const styles = {
     fontWeight: "500",
     borderRadius: "8px",
     cursor: "pointer",
-    textDecoration: "none", // For Link
+    textDecoration: "none",
   },
   mobileNavLinkActive: {
     background: "#334155",
     color: "white",
     fontWeight: "600",
   },
-
   mainContent: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
-
   contentCard: {
     background: "transparent",
     borderRadius: "0",
@@ -446,7 +463,7 @@ const styles = {
     overflow: "visible",
   },
 
-  // Login Styles (Unchanged)
+  // Login Styles
   loginContainer: { display: "flex", minHeight: "100vh", background: "#fff" },
   loginBanner: {
     flex: 1,

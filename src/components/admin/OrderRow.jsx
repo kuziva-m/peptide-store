@@ -19,9 +19,16 @@ import {
   MessageCircle,
   Send,
   Tag,
+  Trash2,
 } from "lucide-react";
 
-export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
+export function OrderRow({
+  order,
+  onUpdate,
+  showToast,
+  promptConfirm,
+  onDelete,
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [noteText, setNoteText] = useState(order.notes || "");
@@ -44,6 +51,20 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
     postal_code: order.shipping_address?.postal_code || "",
     country: order.shipping_address?.country || "AU",
   });
+
+  // --- TIMEZONE FIX: Force Australia/Melbourne (GMT+11) ---
+  const formatAUSDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleString("en-AU", {
+      timeZone: "Australia/Melbourne",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
   const handleSingleExport = (e) => {
     e.stopPropagation();
@@ -296,8 +317,8 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
             )}
           </div>
           <div style={styles.metaText}>
-            #{order.id.slice(0, 8)} •{" "}
-            {new Date(order.created_at).toLocaleDateString()}
+            #{order.id.slice(0, 8)} • {/* UPDATED: Uses specific AU Timezone */}
+            {formatAUSDate(order.created_at)}
           </div>
         </div>
         <div style={styles.colStatus}>
@@ -340,6 +361,25 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
           </div>
         </div>
         <div style={styles.colTotal}>${order.total_amount}</div>
+
+        {/* 3. CONDITIONAL DELETE BUTTON */}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // Prevents row expansion when clicking delete
+              onDelete();
+            }}
+            style={{
+              ...styles.actionIconBtn,
+              color: "#ef4444", // Red color
+              marginRight: "4px",
+            }}
+            title="Delete Order"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+
         <button
           onClick={handleSingleExport}
           style={styles.actionIconBtn}
@@ -355,7 +395,7 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
       {/* EXPANDED PANEL */}
       {isExpanded && (
         <div style={styles.expandedPanel}>
-          {/* CUSTOMER DETAILS (NO CHANGES) */}
+          {/* CUSTOMER DETAILS */}
           <div
             style={{
               borderBottom: "1px solid #e2e8f0",
@@ -646,7 +686,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                     }
                     style={styles.input}
                   >
-                    {/* REMOVED PENDING OPTION */}
                     <option value="paid">Paid</option>
                     <option value="label_created">Label Created</option>
                     <option value="shipped">Shipped</option>
@@ -707,7 +746,6 @@ export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
                         marginBottom: 8,
                       }}
                     >
-                      {/* CHANGED: Removed Mark as Paid Button. Now starts at Label Created. */}
                       {(order.status === "pending" ||
                         order.status === "paid") && (
                         <button

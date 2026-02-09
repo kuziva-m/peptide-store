@@ -479,7 +479,7 @@ async function sendAdminEmail(
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "Melbourne Peptides <info@melbournepeptides.com>",
+      from: "Melbourne Peptides <info@melbournepeptides.com.au>",
       to: [ADMIN_EMAIL],
       subject: `New Order Received! ($${totalAmount.toFixed(2)})`,
       html: `
