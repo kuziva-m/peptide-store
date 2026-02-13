@@ -6,20 +6,22 @@ import "./ProductCard.css";
 export default function ProductCard({ product, loading }) {
   const { addToCart } = useCart();
 
-  // Logic to handle variants
+  // Sort variants by price low-to-high
   const sortedVariants =
     product?.variants?.sort((a, b) => a.price - b.price) || [];
 
   const [selectedVariant, setSelectedVariant] = useState(null);
 
-  // Initialize selected variant when product loads
+  // Initialize selected variant
   useEffect(() => {
     if (sortedVariants.length > 0) {
-      setSelectedVariant(sortedVariants[0]);
+      // Try to find the first IN STOCK variant to select by default
+      const firstInStock = sortedVariants.find((v) => v.in_stock !== false);
+      setSelectedVariant(firstInStock || sortedVariants[0]);
     }
   }, [product]);
 
-  // SKELETON STATE
+  // SKELETON LOADING STATE
   if (loading || !product) {
     return (
       <div className="product-card skeleton-card">
@@ -33,7 +35,24 @@ export default function ProductCard({ product, loading }) {
     );
   }
 
-  // Determine Image to Show
+  // --- STOCK LOGIC ---
+  const isProductActive = product.in_stock !== false;
+  const isVariantInStock = selectedVariant?.in_stock !== false;
+  const canBuy = isProductActive && isVariantInStock;
+
+  // Determine Badge State
+  let badgeStatus = "in-stock";
+  let badgeText = "In Stock";
+
+  if (!isProductActive) {
+    badgeStatus = "unavailable";
+    badgeText = "Unavailable";
+  } else if (!isVariantInStock) {
+    badgeStatus = "out-of-stock";
+    badgeText = "Sold Out";
+  }
+
+  // Determine Image
   const displayImage =
     selectedVariant?.image_url ||
     product.image_url ||
@@ -46,15 +65,11 @@ export default function ProductCard({ product, loading }) {
     }).format(amount);
   };
 
-  const isInStock = product.in_stock !== false;
-
-  // Identify if this is an accessory (Syringes/Prep Pads)
   const isAccessory = product.category === "Accessories";
 
   const handleAddToCart = (e) => {
     e.preventDefault();
-
-    if (isInStock && selectedVariant) {
+    if (canBuy && selectedVariant) {
       addToCart(
         {
           ...product,
@@ -71,22 +86,17 @@ export default function ProductCard({ product, loading }) {
 
   return (
     <div className="product-card">
-      {/* LINK WRAPPER */}
       <Link to={`/product/${product.id}`} className="card-image-wrapper">
-        {isInStock ? (
-          <div className="status-badge-subtle">
-            <span className="status-dot"></span> In Stock
-          </div>
-        ) : (
-          <div className="status-badge-subtle out-of-stock">
-            <span className="status-dot"></span> Out of Stock
-          </div>
-        )}
+        {/* DYNAMIC BADGE */}
+        <div className={`status-badge-subtle ${badgeStatus}`}>
+          <span className="status-dot"></span> {badgeText}
+        </div>
 
         <img
           src={displayImage}
           alt={`${product.name} - ${selectedVariant?.size_label || ""}`}
           loading="lazy"
+          style={{ opacity: canBuy ? 1 : 0.6, transition: "opacity 0.3s" }}
         />
       </Link>
 
@@ -99,7 +109,6 @@ export default function ProductCard({ product, loading }) {
             <h3 className="product-name">{product.name}</h3>
           </Link>
 
-          {/* HIDE PURITY/CAS FOR SYRINGES & PREP PADS */}
           {!isAccessory && (
             <div className="science-meta">
               <span>PURITY: &gt;99%</span>
@@ -108,7 +117,6 @@ export default function ProductCard({ product, loading }) {
           )}
         </div>
 
-        {/* PRICE & SELECTOR ROW */}
         <div className="selector-row">
           <div className="price-container">
             <span className="product-price">
@@ -119,29 +127,38 @@ export default function ProductCard({ product, loading }) {
           </div>
 
           <div className="variant-pills">
-            {sortedVariants.map((v) => (
-              <button
-                key={v.id}
-                className={`variant-pill ${
-                  selectedVariant?.id === v.id ? "active" : ""
-                }`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedVariant(v);
-                }}
-              >
-                {v.size_label}
-              </button>
-            ))}
+            {sortedVariants.map((v) => {
+              const isVStock = v.in_stock !== false;
+              return (
+                <button
+                  key={v.id}
+                  className={`variant-pill ${
+                    selectedVariant?.id === v.id ? "active" : ""
+                  } ${!isVStock ? "pill-disabled" : ""}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedVariant(v);
+                  }}
+                  title={!isVStock ? "Out of Stock" : ""}
+                >
+                  {v.size_label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <button
           className="buy-btn"
-          disabled={!isInStock}
+          disabled={!canBuy}
           onClick={handleAddToCart}
+          style={{
+            backgroundColor: canBuy ? "var(--primary)" : "#94a3b8",
+            cursor: canBuy ? "pointer" : "not-allowed",
+            opacity: canBuy ? 1 : 0.7,
+          }}
         >
-          {isInStock ? "Add to Cart" : "Out of Stock"}
+          {canBuy ? "Add to Cart" : "Out of Stock"}
         </button>
       </div>
     </div>

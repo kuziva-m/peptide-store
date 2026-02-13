@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route, useLocation } from "react-router-dom"; // <--- Added useLocation
+import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -22,30 +22,34 @@ import Success from "./pages/Success";
 import Calculator from "./pages/Calculator";
 import TrackOrder from "./pages/TrackOrder";
 import WriteReview from "./pages/WriteReview";
-import Terms from "./pages/Terms"; // <--- 1. ADDED IMPORT HERE
+import Terms from "./pages/Terms";
+import Landing from "./pages/Landing"; // <--- 1. IMPORT LANDING
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
 
-  // Check if we are currently in the Admin Panel
-  const isAdmin = location.pathname.startsWith("/admin");
+  // Logic to hide layout elements (Navbar, Footer, etc.)
+  // We hide them if we are in Admin Panel OR on the Landing Page
+  const isHiddenPage =
+    location.pathname.startsWith("/admin") || location.pathname === "/landing";
 
   return (
     <div
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
     >
-      {/* HIDE Announcement Bar on Admin */}
-      {!isAdmin && <AnnouncementBar />}
+      {/* HIDE Announcement Bar on Hidden Pages */}
+      {!isHiddenPage && <AnnouncementBar />}
 
       <ScrollToTop />
 
-      {/* HIDE Navbar (Header/Search) on Admin */}
-      {!isAdmin && (
+      {/* HIDE Navbar on Hidden Pages */}
+      {!isHiddenPage && (
         <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       )}
 
-      <CartDrawer />
+      {/* HIDE Cart Drawer on Hidden Pages */}
+      {!isHiddenPage && <CartDrawer />}
 
       <div style={{ flex: 1 }}>
         <Routes>
@@ -59,21 +63,23 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/shipping" element={<Shipping />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />{" "}
-          {/* <--- 2. ADDED ROUTE HERE */}
+          <Route path="/terms" element={<Terms />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/success" element={<Success />} />
+
+          {/* <--- 2. ADD LANDING ROUTE */}
+          <Route path="/landing" element={<Landing />} />
         </Routes>
       </div>
 
       <Toast />
 
-      {/* HIDE Chat & Popups on Admin */}
-      {!isAdmin && <WhatsAppButton />}
-      {!isAdmin && <DiscountPopup />}
+      {/* HIDE Chat & Popups on Hidden Pages */}
+      {!isHiddenPage && <WhatsAppButton />}
+      {!isHiddenPage && <DiscountPopup />}
 
-      {/* HIDE Footer on Admin */}
-      {!isAdmin && <Footer />}
+      {/* HIDE Footer on Hidden Pages */}
+      {!isHiddenPage && <Footer />}
     </div>
   );
 }

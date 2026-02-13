@@ -1,0 +1,292 @@
+/* --- SECTION BACKGROUND (TRANSPARENT) --- */
+.spotlight-section-bg {
+  background: transparent;
+  padding: 40px 0;
+  box-shadow: none;
+  border: none;
+  margin-bottom: 60px;
+  position: relative;
+  text-align: center;
+}
+
+.spotlight-section-bg::before {
+  display: none;
+}
+
+.spotlight-section-bg .section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.section-intro {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 50px auto;
+  display: block;
+  color: #cbd5e1; /* Light Grey text */
+}
+
+/* --- COMPOUND CARDS --- */
+.product-spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  perspective: 1000px;
+  margin-top: 40px;
+  justify-content: center;
+}
+
+.flip-card {
+  height: 520px;
+  width: 100%;
+  max-width: 350px;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.flip-card:hover {
+  transform: translateY(-8px);
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 12px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.flip-card-front {
+  background: rgba(30, 41, 59, 0.8); /* Dark Glass */
+  backdrop-filter: blur(10px);
+}
+
+.flip-card-back {
+  background: #1e293b; /* Solid Dark */
+  color: white;
+  transform: rotateY(180deg);
+  border-color: #475569;
+}
+
+/* PRODUCT IMAGE STYLES */
+.product-image-container {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  background: white; /* Keep image bg white for clarity */
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.spotlight-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.5s ease;
+}
+
+.flip-card:hover .spotlight-product-img {
+  transform: scale(1.05);
+}
+
+.placeholder-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+}
+
+/* TEXT */
+.spotlight-card h4 {
+  color: white;
+  margin: 0 0 12px 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.specs span {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  color: #cbd5e1;
+}
+
+.spotlight-card p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0 0 auto 0;
+  flex: 1;
+}
+
+/* PURITY BAR */
+.purity-bar {
+  margin-top: 24px;
+}
+.purity-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.purity-value {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.purity-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.purity-fill {
+  height: 100%;
+  border-radius: 4px;
+  width: 0;
+  animation: fill-bar 2s ease-out forwards;
+}
+@keyframes fill-bar {
+  to {
+    width: 99.8%;
+  }
+}
+
+.blue-fill {
+  background: #3b82f6;
+}
+.green-fill {
+  background: #003f7a;
+}
+.orange-fill {
+  background: #010036;
+}
+
+.card-hint {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* BACK OF CARD STYLES */
+.flip-card-back h4 {
+  color: white;
+  margin-bottom: 24px;
+}
+.flip-card-back.blue-theme {
+  border-top: 4px solid #3b82f6;
+}
+.flip-card-back.green-theme {
+  border-top: 4px solid #10b981;
+}
+.flip-card-back.orange-theme {
+  border-top: 4px solid #f97316;
+}
+
+.tech-specs {
+  flex: 1;
+}
+.tech-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9rem;
+}
+.tech-row:last-child {
+  border-bottom: none;
+}
+.tech-row span:first-child {
+  color: #94a3b8;
+  font-weight: 500;
+}
+.tech-row span:last-child {
+  font-weight: 700;
+  color: white;
+}
+
+.spin-continuous {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.text-muted {
+  color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+  .product-spotlight-grid {
+    grid-template-columns: 1fr;
+  }
+  .flip-card {
+    height: 500px;
+  }
+  .flip-card-front,
+  .flip-card-back {
+    padding: 24px;
+  }
+  .spotlight-section-bg {
+    padding: 40px 0;
+    border-radius: 0;
+  }
+}

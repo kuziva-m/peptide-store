@@ -1,3 +1,4 @@
+/* --- EXISTING STYLES --- */
 .product-card {
   background: var(--bg-surface);
   border: 1px solid transparent;
@@ -16,18 +17,15 @@
   box-shadow: var(--shadow-hover);
 }
 
-/* --- IMAGE SECTION --- */
 .card-image-wrapper {
   background: radial-gradient(circle at center, #ffffff 50%, #f1f5f9 100%);
   height: 280px;
   width: 100%;
   padding: 30px;
-
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-
   text-decoration: none;
   color: inherit;
   border-bottom: 1px solid var(--border);
@@ -43,7 +41,6 @@
   transition: all 0.4s ease-out;
   display: block;
   margin: 0 auto;
-
   filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
 }
 
@@ -52,44 +49,53 @@
   filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.15));
 }
 
-/* --- BADGE --- */
+/* --- BADGE STYLES (UPDATED) --- */
 .status-badge-subtle {
   position: absolute !important;
   top: 12px;
   left: 12px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(4px);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--clinical-teal);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--clinical-teal); /* Default Green */
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(13, 148, 136, 0.2);
   z-index: 10;
   pointer-events: none;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   background-color: var(--clinical-teal);
   border-radius: 50%;
+  display: inline-block;
 }
 
-/* --- OUT OF STOCK BADGE VARIANT --- */
+/* Red for Sold Out */
 .status-badge-subtle.out-of-stock {
-  color: #ef4444; /* Red */
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
 }
-
 .status-badge-subtle.out-of-stock .status-dot {
   background-color: #ef4444;
+}
+
+/* Grey for Unavailable (Product Disabled) */
+.status-badge-subtle.unavailable {
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+.status-badge-subtle.unavailable .status-dot {
+  background-color: #94a3b8;
 }
 
 /* --- CONTENT --- */
@@ -196,6 +202,22 @@
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
 }
 
+/* Disabled Pills (Strikethrough) */
+.pill-disabled {
+  opacity: 0.6;
+  text-decoration: line-through;
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+}
+
+.pill-disabled.active {
+  text-decoration: none; /* Show text clearly if selected so user knows WHAT is out of stock */
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
 /* --- BUTTON --- */
 .buy-btn {
   width: 100%;
@@ -232,14 +254,7 @@
   box-shadow: none;
 }
 
-.no-image-placeholder {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  opacity: 0.6;
-}
-
-/* --- SKELETON SPECIFIC --- */
+/* SKELETON */
 .skeleton-card {
   pointer-events: none;
   border: 1px solid var(--border);

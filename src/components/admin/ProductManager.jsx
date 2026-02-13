@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import imageCompression from "browser-image-compression";
 import {
   Trash2,
   Edit2,
@@ -10,10 +11,13 @@ import {
   Image as ImageIcon,
   Upload,
   Loader,
-  Save, // Added Save Icon
+  Save,
+  CheckCircle,
+  XCircle,
+  Box, // Added icon for stock
 } from "lucide-react";
 
-// --- UPDATED CATEGORIES LIST ---
+// --- CATEGORIES LIST ---
 const CATEGORIES = ["Peptides", "Peptide Blends", "Accessories"];
 const STORAGE_BUCKET = "product-images";
 
@@ -24,6 +28,8 @@ export default function ProductManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  // New Product Form State
   const [newProductName, setNewProductName] = useState("");
   const [newProductCategory, setNewProductCategory] = useState("Peptides");
   const [newProductImage, setNewProductImage] = useState("");
@@ -78,27 +84,36 @@ export default function ProductManager() {
     }
   };
 
-  // --- IMAGE UPLOAD LOGIC ---
   const handleImageUpload = async (file) => {
     if (!file) return;
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(filePath, file);
+    const options = {
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+    };
 
-    if (uploadError) {
-      alert("Upload failed: " + uploadError.message);
+    try {
+      const compressedFile = await imageCompression(file, options);
+      const fileExt = compressedFile.name.split(".").pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(filePath, compressedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      alert("Upload failed: " + error.message);
       return null;
     }
-
-    const { data } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
   };
 
   const filteredProducts = products.filter((p) => {
@@ -189,7 +204,7 @@ export default function ProductManager() {
                 style={{ ...styles.input, height: "80px" }}
                 value={newProductDesc}
                 onChange={(e) => setNewProductDesc(e.target.value)}
-                placeholder="Short description for SEO and product page..."
+                placeholder="Short description..."
               />
             </div>
             <div style={{ gridColumn: "span 2" }}>
@@ -272,19 +287,34 @@ function ProductRow({
   handleImageUpload,
 }) {
   const [variants, setVariants] = useState(product.variants || []);
-
-  // NEW: Controlled state for Product Details
   const [name, setName] = useState(product.name);
   const [image, setImage] = useState(product.image_url);
   const [isSaving, setIsSaving] = useState(false);
+  const [inStock, setInStock] = useState(product.in_stock);
 
-  // Sync state if product prop updates (e.g. from parent refresh)
   useEffect(() => {
     setName(product.name);
     setImage(product.image_url);
+    setInStock(product.in_stock);
   }, [product]);
 
-  // Save Function for Name/Image
+  const handleToggleStock = async (e) => {
+    e.stopPropagation();
+    const newStatus = !inStock;
+    setInStock(newStatus);
+
+    const { error } = await supabase
+      .from("products")
+      .update({ in_stock: newStatus })
+      .eq("id", product.id);
+
+    if (error) {
+      console.error(error);
+      setInStock(!newStatus);
+      alert("Failed to update stock status");
+    }
+  };
+
   const handleSaveDetails = async () => {
     setIsSaving(true);
     const { error } = await supabase
@@ -293,12 +323,7 @@ function ProductRow({
       .eq("id", product.id);
 
     setIsSaving(false);
-
-    if (error) {
-      alert("Failed to save: " + error.message);
-    } else {
-      // Optional: you could add a toast here
-    }
+    if (error) alert("Failed to save: " + error.message);
   };
 
   const addVariant = async () => {
@@ -308,6 +333,7 @@ function ProductRow({
         product_id: product.id,
         size_label: "10 Pack",
         price: 10,
+        in_stock: true, // Default new variants to in stock
       })
       .select()
       .single();
@@ -334,7 +360,6 @@ function ProductRow({
       <div style={styles.productHeader}>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <div style={styles.imgThumbnail}>
-            {/* Use local state 'image' for immediate feedback */}
             {image ? (
               <img src={image} alt={name} style={styles.img} />
             ) : (
@@ -342,12 +367,35 @@ function ProductRow({
             )}
           </div>
           <div>
-            {/* Use local state 'name' for immediate feedback */}
             <h4 style={{ margin: 0, fontSize: "1rem" }}>{name}</h4>
             <span style={styles.badge}>{product.category}</span>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={handleToggleStock}
+            style={{
+              ...styles.stockBtn,
+              backgroundColor: inStock ? "#dcfce7" : "#fee2e2",
+              color: inStock ? "#166534" : "#991b1b",
+              border: inStock ? "1px solid #bbf7d0" : "1px solid #fecaca",
+            }}
+            title={
+              inStock ? "Mark Product Out of Stock" : "Mark Product In Stock"
+            }
+          >
+            {inStock ? (
+              <>
+                <CheckCircle size={14} /> Product Active
+              </>
+            ) : (
+              <>
+                <XCircle size={14} /> Product Inactive
+              </>
+            )}
+          </button>
+
           <button onClick={onToggle} style={styles.iconBtn}>
             {isExpanded ? <ChevronUp size={20} /> : <Edit2 size={20} />}
           </button>
@@ -360,7 +408,6 @@ function ProductRow({
         </div>
       </div>
 
-      {/* EXPANDED EDIT MODE */}
       {isExpanded && (
         <div style={styles.expandedPanel}>
           <div style={{ marginBottom: "20px", display: "grid", gap: "15px" }}>
@@ -387,16 +434,13 @@ function ProductRow({
                     hidden
                     onChange={async (e) => {
                       const url = await handleImageUpload(e.target.files[0]);
-                      if (url) {
-                        setImage(url); // Update local state immediately
-                      }
+                      if (url) setImage(url);
                     }}
                   />
                 </label>
               </div>
             </div>
 
-            {/* NEW SAVE BUTTON */}
             <button
               onClick={handleSaveDetails}
               style={{
@@ -436,16 +480,20 @@ function ProductRow({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "80px 80px 1fr 1fr 30px",
+                gridTemplateColumns: "100px 80px 100px 1fr 1fr 30px", // Adjusted grid
                 gap: "10px",
                 paddingLeft: "10px",
+                fontSize: "0.8rem",
+                color: "#64748b",
+                fontWeight: "bold",
               }}
             >
-              <small>Size</small>
-              <small>Price ($)</small>
-              <small>Image URL</small>
-              <small>Upload</small>
-              <small></small>
+              <span>Stock Status</span>
+              <span>Size</span>
+              <span>Price ($)</span>
+              <span>Image URL</span>
+              <span>Upload</span>
+              <span></span>
             </div>
             {variants.map((v) => (
               <VariantRow
@@ -467,15 +515,43 @@ function ProductRow({
 }
 
 function VariantRow({ data, update, onDelete, handleImageUpload }) {
+  // Safe toggle for existing rows that might not have in_stock yet
+  const isInStock = data.in_stock !== false;
+
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "80px 80px 1fr 1fr 30px", // Adjusted grid
+        gridTemplateColumns: "100px 80px 100px 1fr 1fr 30px",
         gap: "10px",
         alignItems: "center",
+        padding: "10px",
+        backgroundColor: "white",
+        borderRadius: "8px",
+        border: "1px solid #e2e8f0",
       }}
     >
+      {/* VARIANT STOCK TOGGLE */}
+      <button
+        onClick={() => update(data.id, "in_stock", !isInStock)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          padding: "4px 8px",
+          borderRadius: "4px",
+          fontSize: "0.75rem",
+          fontWeight: "600",
+          border: "none",
+          cursor: "pointer",
+          backgroundColor: isInStock ? "#dcfce7" : "#fee2e2",
+          color: isInStock ? "#166534" : "#991b1b",
+          width: "fit-content",
+        }}
+      >
+        {isInStock ? "In Stock" : "Out of Stock"}
+      </button>
+
       <input
         value={data.size_label}
         onChange={(e) => update(data.id, "size_label", e.target.value)}
@@ -489,14 +565,12 @@ function VariantRow({ data, update, onDelete, handleImageUpload }) {
         style={styles.inputSmall}
         placeholder="$$"
       />
-      {/* Variant Image URL Input */}
       <input
         value={data.image_url || ""}
         onChange={(e) => update(data.id, "image_url", e.target.value)}
         style={styles.inputSmall}
         placeholder="Image URL"
       />
-      {/* Variant Upload Button */}
       <label style={styles.uploadBtnSmall}>
         <Upload size={14} style={{ marginRight: 4 }} />
         <span style={{ fontSize: "0.75rem" }}>Upload</span>
@@ -505,9 +579,7 @@ function VariantRow({ data, update, onDelete, handleImageUpload }) {
           hidden
           onChange={async (e) => {
             const url = await handleImageUpload(e.target.files[0]);
-            if (url) {
-              update(data.id, "image_url", url);
-            }
+            if (url) update(data.id, "image_url", url);
           }}
         />
       </label>
@@ -527,7 +599,6 @@ function VariantRow({ data, update, onDelete, handleImageUpload }) {
   );
 }
 
-// --- STYLES ---
 const styles = {
   header: {
     display: "flex",
@@ -659,6 +730,17 @@ const styles = {
     cursor: "pointer",
     padding: "8px",
     color: "#64748b",
+  },
+  stockBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    fontSize: "0.8rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s",
   },
   expandedPanel: {
     background: "#f8fafc",
