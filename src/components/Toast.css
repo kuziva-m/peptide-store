@@ -1,0 +1,55 @@
+.toast-notification {
+  position: fixed;
+  /* Moved up from bottom: 24px to bottom: 100px */
+  bottom: 100px;
+  right: 24px;
+  background-color: #10b981; /* Emerald Green */
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  z-index: 9999;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px); /* Subtle slide up */
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* On mobile, center it at the top instead to be extra safe */
+@media (max-width: 600px) {
+  .toast-notification {
+    bottom: auto;
+    top: 24px;
+    right: 50%;
+    transform: translateX(50%);
+    width: 90%;
+    justify-content: center;
+    animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translate(50%, -20px);
+      opacity: 0;
+    }
+    to {
+      transform: translate(50%, 0);
+      opacity: 1;
+    }
+  }
+}

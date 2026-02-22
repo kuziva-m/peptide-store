@@ -1,0 +1,413 @@
+/* src/pages/Calculator.css */
+
+.calc-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* HEADER */
+.calc-page-header {
+  text-align: center;
+  margin-bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background-color: #f0f4ff; /* var(--science-blue) tint */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.calc-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--medical-navy);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.calc-subtitle {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+/* GRID LAYOUT */
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+/* INPUT SECTION */
+.calc-card {
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.section-label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+}
+
+/* --- NEW: SYRINGE SELECTOR --- */
+.selector-container {
+  margin-bottom: 0;
+}
+
+.syringe-select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.syringe-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 8px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-muted);
+}
+
+.syringe-option:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+}
+
+.syringe-option.selected {
+  border-color: var(--primary);
+  background-color: #f0f4ff;
+  color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(70, 53, 222, 0.15);
+  transform: translateY(-2px);
+}
+
+.syringe-icon {
+  transition: transform 0.2s;
+}
+
+.selected-name-display {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  text-align: center;
+}
+
+.selected-name-display span {
+  font-weight: 600;
+  color: var(--medical-navy);
+}
+
+.divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 24px 0;
+}
+
+/* INPUT FIELDS */
+.inputs-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--medical-navy);
+  margin-bottom: 8px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: var(--font-main);
+  transition: all 0.2s;
+  background-color: #fcfcfc;
+  color: var(--medical-navy);
+}
+
+.input-wrapper input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(70, 53, 222, 0.1);
+}
+
+.unit-badge {
+  position: absolute;
+  right: 12px;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  pointer-events: none;
+  border: 1px solid #e2e8f0;
+}
+
+.helper-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* RESULT SECTION */
+.result-column {
+  position: sticky;
+  top: 100px;
+}
+
+.result-card {
+  background: var(--medical-navy);
+  color: white;
+  padding: 32px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.result-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at top right,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.res-badge {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  display: inline-block;
+  backdrop-filter: blur(4px);
+}
+
+.result-header h3 {
+  color: white;
+  margin: 0 0 6px 0;
+}
+
+.concentration-text {
+  color: var(--clinical-teal); /* Brand Teal */
+  background: rgba(13, 148, 136, 0.1);
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* RESULT MAIN BOX */
+.result-main {
+  margin: 24px 0;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.result-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.big-number {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  margin: 8px 0;
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.unit-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #818cf8; /* Lighter primary for dark bg */
+}
+
+.syringe-type-text {
+  font-size: 0.8rem;
+  margin-top: 8px;
+  opacity: 0.6;
+}
+
+/* SUMMARY BOX */
+.summary-box {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.summary-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-row span {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.summary-row strong {
+  font-size: 1.1rem;
+}
+
+/* SYRINGE VISUALIZER */
+.syringe-wrapper {
+  margin-top: 10px;
+}
+
+.syringe-container {
+  height: 50px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 8px;
+}
+
+.syringe-fill {
+  height: 100%;
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.syringe-plunger {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #334155;
+  transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateX(-100%); /* Align right edge to fill */
+}
+
+.syringe-ticks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 9%,
+    rgba(0, 0, 0, 0.4) 10%
+  );
+  z-index: 2;
+  opacity: 0.3;
+}
+
+.syringe-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  padding: 0 4px;
+}
+
+/* MOBILE OPTIMIZATION */
+@media (max-width: 900px) {
+  .calc-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .result-column {
+    position: static;
+    order: -1;
+  }
+
+  .calc-page-header {
+    margin-bottom: 30px;
+  }
+
+  .calc-title {
+    font-size: 1.8rem;
+  }
+
+  /* HIDE SYRINGE VISUAL ON MOBILE */
+  .syringe-wrapper {
+    display: none;
+  }
+
+  /* MAKE RESULT CARD MORE COMPACT */
+  .result-card {
+    padding: 24px;
+  }
+
+  .result-main {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .big-number {
+    font-size: 3rem;
+  }
+
+  .unit-label {
+    font-size: 1rem;
+  }
+}

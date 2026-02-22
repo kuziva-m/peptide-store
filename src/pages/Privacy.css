@@ -1,0 +1,161 @@
+.privacy-page {
+  padding: 80px 0;
+  background-color: var(--bg-body);
+}
+
+.privacy-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.privacy-header h1 {
+  font-size: 2.5rem;
+  color: var(--medical-navy);
+  margin-bottom: 10px;
+}
+
+.last-updated {
+  display: inline-block;
+  background: white;
+  padding: 6px 16px;
+  border-radius: 50px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.privacy-content {
+  background: white;
+  padding: 60px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.privacy-content section {
+  margin-bottom: 50px;
+}
+
+.privacy-content section:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-content h2 {
+  font-size: 1.5rem;
+  color: var(--medical-navy);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.privacy-content p {
+  color: #334155;
+  line-height: 1.8;
+  margin-bottom: 15px;
+}
+
+.highlight-box {
+  background: #f8fafc;
+  padding: 20px;
+  border-left: 4px solid var(--primary);
+  border-radius: 4px;
+  font-weight: 500;
+  color: var(--medical-navy) !important;
+}
+
+.styled-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.styled-list li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 12px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.styled-list li::before {
+  content: "•";
+  color: var(--clinical-teal);
+  font-weight: bold;
+  font-size: 1.2rem;
+  position: absolute;
+  left: 0;
+  top: -2px;
+}
+
+.styled-list strong {
+  color: var(--medical-navy);
+}
+
+/* 2 Column Grid for "How We Use" */
+.grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.info-card {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.info-card h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+.info-card p {
+  font-size: 0.9rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.contact-section {
+  text-align: center;
+  background: var(--medical-navy);
+  color: white;
+  padding: 40px !important;
+  border-radius: 12px;
+  margin-top: 60px;
+}
+
+.contact-section h2,
+.contact-section p {
+  color: white;
+}
+
+.contact-btn {
+  display: inline-block;
+  margin-top: 15px;
+  background: white;
+  color: var(--medical-navy);
+  padding: 12px 24px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+.contact-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .privacy-content {
+    padding: 30px 20px;
+  }
+  .grid-2-col {
+    grid-template-columns: 1fr;
+  }
+}

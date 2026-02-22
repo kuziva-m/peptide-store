@@ -1,0 +1,240 @@
+.product-page {
+  padding-top: 40px;
+  padding-bottom: 80px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  margin-bottom: 30px;
+  transition: color 0.2s;
+}
+.back-link:hover {
+  color: var(--primary);
+}
+
+.product-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+}
+
+/* IMAGE */
+.main-image-frame {
+  background-color: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.main-image-frame img {
+  max-width: 90%;
+  max-height: 90%;
+  mix-blend-mode: multiply;
+  object-fit: contain;
+}
+
+/* INFO */
+.p-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--medical-navy);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+
+.p-meta {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.p-badge {
+  background: #f1f5f9;
+  color: var(--medical-navy);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.p-price {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 24px;
+  font-family: var(--font-mono);
+}
+
+/* VARIANTS */
+.p-variants label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-main);
+}
+
+.variant-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.p-variant-btn {
+  padding: 12px 24px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.p-variant-btn:hover {
+  border-color: var(--primary);
+}
+
+.p-variant-btn.active {
+  border-color: var(--primary);
+  background-color: var(--science-blue);
+  color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(70, 53, 222, 0.2);
+}
+
+/* ACTION */
+.p-add-btn {
+  width: 100%;
+  padding: 18px;
+  background-color: var(--medical-navy);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 40px;
+  transition: background 0.2s;
+}
+
+.p-add-btn:hover {
+  background-color: var(--primary);
+}
+
+/* DESCRIPTION */
+.p-description {
+  border-top: 1px solid var(--border);
+  padding-top: 30px;
+  margin-bottom: 30px;
+}
+
+.p-description h3 {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+
+.p-description p {
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+/* LAB RESULTS ACCORDION */
+.lab-accordion {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 30px;
+}
+
+.lab-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--medical-navy);
+  font-size: 1.1rem;
+  list-style: none; /* Removes default triangle */
+}
+
+.lab-summary::-webkit-details-marker {
+  display: none; /* Removes default triangle in Chrome/Safari */
+}
+
+.lab-content {
+  padding-bottom: 20px;
+}
+
+.lab-preview-container {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: zoom-in;
+}
+
+.lab-preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.view-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: var(--medical-navy);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* TRUST */
+.p-trust {
+  display: grid;
+  gap: 12px;
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--medical-navy);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.trust-item.warning {
+  color: #d97706;
+}
+
+@media (max-width: 900px) {
+  .product-layout {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+}

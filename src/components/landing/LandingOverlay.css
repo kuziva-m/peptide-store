@@ -1,0 +1,211 @@
+/* --- STICKY NAV --- */
+.sticky-nav {
+  position: fixed;
+  top: -80px;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.sticky-nav.visible {
+  top: 0;
+}
+
+.nav-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+.nav-links button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 8px 16px;
+  border-radius: 6px;
+}
+.nav-links button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- SCROLL PROGRESS --- */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 1001;
+}
+.scroll-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  transition: width 0.1s ease-out;
+}
+
+/* --- VIEWER BADGE --- */
+.viewer-badge {
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slide-in-left 0.6s ease-out;
+}
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* --- NOTIFICATIONS --- */
+.order-notification {
+  position: fixed;
+  top: 100px;
+  right: -400px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+  min-width: 320px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.order-notification.show {
+  right: 30px;
+}
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.notification-icon {
+  color: #10b981;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.notification-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.5;
+}
+.notification-text strong {
+  color: #0f172a;
+  display: block;
+  margin-bottom: 2px;
+}
+.notification-time {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* --- FLOATING CTA --- */
+.floating-cta {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+  transition: all 0.3s;
+  z-index: 998;
+}
+.floating-cta:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 15px 30px -5px rgba(59, 130, 246, 0.6);
+}
+.rotate-up {
+  transform: rotate(-90deg);
+}
+
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
+  .viewer-badge {
+    bottom: 20px;
+    left: 20px;
+    font-size: 0.75rem;
+    padding: 8px 12px;
+  }
+  .order-notification.show {
+    right: 20px;
+  }
+  .floating-cta {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
