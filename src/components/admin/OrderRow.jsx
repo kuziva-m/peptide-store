@@ -211,9 +211,65 @@ export function OrderRow({
     });
   };
 
+  // --- NEW: Save Edited Details ---
+  const handleSaveEdit = async () => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          customer_name: formData.name,
+          customer_email: formData.email,
+          shipping_address: {
+            phone: formData.phone,
+            line1: formData.line1,
+            line2: formData.line2,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postal_code,
+            country: formData.country,
+          },
+        })
+        .eq("id", order.id);
+
+      if (error) throw error;
+
+      showToast("Order details updated successfully!");
+      setIsEditing(false);
+      onUpdate();
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating order details.");
+    }
+  };
+
+  // --- NEW: Hard Delete Order ---
+  const handleDeleteOrder = async () => {
+    promptConfirm(
+      "Delete Order",
+      "Are you absolutely sure? This will permanently delete the order from the database and cannot be undone.",
+      async () => {
+        try {
+          const { error } = await supabase
+            .from("orders")
+            .delete()
+            .eq("id", order.id);
+
+          if (error) throw error;
+
+          showToast("Order deleted successfully!");
+          onUpdate(); // Refresh the parent list to remove it from the screen
+        } catch (err) {
+          console.error("Error deleting order:", err);
+          showToast("Failed to delete order. Check console.");
+        }
+      },
+      true, // Flags it as a red/destructive action in your promptConfirm
+    );
+  };
+
   const getStatusStyle = (s) => {
     switch (s) {
-      case "pending": // NEW: Handle pending manual orders
+      case "pending":
       case "payment_reported":
         return {
           bg: "#fff7ed",
@@ -309,213 +365,34 @@ export function OrderRow({
 
       {isExpanded && (
         <div style={styles.expandedPanel}>
-          {/* VERIFY PAYMENT BOX FOR PENDING ORDERS */}
-          {(order.status === "pending" ||
-            order.status === "payment_reported" ||
-            order.status === "pending_contact") && (
+          {isEditing ? (
+            /* ============================== */
+            /* 📝 EDIT MODE UI                */
+            /* ============================== */
             <div
               style={{
-                background: "#fff7ed",
-                border: "1px solid #fed7aa",
+                padding: "10px",
+                background: "#f8fafc",
                 borderRadius: "8px",
-                padding: "16px",
-                marginBottom: "20px",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                border: "1px solid #e2e8f0",
               }}
             >
-              <h4
-                style={{
-                  margin: "0 0 10px 0",
-                  color: "#9a3412",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <AlertTriangle size={18} /> Review Payment Proof
-              </h4>
               <div
                 style={{
-                  display: "flex",
-                  gap: "15px",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                }}
-              >
-                {order.receipt_url ? (
-                  <a
-                    href={order.receipt_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      background: "white",
-                      padding: "10px 16px",
-                      borderRadius: "6px",
-                      border: "1px solid #fdba74",
-                      color: "#c2410c",
-                      fontWeight: "bold",
-                      textDecoration: "none",
-                    }}
-                  >
-                    <ImageIcon size={18} /> View Payment Screenshot
-                  </a>
-                ) : (
-                  <span
-                    style={{
-                      color: "#ef4444",
-                      fontWeight: "bold",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <XCircle size={18} /> No Screenshot Sent
-                  </span>
-                )}
-                <div
-                  style={{ display: "flex", gap: "8px", marginLeft: "auto" }}
-                >
-                  <button
-                    onClick={handleRejectPayment}
-                    style={{
-                      background: "#fee2e2",
-                      color: "#b91c1c",
-                      border: "1px solid #fecaca",
-                      padding: "8px 16px",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Cancel Order
-                  </button>
-                  <button
-                    onClick={handleApprovePayment}
-                    style={{
-                      background: "#16a34a",
-                      color: "white",
-                      border: "none",
-                      padding: "8px 16px",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <CheckCircle size={16} /> Approve & Move to Paid
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div style={styles.panelGrid}>
-            <div style={{ gridColumn: "span 2" }}>
-              <div style={styles.sectionTitle}>
-                <Package size={14} /> Items
-              </div>
-              <div style={styles.itemsTable}>
-                {displayItems.length === 0 ? (
-                  <div style={{ padding: "10px", color: "#64748b" }}>
-                    No items recorded.
-                  </div>
-                ) : (
-                  displayItems.map((item, i) => {
-                    let sizeText = "";
-                    if (item.variants?.size_label)
-                      sizeText = item.variants.size_label;
-                    else if (typeof item.variant === "string")
-                      sizeText = item.variant;
-                    else if (item.variant?.size_label)
-                      sizeText = item.variant.size_label;
-
-                    const price = item.price_at_purchase || item.price || 0;
-
-                    return (
-                      <div key={i} style={styles.itemRow}>
-                        <span style={styles.itemQty}>{item.quantity}x</span>
-                        <div style={styles.itemInfo}>
-                          <span style={styles.itemName}>
-                            {item.product_name_snapshot ||
-                              item.name ||
-                              "Product"}
-                          </span>
-                          {sizeText && (
-                            <span style={styles.variantLabel}>{sizeText}</span>
-                          )}
-                        </div>
-                        <span style={styles.itemPrice}>
-                          ${price.toFixed(2)}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <div style={{ marginTop: "20px" }}>
-                <div style={styles.sectionTitle}>
-                  <MessageCircle size={14} /> Private Notes
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <textarea
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Details about payment, customer..."
-                    style={styles.noteInput}
-                    rows={2}
-                  />
-                  <button onClick={handleSaveNote} style={styles.saveNoteBtn}>
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.detailCol}>
-              <div style={styles.sectionTitle}>
-                <User size={14} /> Customer
-              </div>
-              <div
-                style={{
-                  fontSize: "0.9rem",
+                  ...styles.sectionTitle,
                   color: "#334155",
-                  lineHeight: "1.6",
+                  marginBottom: "15px",
                 }}
               >
-                <div style={{ fontWeight: "bold" }}>{order.customer_name}</div>
-                <div>{order.customer_email}</div>
-                <div>{order.shipping_address?.phone}</div>
-                <hr
-                  style={{
-                    margin: "10px 0",
-                    border: "0",
-                    borderTop: "1px solid #e2e8f0",
-                  }}
-                />
-                <div>{order.shipping_address?.line1}</div>
-                <div>
-                  {order.shipping_address?.city},{" "}
-                  {order.shipping_address?.state}{" "}
-                  {order.shipping_address?.postal_code}
-                </div>
+                <Edit2 size={16} /> Edit Order Details
               </div>
 
               <div
                 style={{
-                  marginTop: "auto",
-                  display: "flex",
-                  flexDirection: "column",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
                   gap: "10px",
-                  background: "#f8fafc",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
+                  marginBottom: "20px",
                 }}
               >
                 <div>
@@ -524,21 +401,20 @@ export function OrderRow({
                       fontSize: "0.75rem",
                       fontWeight: "bold",
                       color: "#64748b",
-                      display: "block",
-                      marginBottom: "4px",
                     }}
                   >
-                    Tracking Number
+                    Customer Name
                   </label>
                   <input
-                    placeholder="Paste AusPost tracking here..."
-                    value={quickTracking}
-                    onChange={(e) => setQuickTracking(e.target.value)}
                     style={{
                       ...styles.input,
                       width: "100%",
                       background: "white",
                     }}
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                   />
                 </div>
                 <div>
@@ -547,54 +423,512 @@ export function OrderRow({
                       fontSize: "0.75rem",
                       fontWeight: "bold",
                       color: "#64748b",
-                      display: "block",
-                      marginBottom: "4px",
                     }}
                   >
-                    Update Status
+                    Email
                   </label>
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
+                  <input
                     style={{
                       ...styles.input,
                       width: "100%",
                       background: "white",
                     }}
-                  >
-                    <option value="paid">Paid (Processing)</option>
-                    <option value="label_created">Label Created</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                  </select>
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                  />
                 </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
+                    Phone
+                  </label>
+                  <input
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
+                    Address Line 1
+                  </label>
+                  <input
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.line1}
+                    onChange={(e) =>
+                      setFormData({ ...formData, line1: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
+                    Address Line 2
+                  </label>
+                  <input
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.line2}
+                    onChange={(e) =>
+                      setFormData({ ...formData, line2: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
+                    City
+                  </label>
+                  <input
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.city}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
+                    State
+                  </label>
+                  <input
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.state}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
+                    Postal Code
+                  </label>
+                  <input
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.postal_code}
+                    onChange={(e) =>
+                      setFormData({ ...formData, postal_code: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  justifyContent: "flex-end",
+                }}
+              >
                 <button
-                  onClick={handleUpdateStatus}
-                  style={{
-                    ...styles.actionBtn,
-                    background: "#0f172a",
-                    color: "white",
-                    borderColor: "#0f172a",
-                    width: "100%",
-                    padding: "10px",
-                    marginTop: "5px",
-                  }}
+                  onClick={() => setIsEditing(false)}
+                  style={{ ...styles.secondaryBtn, background: "white" }}
                 >
-                  Update & Email Customer
+                  Cancel
                 </button>
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleSaveEdit}
                   style={{
-                    ...styles.secondaryBtn,
-                    width: "100%",
-                    marginTop: "10px",
+                    ...styles.actionBtn,
+                    background: "#16a34a",
+                    color: "white",
+                    borderColor: "#16a34a",
+                    display: "flex",
+                    gap: "5px",
+                    alignItems: "center",
                   }}
                 >
-                  <Edit2 size={14} /> Edit Full Order Details
+                  <Save size={16} /> Save Changes
                 </button>
               </div>
             </div>
-          </div>
+          ) : (
+            /* ============================== */
+            /* 👁️ NORMAL VIEW MODE           */
+            /* ============================== */
+            <>
+              {(order.status === "pending" ||
+                order.status === "payment_reported" ||
+                order.status === "pending_contact") && (
+                <div
+                  style={{
+                    background: "#fff7ed",
+                    border: "1px solid #fed7aa",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    marginBottom: "20px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <h4
+                    style={{
+                      margin: "0 0 10px 0",
+                      color: "#9a3412",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <AlertTriangle size={18} /> Review Payment Proof
+                  </h4>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "15px",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                    }}
+                  >
+                    {order.receipt_url ? (
+                      <a
+                        href={order.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          background: "white",
+                          padding: "10px 16px",
+                          borderRadius: "6px",
+                          border: "1px solid #fdba74",
+                          color: "#c2410c",
+                          fontWeight: "bold",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <ImageIcon size={18} /> View Payment Screenshot
+                      </a>
+                    ) : (
+                      <span
+                        style={{
+                          color: "#ef4444",
+                          fontWeight: "bold",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <XCircle size={18} /> No Screenshot Sent
+                      </span>
+                    )}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginLeft: "auto",
+                      }}
+                    >
+                      <button
+                        onClick={handleRejectPayment}
+                        style={{
+                          background: "#fee2e2",
+                          color: "#b91c1c",
+                          border: "1px solid #fecaca",
+                          padding: "8px 16px",
+                          borderRadius: "6px",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel Order
+                      </button>
+                      <button
+                        onClick={handleApprovePayment}
+                        style={{
+                          background: "#16a34a",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 16px",
+                          borderRadius: "6px",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <CheckCircle size={16} /> Approve & Move to Paid
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={styles.panelGrid}>
+                <div style={{ gridColumn: "span 2" }}>
+                  <div style={styles.sectionTitle}>
+                    <Package size={14} /> Items
+                  </div>
+                  <div style={styles.itemsTable}>
+                    {displayItems.length === 0 ? (
+                      <div style={{ padding: "10px", color: "#64748b" }}>
+                        No items recorded.
+                      </div>
+                    ) : (
+                      displayItems.map((item, i) => {
+                        let sizeText = "";
+                        if (item.variants?.size_label)
+                          sizeText = item.variants.size_label;
+                        else if (typeof item.variant === "string")
+                          sizeText = item.variant;
+                        else if (item.variant?.size_label)
+                          sizeText = item.variant.size_label;
+
+                        const price = item.price_at_purchase || item.price || 0;
+
+                        return (
+                          <div key={i} style={styles.itemRow}>
+                            <span style={styles.itemQty}>{item.quantity}x</span>
+                            <div style={styles.itemInfo}>
+                              <span style={styles.itemName}>
+                                {item.product_name_snapshot ||
+                                  item.name ||
+                                  "Product"}
+                              </span>
+                              {sizeText && (
+                                <span style={styles.variantLabel}>
+                                  {sizeText}
+                                </span>
+                              )}
+                            </div>
+                            <span style={styles.itemPrice}>
+                              ${price.toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: "20px" }}>
+                    <div style={styles.sectionTitle}>
+                      <MessageCircle size={14} /> Private Notes
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <textarea
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value)}
+                        placeholder="Details about payment, customer..."
+                        style={styles.noteInput}
+                        rows={2}
+                      />
+                      <button
+                        onClick={handleSaveNote}
+                        style={styles.saveNoteBtn}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.detailCol}>
+                  <div style={styles.sectionTitle}>
+                    <User size={14} /> Customer
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.9rem",
+                      color: "#334155",
+                      lineHeight: "1.6",
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold" }}>
+                      {order.customer_name}
+                    </div>
+                    <div>{order.customer_email}</div>
+                    <div>{order.shipping_address?.phone}</div>
+                    <hr
+                      style={{
+                        margin: "10px 0",
+                        border: "0",
+                        borderTop: "1px solid #e2e8f0",
+                      }}
+                    />
+                    <div>{order.shipping_address?.line1}</div>
+                    <div>
+                      {order.shipping_address?.city},{" "}
+                      {order.shipping_address?.state}{" "}
+                      {order.shipping_address?.postal_code}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "auto",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      background: "#f8fafc",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div>
+                      <label
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          color: "#64748b",
+                          display: "block",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Tracking Number
+                      </label>
+                      <input
+                        placeholder="Paste AusPost tracking here..."
+                        value={quickTracking}
+                        onChange={(e) => setQuickTracking(e.target.value)}
+                        style={{
+                          ...styles.input,
+                          width: "100%",
+                          background: "white",
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          color: "#64748b",
+                          display: "block",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Update Status
+                      </label>
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        style={{
+                          ...styles.input,
+                          width: "100%",
+                          background: "white",
+                        }}
+                      >
+                        <option value="paid">Paid (Processing)</option>
+                        <option value="label_created">Label Created</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleUpdateStatus}
+                      style={{
+                        ...styles.actionBtn,
+                        background: "#0f172a",
+                        color: "white",
+                        borderColor: "#0f172a",
+                        width: "100%",
+                        padding: "10px",
+                        marginTop: "5px",
+                      }}
+                    >
+                      Update & Email Customer
+                    </button>
+
+                    {/* EDIT DETAILS BUTTON */}
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      style={{
+                        ...styles.secondaryBtn,
+                        width: "100%",
+                        marginTop: "10px",
+                      }}
+                    >
+                      <Edit2 size={14} /> Edit Full Order Details
+                    </button>
+
+                    {/* NEW DELETE BUTTON */}
+                    <button
+                      onClick={handleDeleteOrder}
+                      style={{
+                        background: "#fee2e2",
+                        color: "#b91c1c",
+                        border: "1px solid #fecaca",
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <Trash2 size={16} /> Delete Order
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
