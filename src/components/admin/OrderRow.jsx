@@ -56,6 +56,8 @@ export function OrderRow({
     state: order.shipping_address?.state || "",
     postal_code: order.shipping_address?.postal_code || "",
     country: order.shipping_address?.country || "AU",
+    shipping_method: order.shipping_method || "standard",
+    notes: order.notes || "",
   });
 
   // 🛡️ SAFELY PARSE ITEMS 🛡️
@@ -180,6 +182,7 @@ export function OrderRow({
     if (error) showToast("Failed to save note");
     else {
       showToast("Note saved!");
+      setFormData({ ...formData, notes: noteText }); // Keep edit form in sync
       onUpdate();
     }
   };
@@ -211,7 +214,6 @@ export function OrderRow({
     });
   };
 
-  // --- NEW: Save Edited Details ---
   const handleSaveEdit = async () => {
     try {
       const { error } = await supabase
@@ -219,6 +221,8 @@ export function OrderRow({
         .update({
           customer_name: formData.name,
           customer_email: formData.email,
+          shipping_method: formData.shipping_method,
+          notes: formData.notes,
           shipping_address: {
             phone: formData.phone,
             line1: formData.line1,
@@ -234,6 +238,7 @@ export function OrderRow({
       if (error) throw error;
 
       showToast("Order details updated successfully!");
+      setNoteText(formData.notes); // Sync the quick-view note box
       setIsEditing(false);
       onUpdate();
     } catch (err) {
@@ -242,7 +247,6 @@ export function OrderRow({
     }
   };
 
-  // --- NEW: Hard Delete Order ---
   const handleDeleteOrder = async () => {
     promptConfirm(
       "Delete Order",
@@ -257,13 +261,13 @@ export function OrderRow({
           if (error) throw error;
 
           showToast("Order deleted successfully!");
-          onUpdate(); // Refresh the parent list to remove it from the screen
+          onUpdate();
         } catch (err) {
           console.error("Error deleting order:", err);
           showToast("Failed to delete order. Check console.");
         }
       },
-      true, // Flags it as a red/destructive action in your promptConfirm
+      true,
     );
   };
 
@@ -327,6 +331,7 @@ export function OrderRow({
   };
 
   const sStyle = getStatusStyle(order.status);
+  const isExpress = order.shipping_method?.toLowerCase() === "express";
 
   return (
     <div style={styles.orderRow}>
@@ -339,10 +344,55 @@ export function OrderRow({
             <div style={styles.primaryText}>
               {order.customer_name || "Guest"}
             </div>
-            {order.receipt_url && <ImageIcon size={14} color="#d97706" />}
+            {order.receipt_url && (
+              <ImageIcon
+                size={14}
+                color="#d97706"
+                title="Has Payment Receipt"
+              />
+            )}
+            {order.notes && (
+              <MessageCircle size={14} color="#3b82f6" title="Has Notes" />
+            )}
           </div>
           <div style={styles.metaText}>
             #{order.id.slice(0, 8)} • {formatAUSDate(order.created_at)}
+            {/* NEW SHIPPING BADGE */}
+            {isExpress ? (
+              <span
+                style={{
+                  marginLeft: "8px",
+                  background: "#fee2e2",
+                  color: "#b91c1c",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  fontSize: "0.65rem",
+                  fontWeight: "bold",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <Zap size={10} /> EXPRESS
+              </span>
+            ) : (
+              <span
+                style={{
+                  marginLeft: "8px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  fontSize: "0.65rem",
+                  fontWeight: "bold",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <Truck size={10} /> STANDARD
+              </span>
+            )}
           </div>
         </div>
         <div style={styles.colStatus}>
@@ -392,7 +442,7 @@ export function OrderRow({
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "10px",
-                  marginBottom: "20px",
+                  marginBottom: "15px",
                 }}
               >
                 <div>
@@ -469,6 +519,34 @@ export function OrderRow({
                       color: "#64748b",
                     }}
                   >
+                    Shipping Method
+                  </label>
+                  <select
+                    style={{
+                      ...styles.input,
+                      width: "100%",
+                      background: "white",
+                    }}
+                    value={formData.shipping_method}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        shipping_method: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="express">Express</option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#64748b",
+                    }}
+                  >
                     Address Line 1
                   </label>
                   <input
@@ -527,50 +605,85 @@ export function OrderRow({
                     }
                   />
                 </div>
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: "bold",
-                      color: "#64748b",
-                    }}
-                  >
-                    State
-                  </label>
-                  <input
-                    style={{
-                      ...styles.input,
-                      width: "100%",
-                      background: "white",
-                    }}
-                    value={formData.state}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
-                  />
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "10px",
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: "bold",
+                        color: "#64748b",
+                      }}
+                    >
+                      State
+                    </label>
+                    <input
+                      style={{
+                        ...styles.input,
+                        width: "100%",
+                        background: "white",
+                      }}
+                      value={formData.state}
+                      onChange={(e) =>
+                        setFormData({ ...formData, state: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: "bold",
+                        color: "#64748b",
+                      }}
+                    >
+                      Postcode
+                    </label>
+                    <input
+                      style={{
+                        ...styles.input,
+                        width: "100%",
+                        background: "white",
+                      }}
+                      value={formData.postal_code}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          postal_code: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: "bold",
-                      color: "#64748b",
-                    }}
-                  >
-                    Postal Code
-                  </label>
-                  <input
-                    style={{
-                      ...styles.input,
-                      width: "100%",
-                      background: "white",
-                    }}
-                    value={formData.postal_code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, postal_code: e.target.value })
-                    }
-                  />
-                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: "bold",
+                    color: "#64748b",
+                  }}
+                >
+                  Internal Notes
+                </label>
+                <textarea
+                  style={{
+                    ...styles.input,
+                    width: "100%",
+                    background: "white",
+                    minHeight: "60px",
+                  }}
+                  value={formData.notes}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
+                />
               </div>
 
               <div
@@ -806,6 +919,18 @@ export function OrderRow({
                         borderTop: "1px solid #e2e8f0",
                       }}
                     />
+                    <div>
+                      <span style={{ fontWeight: "bold" }}>Shipping:</span>{" "}
+                      <span
+                        style={{
+                          textTransform: "capitalize",
+                          color: isExpress ? "#b91c1c" : "inherit",
+                          fontWeight: isExpress ? "bold" : "normal",
+                        }}
+                      >
+                        {order.shipping_method || "Standard"}
+                      </span>
+                    </div>
                     <div>{order.shipping_address?.line1}</div>
                     <div>
                       {order.shipping_address?.city},{" "}
