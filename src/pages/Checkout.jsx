@@ -10,11 +10,12 @@ import {
   Upload,
   CheckCircle,
   Landmark,
+  Tag,
 } from "lucide-react";
 import "../components/CartDrawer.css";
 
 export default function Checkout() {
-  const { cart, cartTotal } = useCart(); // Removed clearCart here to prevent the redirect bug!
+  const { cart, cartTotal } = useCart();
   const navigate = useNavigate();
 
   // --- PRE-GENERATE ORDER ID ---
@@ -41,6 +42,12 @@ export default function Checkout() {
   });
 
   const [shippingMethod, setShippingMethod] = useState("standard");
+
+  // --- DISCOUNT STATE ---
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountError, setDiscountError] = useState("");
+  const [discountSuccess, setDiscountSuccess] = useState("");
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -75,7 +82,43 @@ export default function Checkout() {
     setTimeout(() => setCopied(""), 2000);
   };
 
-  // --- SHIPPING CALCULATIONS ---
+  // --- DISCOUNT LOGIC ---
+  const handleApplyDiscount = async () => {
+    setDiscountError("");
+    setDiscountSuccess("");
+    const code = discountCode.trim().toUpperCase();
+
+    if (!code) {
+      setDiscountError("Please enter a code.");
+      return;
+    }
+
+    // TODO: You can hook this up to a Supabase "discounts" table later!
+    // For now, here is a hardcoded example for testing:
+    if (code === "10OFF") {
+      const discount = cartTotal * 0.1; // 10% off
+      setDiscountAmount(discount);
+      setDiscountSuccess("10% Off Applied!");
+    } else if (code === "FREESHIP") {
+      setDiscountAmount(14.99); // Flat amount off
+      setDiscountSuccess("Free Shipping Applied!");
+    } else {
+      setDiscountError("Invalid or expired discount code.");
+      setDiscountAmount(0);
+    }
+  };
+
+  const removeDiscount = () => {
+    setDiscountCode("");
+    setDiscountAmount(0);
+    setDiscountSuccess("");
+    setDiscountError("");
+  };
+
+  // --- SHIPPING & TOTAL CALCULATIONS ---
+  // Apply discount to the subtotal (ensuring it doesn't go below 0)
+  const discountedSubtotal = Math.max(0, cartTotal - discountAmount);
+
   const isStandardFree = cartTotal >= 150;
   const isExpressFree = cartTotal >= 250;
 
@@ -90,7 +133,7 @@ export default function Checkout() {
     shippingLabel = isStandardFree ? "Free" : "$9.99";
   }
 
-  const estimatedTotal = cartTotal + shippingCost;
+  const estimatedTotal = discountedSubtotal + shippingCost;
 
   // --- FINAL SUBMIT ---
   const submitOrder = async (e) => {
@@ -139,9 +182,10 @@ export default function Checkout() {
         items: cart,
         receipt_url: receiptUrl,
         status: "pending",
+        discount_code: discountAmount > 0 ? discountCode.toUpperCase() : null, // Save the code!
+        discount_amount: discountAmount > 0 ? discountAmount : 0, // Save the amount!
       };
 
-      // NO .select() or .single() here! This allows guest inserts without triggering RLS read errors.
       const { error: orderError } = await supabase
         .from("orders")
         .insert(orderPayload);
@@ -150,7 +194,6 @@ export default function Checkout() {
 
       // 3. SEND EMAIL NOTIFICATIONS (To Customer & Admin)
       try {
-        // Format items specifically for the email template
         const emailItems = cart.map((item) => ({
           name: item.name,
           quantity: item.quantity,
@@ -176,6 +219,8 @@ export default function Checkout() {
           <div style="text-align: left;">
             <p><strong>Order ID:</strong> #${shortRef}</p>
             <p><strong>Customer:</strong> ${formData.name} (<a href="mailto:${formData.email}">${formData.email}</a>)</p>
+            <p><strong>Subtotal:</strong> $${cartTotal.toFixed(2)}</p>
+            ${discountAmount > 0 ? `<p><strong>Discount (${discountCode.toUpperCase()}):</strong> -$${discountAmount.toFixed(2)}</p>` : ""}
             <p><strong>Order Total:</strong> $${estimatedTotal.toFixed(2)}</p>
             <p><strong>Shipping Speed:</strong> ${shippingMethod === "express" ? "Express" : "Standard"}</p>
             <br/>
@@ -188,17 +233,16 @@ export default function Checkout() {
 
         await supabase.functions.invoke("send-email", {
           body: {
-            to: "info@melbournepeptides.com.au", // Change if you want it sent somewhere else!
+            to: "info@melbournepeptides.com.au",
             subject: `🚨 New Order Received! - #${shortRef}`,
             html: adminHtml,
           },
         });
       } catch (emailErr) {
         console.error("Failed to send notification emails:", emailErr);
-        // We catch this silently so the customer still gets sent to the success page even if Resend glitches!
       }
 
-      // 4. Redirect to Success (Using the pre-generated orderId!)
+      // 4. Redirect to Success
       navigate(`/success?order_id=${orderId}`);
     } catch (err) {
       console.error("Checkout Error:", err);
@@ -506,7 +550,6 @@ export default function Checkout() {
                   boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
                 }}
               >
-                {/* UPDATED: Copyable Account Name */}
                 <div
                   style={{
                     display: "flex",
@@ -892,6 +935,95 @@ export default function Checkout() {
               })}
             </div>
 
+            {/* --- NEW DISCOUNT CODE SECTION --- */}
+            <div style={{ marginBottom: "20px" }}>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <Tag
+                    size={16}
+                    color="#94a3b8"
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Discount code"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value)}
+                    disabled={discountAmount > 0}
+                    style={{
+                      ...inputStyle,
+                      paddingLeft: "36px",
+                      paddingTop: "10px",
+                      paddingBottom: "10px",
+                      background: discountAmount > 0 ? "#f1f5f9" : "white",
+                    }}
+                  />
+                </div>
+                {discountAmount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={removeDiscount}
+                    style={{
+                      background: "#ef4444",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "0 16px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleApplyDiscount}
+                    style={{
+                      background: "#0f172a",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "0 16px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
+              {discountError && (
+                <p
+                  style={{
+                    color: "#ef4444",
+                    fontSize: "12px",
+                    marginTop: "8px",
+                    marginBottom: 0,
+                  }}
+                >
+                  {discountError}
+                </p>
+              )}
+              {discountSuccess && (
+                <p
+                  style={{
+                    color: "#16a34a",
+                    fontSize: "12px",
+                    marginTop: "8px",
+                    marginBottom: 0,
+                  }}
+                >
+                  {discountSuccess}
+                </p>
+              )}
+            </div>
+
             <hr
               style={{
                 border: "none",
@@ -911,6 +1043,22 @@ export default function Checkout() {
               <span>Subtotal</span>
               <span>${cartTotal.toFixed(2)}</span>
             </div>
+
+            {/* SHOW DISCOUNT DEDUCTION IF APPLIED */}
+            {discountAmount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "12px",
+                  color: "#16a34a",
+                  fontWeight: "500",
+                }}
+              >
+                <span>Discount ({discountCode.toUpperCase()})</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
 
             <div
               style={{
