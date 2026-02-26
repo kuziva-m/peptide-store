@@ -46,8 +46,10 @@ export default function Checkout() {
   // --- DISCOUNT STATE ---
   const [discountCode, setDiscountCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [promoFreeShipping, setPromoFreeShipping] = useState(false);
   const [discountError, setDiscountError] = useState("");
   const [discountSuccess, setDiscountSuccess] = useState("");
+  const [isVerifyingDiscount, setIsVerifyingDiscount] = useState(false);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function Checkout() {
     setTimeout(() => setCopied(""), 2000);
   };
 
-  // --- DISCOUNT LOGIC ---
+  // --- LIVE SUPABASE DISCOUNT LOGIC ---
   const handleApplyDiscount = async () => {
     setDiscountError("");
     setDiscountSuccess("");
@@ -93,34 +95,83 @@ export default function Checkout() {
       return;
     }
 
-    // TODO: You can hook this up to a Supabase "discounts" table later!
-    // For now, here is a hardcoded example for testing:
-    if (code === "10OFF") {
-      const discount = cartTotal * 0.1; // 10% off
-      setDiscountAmount(discount);
-      setDiscountSuccess("10% Off Applied!");
-    } else if (code === "FREESHIP") {
-      setDiscountAmount(14.99); // Flat amount off
-      setDiscountSuccess("Free Shipping Applied!");
-    } else {
-      setDiscountError("Invalid or expired discount code.");
-      setDiscountAmount(0);
+    setIsVerifyingDiscount(true);
+
+    try {
+      // 1. Fetch the exact code from Supabase (using maybeSingle to prevent standard errors if code doesn't exist)
+      const { data: discount, error } = await supabase
+        .from("discounts")
+        .select("*")
+        .ilike("code", code)
+        .maybeSingle();
+
+      // Check if it exists and is active
+      if (
+        error ||
+        !discount ||
+        discount.active === false ||
+        discount.active === "false"
+      ) {
+        setDiscountError("Invalid or inactive discount code.");
+        setDiscountAmount(0);
+        setPromoFreeShipping(false);
+        return;
+      }
+
+      // 2. Check Usage Limits (max_uses)
+      if (
+        discount.max_uses !== null &&
+        (discount.used_count || 0) >= parseInt(discount.max_uses)
+      ) {
+        setDiscountError("This code has reached its usage limit.");
+        setDiscountAmount(0);
+        setPromoFreeShipping(false);
+        return;
+      }
+
+      // 3. Calculate the Effects based on exact database columns
+      let calculatedAmount = 0;
+      let successMessages = [];
+
+      // If it gives a percentage off
+      if (discount.type === "percentage" && discount.value > 0) {
+        calculatedAmount = cartTotal * (parseFloat(discount.value) / 100);
+        successMessages.push(`${discount.value}% Off`);
+      }
+
+      // If it gives free shipping
+      if (
+        discount.free_shipping === true ||
+        discount.free_shipping === "true"
+      ) {
+        setPromoFreeShipping(true);
+        successMessages.push("Free Shipping");
+      }
+
+      setDiscountAmount(calculatedAmount);
+      setDiscountSuccess(successMessages.join(" + ") + " Applied!");
+    } catch (err) {
+      console.error("Discount Verify Error:", err);
+      setDiscountError("Could not verify code.");
+    } finally {
+      setIsVerifyingDiscount(false);
     }
   };
 
   const removeDiscount = () => {
     setDiscountCode("");
     setDiscountAmount(0);
+    setPromoFreeShipping(false);
     setDiscountSuccess("");
     setDiscountError("");
   };
 
   // --- SHIPPING & TOTAL CALCULATIONS ---
-  // Apply discount to the subtotal (ensuring it doesn't go below 0)
   const discountedSubtotal = Math.max(0, cartTotal - discountAmount);
 
-  const isStandardFree = cartTotal >= 150;
-  const isExpressFree = cartTotal >= 250;
+  // Calculate if shipping is free (either via order total OR via discount code)
+  const isStandardFree = cartTotal >= 150 || promoFreeShipping;
+  const isExpressFree = cartTotal >= 250 || promoFreeShipping;
 
   let shippingCost = 0;
   let shippingLabel = "Free";
@@ -151,7 +202,7 @@ export default function Checkout() {
     setError(null);
 
     try {
-      // 1. Upload the Receipt Image to Supabase Storage
+      // 1. Upload the Receipt Image
       const fileExt = receiptFile.name.split(".").pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
 
@@ -160,9 +211,7 @@ export default function Checkout() {
         .upload(fileName, receiptFile);
 
       if (uploadError)
-        throw new Error(
-          "Failed to upload receipt. Please ensure the file is valid and try again.",
-        );
+        throw new Error("Failed to upload receipt. Please try again.");
 
       const { data: publicUrlData } = supabase.storage
         .from("payment-proofs")
@@ -170,7 +219,7 @@ export default function Checkout() {
 
       const receiptUrl = publicUrlData.publicUrl;
 
-      // 2. Insert Order directly into Supabase Database using our pre-generated ID
+      // 2. Insert Order
       const orderPayload = {
         id: orderId,
         customer_name: formData.name,
@@ -182,8 +231,11 @@ export default function Checkout() {
         items: cart,
         receipt_url: receiptUrl,
         status: "pending",
-        discount_code: discountAmount > 0 ? discountCode.toUpperCase() : null, // Save the code!
-        discount_amount: discountAmount > 0 ? discountAmount : 0, // Save the amount!
+        discount_code:
+          discountAmount > 0 || promoFreeShipping
+            ? discountCode.toUpperCase()
+            : null,
+        discount_amount: discountAmount,
       };
 
       const { error: orderError } = await supabase
@@ -192,7 +244,27 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
-      // 3. SEND EMAIL NOTIFICATIONS (To Customer & Admin)
+      // 3. Increment the Discount Usage Count in Database (if a code was used)
+      if (discountCode && (discountAmount > 0 || promoFreeShipping)) {
+        try {
+          // Get current count, then add 1
+          const { data: dData } = await supabase
+            .from("discounts")
+            .select("used_count")
+            .ilike("code", discountCode)
+            .single();
+          if (dData) {
+            await supabase
+              .from("discounts")
+              .update({ used_count: (dData.used_count || 0) + 1 })
+              .ilike("code", discountCode);
+          }
+        } catch (dbErr) {
+          console.error("Failed to increment discount count:", dbErr);
+        }
+      }
+
+      // 4. SEND EMAIL NOTIFICATIONS
       try {
         const emailItems = cart.map((item) => ({
           name: item.name,
@@ -200,7 +272,6 @@ export default function Checkout() {
           size: getVariantLabel(item.variant),
         }));
 
-        // A. Email to Customer
         await supabase.functions.invoke("send-email", {
           body: {
             email: formData.email,
@@ -214,7 +285,6 @@ export default function Checkout() {
           },
         });
 
-        // B. Email to Store Admin
         const adminHtml = `
           <div style="text-align: left;">
             <p><strong>Order ID:</strong> #${shortRef}</p>
@@ -242,7 +312,7 @@ export default function Checkout() {
         console.error("Failed to send notification emails:", emailErr);
       }
 
-      // 4. Redirect to Success
+      // 5. Redirect to Success
       navigate(`/success?order_id=${orderId}`);
     } catch (err) {
       console.error("Checkout Error:", err);
@@ -377,7 +447,6 @@ export default function Checkout() {
                   onChange={handleChange}
                   style={inputStyle}
                 />
-
                 <div
                   style={{
                     display: "grid",
@@ -935,7 +1004,7 @@ export default function Checkout() {
               })}
             </div>
 
-            {/* --- NEW DISCOUNT CODE SECTION --- */}
+            {/* --- LIVE SUPABASE DISCOUNT CODE SECTION --- */}
             <div style={{ marginBottom: "20px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div style={{ position: "relative", flex: 1 }}>
@@ -954,17 +1023,20 @@ export default function Checkout() {
                     placeholder="Discount code"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
-                    disabled={discountAmount > 0}
+                    disabled={discountAmount > 0 || promoFreeShipping}
                     style={{
                       ...inputStyle,
                       paddingLeft: "36px",
                       paddingTop: "10px",
                       paddingBottom: "10px",
-                      background: discountAmount > 0 ? "#f1f5f9" : "white",
+                      background:
+                        discountAmount > 0 || promoFreeShipping
+                          ? "#f1f5f9"
+                          : "white",
                     }}
                   />
                 </div>
-                {discountAmount > 0 ? (
+                {discountAmount > 0 || promoFreeShipping ? (
                   <button
                     type="button"
                     onClick={removeDiscount}
@@ -984,6 +1056,7 @@ export default function Checkout() {
                   <button
                     type="button"
                     onClick={handleApplyDiscount}
+                    disabled={isVerifyingDiscount}
                     style={{
                       background: "#0f172a",
                       color: "white",
@@ -994,7 +1067,7 @@ export default function Checkout() {
                       cursor: "pointer",
                     }}
                   >
-                    Apply
+                    {isVerifyingDiscount ? "..." : "Apply"}
                   </button>
                 )}
               </div>
