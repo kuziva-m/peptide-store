@@ -14,7 +14,8 @@ import {
   Save,
   CheckCircle,
   XCircle,
-  Box, // Added icon for stock
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 // --- CATEGORIES LIST ---
@@ -315,15 +316,48 @@ function ProductRow({
     }
   };
 
+  // 1. UPDATED SAVE FUNCTION: Saves Main Product + ALL Variants
   const handleSaveDetails = async () => {
     setIsSaving(true);
-    const { error } = await supabase
+
+    // Save main product
+    const { error: productError } = await supabase
       .from("products")
       .update({ name: name, image_url: image })
       .eq("id", product.id);
 
+    if (productError) {
+      alert("Failed to save product: " + productError.message);
+      setIsSaving(false);
+      return;
+    }
+
+    // Save all variants currently in local state
+    const variantPromises = variants.map((v) =>
+      supabase
+        .from("variants")
+        .update({
+          size_label: v.size_label,
+          price: v.price,
+          image_url: v.image_url,
+          in_stock: v.in_stock,
+          is_hidden: v.is_hidden, // Save the hide toggle!
+        })
+        .eq("id", v.id),
+    );
+
+    const results = await Promise.all(variantPromises);
+    const failedVariant = results.find((r) => r.error);
+
     setIsSaving(false);
-    if (error) alert("Failed to save: " + error.message);
+    if (failedVariant) {
+      alert(
+        "Product saved, but failed to save some variants: " +
+          failedVariant.error.message,
+      );
+    } else {
+      alert("All changes saved successfully!");
+    }
   };
 
   const addVariant = async () => {
@@ -333,24 +367,24 @@ function ProductRow({
         product_id: product.id,
         size_label: "10 Pack",
         price: 10,
-        in_stock: true, // Default new variants to in stock
+        in_stock: true,
+        is_hidden: false,
       })
       .select()
       .single();
     if (data) setVariants([...variants, data]);
   };
 
-  const updateVariant = async (id, field, value) => {
+  // 2. UPDATED UPDATE FUNCTION: Only updates local state so it doesn't overwhelm database
+  const updateVariantLocal = (id, field, value) => {
     setVariants(
       variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
     );
-    await supabase
-      .from("variants")
-      .update({ [field]: value })
-      .eq("id", id);
   };
 
   const deleteVariant = async (id) => {
+    if (!confirm("Are you sure you want to permanently delete this variant?"))
+      return;
     setVariants(variants.filter((v) => v.id !== id));
     await supabase.from("variants").delete().eq("id", id);
   };
@@ -441,16 +475,18 @@ function ProductRow({
               </div>
             </div>
 
+            {/* MOVED SAVE BUTTON HERE SO IT'S OBVIOUS IT SAVES EVERYTHING */}
             <button
               onClick={handleSaveDetails}
               style={{
                 ...styles.saveBtn,
                 width: "fit-content",
-                padding: "8px 20px",
+                padding: "10px 24px",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
                 opacity: isSaving ? 0.7 : 1,
+                marginTop: "10px",
               }}
               disabled={isSaving}
             >
@@ -458,7 +494,7 @@ function ProductRow({
                 "Saving..."
               ) : (
                 <>
-                  <Save size={16} /> Save Changes
+                  <Save size={18} /> Save All Changes (Product & Variants)
                 </>
               )}
             </button>
@@ -480,7 +516,7 @@ function ProductRow({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "100px 80px 100px 1fr 1fr 30px", // Adjusted grid
+                gridTemplateColumns: "100px 80px 100px 1fr 1fr 35px 35px", // Added space for hide button
                 gap: "10px",
                 paddingLeft: "10px",
                 fontSize: "0.8rem",
@@ -493,13 +529,14 @@ function ProductRow({
               <span>Price ($)</span>
               <span>Image URL</span>
               <span>Upload</span>
-              <span></span>
+              <span>Hide</span>
+              <span>Del</span>
             </div>
             {variants.map((v) => (
               <VariantRow
                 key={v.id}
                 data={v}
-                update={updateVariant}
+                updateLocal={updateVariantLocal}
                 onDelete={() => deleteVariant(v.id)}
                 handleImageUpload={handleImageUpload}
               />
@@ -514,26 +551,28 @@ function ProductRow({
   );
 }
 
-function VariantRow({ data, update, onDelete, handleImageUpload }) {
-  // Safe toggle for existing rows that might not have in_stock yet
+function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
   const isInStock = data.in_stock !== false;
+  const isHidden = data.is_hidden === true;
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "100px 80px 100px 1fr 1fr 30px",
+        gridTemplateColumns: "100px 80px 100px 1fr 1fr 35px 35px",
         gap: "10px",
         alignItems: "center",
         padding: "10px",
-        backgroundColor: "white",
+        backgroundColor: isHidden ? "#f8fafc" : "white", // Greys out if hidden
+        opacity: isHidden ? 0.6 : 1, // Fades out if hidden
         borderRadius: "8px",
         border: "1px solid #e2e8f0",
+        transition: "all 0.2s ease",
       }}
     >
       {/* VARIANT STOCK TOGGLE */}
       <button
-        onClick={() => update(data.id, "in_stock", !isInStock)}
+        onClick={() => updateLocal(data.id, "in_stock", !isInStock)}
         style={{
           display: "flex",
           alignItems: "center",
@@ -554,20 +593,20 @@ function VariantRow({ data, update, onDelete, handleImageUpload }) {
 
       <input
         value={data.size_label}
-        onChange={(e) => update(data.id, "size_label", e.target.value)}
+        onChange={(e) => updateLocal(data.id, "size_label", e.target.value)}
         style={styles.inputSmall}
         placeholder="Size"
       />
       <input
         type="number"
         value={data.price}
-        onChange={(e) => update(data.id, "price", e.target.value)}
+        onChange={(e) => updateLocal(data.id, "price", e.target.value)}
         style={styles.inputSmall}
         placeholder="$$"
       />
       <input
         value={data.image_url || ""}
-        onChange={(e) => update(data.id, "image_url", e.target.value)}
+        onChange={(e) => updateLocal(data.id, "image_url", e.target.value)}
         style={styles.inputSmall}
         placeholder="Image URL"
       />
@@ -579,21 +618,43 @@ function VariantRow({ data, update, onDelete, handleImageUpload }) {
           hidden
           onChange={async (e) => {
             const url = await handleImageUpload(e.target.files[0]);
-            if (url) update(data.id, "image_url", url);
+            if (url) updateLocal(data.id, "image_url", url);
           }}
         />
       </label>
 
+      {/* NEW: HIDE BUTTON */}
+      <button
+        onClick={() => updateLocal(data.id, "is_hidden", !isHidden)}
+        title={isHidden ? "Unhide Variant" : "Hide Variant"}
+        style={{
+          color: isHidden ? "#64748b" : "#3b82f6",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+
+      {/* DELETE BUTTON */}
       <button
         onClick={onDelete}
+        title="Permanently Delete"
         style={{
           color: "#ef4444",
           background: "none",
           border: "none",
           cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <X size={16} />
+        <Trash2 size={16} />
       </button>
     </div>
   );
