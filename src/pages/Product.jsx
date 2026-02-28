@@ -45,9 +45,24 @@ export default function Product() {
       }
 
       if (data) {
-        setProduct(data);
-        if (data.variants && data.variants.length > 0) {
-          const sorted = data.variants.sort((a, b) => a.price - b.price);
+        // --- NEW: FILTER OUT HIDDEN VARIANTS ---
+        const visibleVariants = (data.variants || []).filter(
+          (v) => v.is_hidden !== true,
+        );
+
+        // If all variants are hidden, pretend the product doesn't exist
+        if (visibleVariants.length === 0) {
+          setErrorMsg("This product is currently unavailable.");
+          setProduct(null);
+        } else {
+          const productWithVisibleVariants = {
+            ...data,
+            variants: visibleVariants,
+          };
+          setProduct(productWithVisibleVariants);
+
+          // Auto-select the cheapest visible variant
+          const sorted = visibleVariants.sort((a, b) => a.price - b.price);
           setSelectedVariant(sorted[0]);
         }
       }
@@ -96,7 +111,7 @@ export default function Product() {
         style={{ padding: "80px", textAlign: "center" }}
       >
         <h2>Product Not Found</h2>
-        <p style={{ color: "red" }}>Debug Error: {errorMsg}</p>
+        <p style={{ color: "red" }}>{errorMsg}</p>
         <Link
           to="/shop"
           className="back-link"

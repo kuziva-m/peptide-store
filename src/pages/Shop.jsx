@@ -7,7 +7,7 @@ import {
   LayoutGrid,
   FlaskConical,
   Layers,
-  BriefcaseMedical, // <--- FIXED: Added this missing import
+  BriefcaseMedical,
 } from "lucide-react";
 import "./Home.css";
 import "./Shop.css";
@@ -48,7 +48,21 @@ export default function Shop({ searchQuery }) {
         .order("name");
 
       if (error) throw error;
-      if (data) setProducts(data);
+
+      if (data) {
+        // --- NEW: FILTER OUT HIDDEN VARIANTS ---
+        const visibleProducts = data
+          .map((product) => {
+            // Keep only variants that are NOT hidden
+            const visibleVariants = (product.variants || []).filter(
+              (v) => v.is_hidden !== true,
+            );
+            return { ...product, variants: visibleVariants };
+          })
+          .filter((product) => product.variants.length > 0); // Don't show products if ALL variants are hidden
+
+        setProducts(visibleProducts);
+      }
     } catch (error) {
       console.error("Error fetching:", error);
     } finally {
@@ -276,7 +290,6 @@ export default function Shop({ searchQuery }) {
         }
         @media (min-width: 601px) {
           .tab-icon { display: none; } /* Hide icons on desktop if you prefer text-only */
-          /* Or keep them: .tab-icon { display: flex; } */
         }
       `}</style>
     </div>
