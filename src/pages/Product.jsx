@@ -45,9 +45,9 @@ export default function Product() {
       }
 
       if (data) {
-        // --- NEW: FILTER OUT HIDDEN VARIANTS ---
+        // FILTER OUT HIDDEN VARIANTS
         const visibleVariants = (data.variants || []).filter(
-          (v) => v.is_hidden !== true,
+          (v) => v.is_hidden !== true && v.is_hidden !== "true",
         );
 
         // If all variants are hidden, pretend the product doesn't exist
@@ -127,7 +127,12 @@ export default function Product() {
     product.image_url ||
     "https://via.placeholder.com/600";
 
-  const isInStock = product.in_stock !== false;
+  // --- NEW: INDIVIDUAL VARIANT STOCK LOGIC ---
+  const isMainProductInStock = product.in_stock !== false;
+  const isSelectedVariantInStock = selectedVariant?.in_stock !== false;
+  const isCurrentlyPurchasable =
+    isMainProductInStock && isSelectedVariantInStock;
+
   const activeLabUrl =
     selectedVariant?.lab_result_url || product.lab_result_url;
 
@@ -280,28 +285,34 @@ export default function Product() {
             >
               {product.variants
                 ?.sort((a, b) => a.price - b.price)
-                .map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setSelectedVariant(v)}
-                    style={{
-                      padding: "12px 20px",
-                      borderRadius: "8px",
-                      border:
-                        selectedVariant?.id === v.id
-                          ? "2px solid #0f172a"
-                          : "1px solid #cbd5e1",
-                      background:
-                        selectedVariant?.id === v.id ? "#0f172a" : "white",
-                      color: selectedVariant?.id === v.id ? "white" : "#64748b",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      minWidth: "80px",
-                    }}
-                  >
-                    {v.size_label}
-                  </button>
-                ))}
+                .map((v) => {
+                  const isThisVariantInStock = v.in_stock !== false;
+
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVariant(v)}
+                      style={{
+                        padding: "12px 20px",
+                        borderRadius: "8px",
+                        border:
+                          selectedVariant?.id === v.id
+                            ? "2px solid #0f172a"
+                            : "1px solid #cbd5e1",
+                        background:
+                          selectedVariant?.id === v.id ? "#0f172a" : "white",
+                        color:
+                          selectedVariant?.id === v.id ? "white" : "#64748b",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        minWidth: "80px",
+                        opacity: isThisVariantInStock ? 1 : 0.5, // Fades out out-of-stock sizes
+                      }}
+                    >
+                      {v.size_label} {!isThisVariantInStock && "(Out of Stock)"}
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
@@ -313,6 +324,8 @@ export default function Product() {
                 background: "#f1f5f9",
                 borderRadius: "10px",
                 padding: "0 10px",
+                opacity: isCurrentlyPurchasable ? 1 : 0.5,
+                pointerEvents: isCurrentlyPurchasable ? "auto" : "none",
               }}
             >
               <button
@@ -351,27 +364,29 @@ export default function Product() {
             <button
               className="p-add-btn"
               onClick={handleAddToCart}
-              disabled={!selectedVariant || !isInStock}
+              disabled={!selectedVariant || !isCurrentlyPurchasable}
               style={{
                 flex: 1,
                 padding: "18px",
-                backgroundColor: isInStock ? "#4635de" : "#94a3b8",
+                backgroundColor: isCurrentlyPurchasable ? "#4635de" : "#94a3b8",
                 color: "white",
                 border: "none",
                 borderRadius: "10px",
                 fontSize: "1.1rem",
                 fontWeight: "bold",
-                cursor: isInStock ? "pointer" : "not-allowed",
-                boxShadow: isInStock
+                cursor: isCurrentlyPurchasable ? "pointer" : "not-allowed",
+                boxShadow: isCurrentlyPurchasable
                   ? "0 4px 10px rgba(70, 53, 222, 0.2)"
                   : "none",
               }}
             >
-              {isInStock
-                ? selectedVariant
-                  ? `Add to Cart - ${formatPrice(selectedVariant.price * quantity)}`
-                  : "Select a Variant"
-                : "Out of Stock"}
+              {!isMainProductInStock
+                ? "Product Out of Stock"
+                : !selectedVariant
+                  ? "Select a Variant"
+                  : !isSelectedVariantInStock
+                    ? `${selectedVariant.size_label} is Out of Stock`
+                    : `Add to Cart - ${formatPrice(selectedVariant.price * quantity)}`}
             </button>
           </div>
 
