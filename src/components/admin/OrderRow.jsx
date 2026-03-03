@@ -136,10 +136,11 @@ export function OrderRow({
     }
   };
 
+  // --- UPDATED: THIS NOW TRIGGERS THE 'PAID' EMAIL ---
   const handleApprovePayment = async () => {
     promptConfirm(
       "Confirm Payment",
-      "Mark as Paid? This will move it to the Paid tab.",
+      "Mark as Paid? This will move it to the Paid tab AND email the customer that their payment is approved.",
       async () => {
         const { error } = await supabase
           .from("orders")
@@ -148,6 +149,7 @@ export function OrderRow({
 
         if (!error) {
           showToast("Payment Approved");
+          await sendStatusEmail(quickTracking, "paid"); // Sends the new email!
           onUpdate();
         }
       },
@@ -182,7 +184,7 @@ export function OrderRow({
     if (error) showToast("Failed to save note");
     else {
       showToast("Note saved!");
-      setFormData({ ...formData, notes: noteText }); // Keep edit form in sync
+      setFormData({ ...formData, notes: noteText });
       onUpdate();
     }
   };
@@ -205,7 +207,9 @@ export function OrderRow({
       if (!error) {
         showToast(`Updated to ${selectedStatus}`);
         if (
-          ["label_created", "shipped", "delivered"].includes(selectedStatus)
+          ["paid", "label_created", "shipped", "delivered"].includes(
+            selectedStatus,
+          )
         ) {
           await sendStatusEmail(quickTracking, selectedStatus);
         }
@@ -238,7 +242,7 @@ export function OrderRow({
       if (error) throw error;
 
       showToast("Order details updated successfully!");
-      setNoteText(formData.notes); // Sync the quick-view note box
+      setNoteText(formData.notes);
       setIsEditing(false);
       onUpdate();
     } catch (err) {

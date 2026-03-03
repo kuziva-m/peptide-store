@@ -51,6 +51,12 @@ serve(async (req: Request) => {
       bodyText = message
         ? message.replace(/\n/g, "<br>")
         : "Please check your order details.";
+    } else if (status === "paid") {
+      // --- NEW: PAYMENT APPROVED MESSAGE ---
+      title = "Payment Approved";
+      subject = `Payment Confirmed: Order #${orderId?.slice(0, 8)}`;
+      bodyText =
+        "Great news! Your payment has been successfully approved. We are now processing your order and will dispatch your package within the next 24 hours.";
     } else if (status === "label_created") {
       title = "Shipping Label Created";
       subject = `Shipping Update: Order #${orderId?.slice(0, 8)}`;
@@ -80,24 +86,21 @@ serve(async (req: Request) => {
     `
       : "";
 
-    // 3. Items HTML (WITH THE FIX)
+    // 3. Items HTML
     const itemsList = Array.isArray(items)
       ? items
           .map((item: any) => {
             let displayName = item.name || "Product";
 
-            // 🛡️ SAFETY FILTER: If the name is ridiculously long, it's accidentally the description!
-            // Let's fall back to a cleaner name from the variant or short name if we have it.
+            // Safety filter for long names
             if (displayName.length > 50) {
               if (item.productName) displayName = item.productName;
               else if (typeof item.variant === "string")
                 displayName = item.variant.split(" - ")[0] || item.variant;
-              else if (item.size)
-                displayName = item.size.split(" - ")[0]; // Try to extract from size
-              else displayName = "Peptide"; // Final fallback
+              else if (item.size) displayName = item.size.split(" - ")[0];
+              else displayName = "Peptide";
             }
 
-            // Get a clean size label
             let sizeLabel = item.size || "";
             if (!sizeLabel && typeof item.variant === "string")
               sizeLabel = item.variant;
@@ -125,7 +128,7 @@ serve(async (req: Request) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Melbourne Peptides <info@melbournepeptides.com.au>", // Updated Sender
+        from: "Melbourne Peptides <info@melbournepeptides.com.au>",
         to: [email],
         subject: subject,
         html: `
