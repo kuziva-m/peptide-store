@@ -272,6 +272,7 @@ export default function Checkout() {
           size: getVariantLabel(item.variant),
         }));
 
+        // A. Email to Customer
         await supabase.functions.invoke("send-email", {
           body: {
             email: formData.email,
@@ -285,26 +286,48 @@ export default function Checkout() {
           },
         });
 
+        // --- B. EMAIL TO ADMIN (NOW INCLUDES CART ITEMS) ---
+        const adminItemsHtml = cart
+          .map((item) => {
+            const safeVariant = getVariantLabel(item.variant);
+            return `<li style="margin-bottom: 6px; font-size: 14px; color: #334155;">
+            <strong>${item.quantity}x</strong> ${item.name} ${safeVariant ? `<span style="color: #64748b;">(${safeVariant})</span>` : ""}
+          </li>`;
+          })
+          .join("");
+
         const adminHtml = `
-          <div style="text-align: left;">
-            <p><strong>Order ID:</strong> #${shortRef}</p>
-            <p><strong>Customer:</strong> ${formData.name} (<a href="mailto:${formData.email}">${formData.email}</a>)</p>
-            <p><strong>Subtotal:</strong> $${cartTotal.toFixed(2)}</p>
-            ${discountAmount > 0 ? `<p><strong>Discount (${discountCode.toUpperCase()}):</strong> -$${discountAmount.toFixed(2)}</p>` : ""}
-            <p><strong>Order Total:</strong> $${estimatedTotal.toFixed(2)}</p>
-            <p><strong>Shipping Speed:</strong> ${shippingMethod === "express" ? "Express" : "Standard"}</p>
-            <br/>
-            <p><strong>Payment Screenshot:</strong></p>
-            <a href="${receiptUrl}" target="_blank" style="display: inline-block; background: #16a34a; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Receipt</a>
-            <br/><br/>
-            <p>Log in to your admin panel to review and approve this order.</p>
+          <div style="text-align: left; font-family: sans-serif;">
+            <h2 style="color: #0f172a; margin-top: 0;">🚨 New Order Received!</h2>
+            <p style="margin-bottom: 5px;"><strong>Order ID:</strong> #${shortRef}</p>
+            <p style="margin-bottom: 5px;"><strong>Customer:</strong> ${formData.name} (<a href="mailto:${formData.email}">${formData.email}</a>)</p>
+            <p style="margin-bottom: 20px;"><strong>Shipping Speed:</strong> ${shippingMethod === "express" ? "⚡ Express" : "🚚 Standard"}</p>
+            
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+              <h3 style="margin-top: 0; margin-bottom: 10px; color: #0f172a; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">Items Ordered:</h3>
+              <ul style="list-style-type: none; padding: 0; margin: 0;">
+                ${adminItemsHtml}
+              </ul>
+            </div>
+
+            <p style="margin-bottom: 5px;"><strong>Subtotal:</strong> $${cartTotal.toFixed(2)}</p>
+            ${discountAmount > 0 ? `<p style="margin-bottom: 5px; color: #16a34a;"><strong>Discount (${discountCode.toUpperCase()}):</strong> -$${discountAmount.toFixed(2)}</p>` : ""}
+            <p style="margin-bottom: 20px; font-size: 18px;"><strong>Total Paid:</strong> $${estimatedTotal.toFixed(2)}</p>
+            
+            <div style="margin-top: 20px;">
+              <p><strong>Payment Screenshot:</strong></p>
+              <a href="${receiptUrl}" target="_blank" style="display: inline-block; background: #16a34a; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Receipt</a>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+            <p style="font-size: 12px; color: #64748b;">Log in to your admin panel to review and approve this order.</p>
           </div>
         `;
 
         await supabase.functions.invoke("send-email", {
           body: {
             to: "info@melbournepeptides.com.au",
-            subject: `🚨 New Order Received! - #${shortRef}`,
+            subject: `🚨 New Order #${shortRef} - $${estimatedTotal.toFixed(2)}`, // Improved subject line
             html: adminHtml,
           },
         });

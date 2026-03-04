@@ -87,7 +87,7 @@ serve(async (req: Request) => {
     let finalHtml = "";
 
     // ========================================================================
-    // SCENARIO A: GENERIC EMAIL (From Admin Panel)
+    // SCENARIO A: GENERIC EMAIL (From Admin Panel or Checkout HTML generation)
     // ========================================================================
     if (payload.html && payload.to) {
       toAddress = Array.isArray(payload.to) ? payload.to : [payload.to];
@@ -129,6 +129,12 @@ serve(async (req: Request) => {
         messageBody = message
           ? message.replace(/\n/g, "<br>")
           : "Please check your order details.";
+      } else if (status === "paid") {
+        // --- NEW: PAYMENT APPROVED (24 HOUR DISPATCH) ---
+        title = "Payment Approved";
+        finalSubject = `Payment Confirmed: Order #${orderId.slice(0, 8)}`;
+        messageBody =
+          "Great news! Your payment has been successfully approved. We are now processing your order and will dispatch your package within the next 24 hours.";
       } else if (status === "label_created") {
         title = "Shipping Label Created";
         finalSubject = `Update: Label Created for Order #${orderId.slice(0, 8)}`;
