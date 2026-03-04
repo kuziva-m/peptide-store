@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../lib/CartContext";
+import { Info } from "lucide-react"; // <-- ADDED INFO ICON
 import "./ProductCard.css";
 
 export default function ProductCard({ product, loading }) {
@@ -66,6 +67,9 @@ export default function ProductCard({ product, loading }) {
   };
 
   const isAccessory = product.category === "Accessories";
+
+  // --- NEW: DYNAMIC 40MG CHECK ---
+  const is40mgSelected = selectedVariant?.size_label?.includes("40");
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -147,6 +151,35 @@ export default function ProductCard({ product, loading }) {
             })}
           </div>
         </div>
+
+        {/* COMPACT 40MG FULFILLMENT NOTICE FOR THE GRID CARD */}
+        {!isAccessory && is40mgSelected && (
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "#1e3a8a",
+              backgroundColor: "#eff6ff",
+              padding: "8px 10px",
+              borderRadius: "6px",
+              marginBottom: "12px",
+              display: "flex",
+              gap: "8px",
+              alignItems: "flex-start",
+              border: "1px solid #bfdbfe",
+              lineHeight: "1.4",
+            }}
+          >
+            <Info
+              size={14}
+              style={{ flexShrink: 0, marginTop: "2px" }}
+              color="#3b82f6"
+            />
+            <div>
+              <strong>Note:</strong> 40mg orders may be fulfilled using a
+              combination of smaller vials (e.g. 2x 20mg).
+            </div>
+          </div>
+        )}
 
         <button
           className="buy-btn"

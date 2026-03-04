@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Plus,
   Minus,
+  Info, // <--- ADDED INFO ICON
 } from "lucide-react";
 import "./Product.css";
 
@@ -127,7 +128,7 @@ export default function Product() {
     product.image_url ||
     "https://via.placeholder.com/600";
 
-  // --- NEW: INDIVIDUAL VARIANT STOCK LOGIC ---
+  // INDIVIDUAL VARIANT STOCK LOGIC
   const isMainProductInStock = product.in_stock !== false;
   const isSelectedVariantInStock = selectedVariant?.in_stock !== false;
   const isCurrentlyPurchasable =
@@ -144,6 +145,10 @@ export default function Product() {
   const metaDescription = product.description
     ? `${product.description.substring(0, 150)}... Buy ${product.name} online.`
     : `Buy ${product.name} research supplies in Australia.`;
+
+  // --- NEW: DYNAMIC 40MG CHECK ---
+  // This checks if the currently selected size contains the number "40"
+  const is40mgSelected = selectedVariant?.size_label?.includes("40");
 
   return (
     <div className="container product-page">
@@ -260,7 +265,11 @@ export default function Product() {
             </span>
             <span
               className="p-price"
-              style={{ fontSize: "2rem", fontWeight: "bold", color: "#4635de" }}
+              style={{
+                fontSize: "2rem",
+                fontWeight: "bold",
+                color: "#4635de",
+              }}
             >
               {selectedVariant
                 ? formatPrice(selectedVariant.price)
@@ -306,7 +315,7 @@ export default function Product() {
                         fontWeight: "600",
                         cursor: "pointer",
                         minWidth: "80px",
-                        opacity: isThisVariantInStock ? 1 : 0.5, // Fades out out-of-stock sizes
+                        opacity: isThisVariantInStock ? 1 : 0.5,
                       }}
                     >
                       {v.size_label} {!isThisVariantInStock && "(Out of Stock)"}
@@ -386,9 +395,43 @@ export default function Product() {
                   ? "Select a Variant"
                   : !isSelectedVariantInStock
                     ? `${selectedVariant.size_label} is Out of Stock`
-                    : `Add to Cart - ${formatPrice(selectedVariant.price * quantity)}`}
+                    : `Add to Cart - ${formatPrice(
+                        selectedVariant.price * quantity,
+                      )}`}
             </button>
           </div>
+
+          {/* --- NEW: DYNAMIC 40MG FULFILLMENT NOTICE --- */}
+          {!isAccessory && is40mgSelected && (
+            <div
+              style={{
+                marginTop: "-10px",
+                marginBottom: "30px",
+                padding: "12px 16px",
+                backgroundColor: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: "8px",
+                display: "flex",
+                gap: "12px",
+                alignItems: "flex-start",
+                color: "#1e3a8a",
+                fontSize: "0.85rem",
+                lineHeight: "1.5",
+              }}
+            >
+              <Info
+                size={18}
+                style={{ flexShrink: 0, marginTop: "2px" }}
+                color="#3b82f6"
+              />
+              <div>
+                <strong>Fulfillment Notice:</strong> To ensure the fastest
+                dispatch, your 40mg order may be fulfilled using a combination
+                of smaller vials (e.g., 1x 40mg, 2x 20mg, or 4x 10mg) equating
+                to the exact total amount ordered.
+              </div>
+            </div>
+          )}
 
           {/* HIDE LAB RESULTS FOR ACCESSORIES */}
           {activeLabUrl && !isAccessory && (
