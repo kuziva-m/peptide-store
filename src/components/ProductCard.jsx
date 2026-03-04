@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../lib/CartContext";
-import { Info } from "lucide-react"; // <-- ADDED INFO ICON
+import { Info } from "lucide-react";
 import "./ProductCard.css";
 
 export default function ProductCard({ product, loading }) {
@@ -68,8 +68,11 @@ export default function ProductCard({ product, loading }) {
 
   const isAccessory = product.category === "Accessories";
 
-  // --- NEW: DYNAMIC 40MG CHECK ---
-  const is40mgSelected = selectedVariant?.size_label?.includes("40");
+  // --- NEW: DYNAMIC >10MG CHECK ---
+  const sizeLabel = selectedVariant?.size_label || "";
+  const numericMatch = sizeLabel.match(/\d+/);
+  const sizeNumber = numericMatch ? parseInt(numericMatch[0], 10) : 0;
+  const showFulfillmentNotice = sizeNumber > 10;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -152,8 +155,8 @@ export default function ProductCard({ product, loading }) {
           </div>
         </div>
 
-        {/* COMPACT 40MG FULFILLMENT NOTICE FOR THE GRID CARD */}
-        {!isAccessory && is40mgSelected && (
+        {/* COMPACT FULFILLMENT NOTICE FOR THE GRID CARD */}
+        {!isAccessory && showFulfillmentNotice && (
           <div
             style={{
               fontSize: "0.75rem",
@@ -175,8 +178,8 @@ export default function ProductCard({ product, loading }) {
               color="#3b82f6"
             />
             <div>
-              <strong>Note:</strong> 40mg orders may be fulfilled using a
-              combination of smaller vials (e.g. 2x 20mg).
+              <strong>Note:</strong> {sizeLabel} orders may be fulfilled using a
+              combination of smaller vials.
             </div>
           </div>
         )}

@@ -13,7 +13,7 @@ import {
   ExternalLink,
   Plus,
   Minus,
-  Info, // <--- ADDED INFO ICON
+  Info,
 } from "lucide-react";
 import "./Product.css";
 
@@ -146,9 +146,11 @@ export default function Product() {
     ? `${product.description.substring(0, 150)}... Buy ${product.name} online.`
     : `Buy ${product.name} research supplies in Australia.`;
 
-  // --- NEW: DYNAMIC 40MG CHECK ---
-  // This checks if the currently selected size contains the number "40"
-  const is40mgSelected = selectedVariant?.size_label?.includes("40");
+  // --- NEW: DYNAMIC >10MG CHECK ---
+  const sizeLabel = selectedVariant?.size_label || "";
+  const numericMatch = sizeLabel.match(/\d+/);
+  const sizeNumber = numericMatch ? parseInt(numericMatch[0], 10) : 0;
+  const showFulfillmentNotice = sizeNumber > 10;
 
   return (
     <div className="container product-page">
@@ -401,8 +403,8 @@ export default function Product() {
             </button>
           </div>
 
-          {/* --- NEW: DYNAMIC 40MG FULFILLMENT NOTICE --- */}
-          {!isAccessory && is40mgSelected && (
+          {/* --- NEW: DYNAMIC >10MG FULFILLMENT NOTICE --- */}
+          {!isAccessory && showFulfillmentNotice && (
             <div
               style={{
                 marginTop: "-10px",
@@ -426,8 +428,8 @@ export default function Product() {
               />
               <div>
                 <strong>Fulfillment Notice:</strong> To ensure the fastest
-                dispatch, your 40mg order may be fulfilled using a combination
-                of smaller vials (e.g., 1x 40mg, 2x 20mg, or 4x 10mg) equating
+                dispatch, your {sizeLabel} order may be fulfilled using a
+                combination of smaller vials (e.g. 2x 20mg or 4x 10mg) equating
                 to the exact total amount ordered.
               </div>
             </div>
