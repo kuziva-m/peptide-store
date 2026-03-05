@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../lib/CartContext";
-import { Info } from "lucide-react";
 import "./ProductCard.css";
 
 export default function ProductCard({ product, loading }) {
@@ -67,12 +66,6 @@ export default function ProductCard({ product, loading }) {
   };
 
   const isAccessory = product.category === "Accessories";
-
-  // --- NEW: DYNAMIC >10MG CHECK ---
-  const sizeLabel = selectedVariant?.size_label || "";
-  const numericMatch = sizeLabel.match(/\d+/);
-  const sizeNumber = numericMatch ? parseInt(numericMatch[0], 10) : 0;
-  const showFulfillmentNotice = sizeNumber > 10;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -154,35 +147,6 @@ export default function ProductCard({ product, loading }) {
             })}
           </div>
         </div>
-
-        {/* COMPACT FULFILLMENT NOTICE FOR THE GRID CARD */}
-        {!isAccessory && showFulfillmentNotice && (
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "#1e3a8a",
-              backgroundColor: "#eff6ff",
-              padding: "8px 10px",
-              borderRadius: "6px",
-              marginBottom: "12px",
-              display: "flex",
-              gap: "8px",
-              alignItems: "flex-start",
-              border: "1px solid #bfdbfe",
-              lineHeight: "1.4",
-            }}
-          >
-            <Info
-              size={14}
-              style={{ flexShrink: 0, marginTop: "2px" }}
-              color="#3b82f6"
-            />
-            <div>
-              <strong>Note:</strong> {sizeLabel} orders may be fulfilled using a
-              combination of smaller vials.
-            </div>
-          </div>
-        )}
 
         <button
           className="buy-btn"

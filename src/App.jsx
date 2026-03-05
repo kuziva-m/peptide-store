@@ -5,10 +5,12 @@ import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
 import ScrollToTop from "./components/ScrollToTop";
 import WhatsAppButton from "./components/WhatsAppButton";
-// import DiscountPopup from "./components/DiscountPopup"; // Temporarily disabled
-import EmergencyPopup from "./components/EmergencyPopup";
 import Toast from "./components/Toast";
 import AnnouncementBar from "./components/AnnouncementBar";
+
+// --- POPUPS ---
+import DiscountPopup from "./components/DiscountPopup"; // <--- REACTIVATED!
+// import EmergencyPopup from "./components/EmergencyPopup"; // <--- DISABLED OLD ONE
 
 // Pages
 import Home from "./pages/Home";
@@ -25,7 +27,7 @@ import TrackOrder from "./pages/TrackOrder";
 import WriteReview from "./pages/WriteReview";
 import Terms from "./pages/Terms";
 import Landing from "./pages/Landing";
-import Checkout from "./pages/Checkout"; // <--- CHANGED THIS IMPORT
+import Checkout from "./pages/Checkout";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,16 +66,15 @@ function App() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/success" element={<Success />} />
           <Route path="/landing" element={<Landing />} />
-
-          {/* <--- CHANGED THIS ROUTE TO USE THE NEW COMPONENT ---> */}
           <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </div>
 
       <Toast />
 
-      {/* EMERGENCY POPUP ALWAYS ACTIVE */}
-      <EmergencyPopup />
+      {/* --- NEW EMAIL DISCOUNT POPUP --- */}
+      {/* Hidden on checkout and admin pages so it doesn't get in the way */}
+      {!isHiddenPage && <DiscountPopup />}
 
       {!isHiddenPage && <WhatsAppButton />}
       {!isHiddenPage && <Footer />}

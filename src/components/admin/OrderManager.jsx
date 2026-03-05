@@ -74,6 +74,9 @@ export default function OrderManager() {
       } else if (statusFilter === "paid") {
         matchesStatus =
           order.status === "paid" || order.status === "processing";
+      } else if (statusFilter === "has_notes") {
+        // --- NEW: MATCH ORDERS WITH NOTES ---
+        matchesStatus = order.notes && order.notes.trim().length > 0;
       } else {
         matchesStatus = order.status === statusFilter;
       }
@@ -150,6 +153,10 @@ export default function OrderManager() {
           <FilterTab id="paid" label="Approved (Paid)" color="#16a34a" />
           <FilterTab id="label_created" label="Label Created" />
           <FilterTab id="shipped" label="Shipped" />
+
+          {/* --- NEW: WITH NOTES TAB --- */}
+          <FilterTab id="has_notes" label="With Notes" color="#8b5cf6" />
+
           <FilterTab id="all" label="All" />
         </div>
 
