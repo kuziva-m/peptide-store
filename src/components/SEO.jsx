@@ -7,26 +7,21 @@ export default function SEO({
   type = "website",
   image,
   url,
+  noindex = false, // Critical for utility pages like /admin or /checkout
 }) {
   const { pathname } = useLocation();
   const siteTitle = "Melbourne Peptides";
 
-  // UPDATED: Description now includes "Stock", "10mg", "CAS" for SEO consistency
   const defaultDesc =
     "Buy premium peptides in stock (10mg/5mg). 99% purity guaranteed (CAS verified), fast shipping Australia. Shop BPC-157, Melanotan 2, and more.";
 
   const siteUrl = "https://melbournepeptides.com.au";
-
-  // FIXED: Use the manual URL if provided, otherwise calculate it automatically
   const canonicalUrl = url || `${siteUrl}${pathname}`;
 
-  // FIXED: Logic to keep titles short (~50 chars) but keyword-rich
   let finalTitle;
   if (title === "Home") {
-    // Exact match for the audit keywords
     finalTitle = "Melbourne Peptides | 99% Purity | In Stock Australia";
   } else if (title) {
-    // e.g. "Shop | Melbourne Peptides"
     finalTitle = `${title} | ${siteTitle}`;
   } else {
     finalTitle = "Melbourne Peptides | 99% Purity Peptides In Stock";
@@ -41,10 +36,13 @@ export default function SEO({
       <title>{finalTitle}</title>
       <meta name="description" content={finalDesc} />
 
-      {/* CANONICAL TAG - Critical for fixing the Google Console error */}
+      {/* Canonical Tag - Prevents duplicate content issues */}
       <link rel="canonical" href={canonicalUrl} />
 
-      {/* Facebook / Open Graph */}
+      {/* Robot Instructions */}
+      {noindex && <meta name="robots" content="noindex, follow" />}
+
+      {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />
       <meta property="og:title" content={finalTitle} />
       <meta property="og:description" content={finalDesc} />

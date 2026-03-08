@@ -18,7 +18,8 @@ import {
 import "./Product.css";
 
 export default function Product() {
-  const { id } = useParams();
+  // SEO UPDATE: URL now uses semantic slugs instead of numeric IDs
+  const { slug } = useParams();
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
@@ -29,8 +30,9 @@ export default function Product() {
 
   useEffect(() => {
     async function fetchProduct() {
-      if (!id || id === "undefined") {
-        setErrorMsg("Invalid Product ID");
+      // SEO UPDATE: Check for slug instead of id
+      if (!slug || slug === "undefined") {
+        setErrorMsg("Invalid Product URL");
         setLoading(false);
         return;
       }
@@ -38,7 +40,8 @@ export default function Product() {
       const { data, error } = await supabase
         .from("products")
         .select(`*, variants (*)`)
-        .eq("id", id)
+        // SEO UPDATE: Database lookup now uses the 'slug' column
+        .eq("slug", slug)
         .single();
 
       if (error) {
@@ -51,7 +54,6 @@ export default function Product() {
           (v) => v.is_hidden !== true && v.is_hidden !== "true",
         );
 
-        // If all variants are hidden, pretend the product doesn't exist
         if (visibleVariants.length === 0) {
           setErrorMsg("This product is currently unavailable.");
           setProduct(null);
@@ -70,7 +72,7 @@ export default function Product() {
       setLoading(false);
     }
     fetchProduct();
-  }, [id]);
+  }, [slug]);
 
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
@@ -123,6 +125,7 @@ export default function Product() {
       </div>
     );
 
+  const absoluteUrl = `https://melbournepeptides.com.au/product/${slug}`;
   const displayImage =
     selectedVariant?.image_url ||
     product.image_url ||
@@ -142,9 +145,10 @@ export default function Product() {
     product.category === "Syringes" ||
     product.category === "Prep Pads";
 
+  // SEO UPDATE: Optimized meta description for search results
   const metaDescription = product.description
-    ? `${product.description.substring(0, 150)}... Buy ${product.name} online.`
-    : `Buy ${product.name} research supplies in Australia.`;
+    ? `${product.description.substring(0, 140)}. Buy ${product.name} research peptide in Australia with fast shipping.`
+    : `Buy ${product.name} research peptide in Australia.`;
 
   // --- NEW: DYNAMIC >10MG CHECK ---
   const sizeLabel = selectedVariant?.size_label || "";
@@ -159,7 +163,56 @@ export default function Product() {
         description={metaDescription}
         image={displayImage}
         type="product"
+        url={absoluteUrl}
       />
+
+      {/* SEO UPDATE: JSON-LD Product Schema for Rich Snippets */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "@id": absoluteUrl,
+          name: product.name,
+          image: displayImage,
+          description: metaDescription,
+          brand: {
+            "@type": "Brand",
+            name: "Melbourne Peptides",
+          },
+          offers: {
+            "@type": "Offer",
+            url: absoluteUrl,
+            priceCurrency: "AUD",
+            price: selectedVariant?.price,
+            priceValidUntil: "2026-12-31",
+            availability: isCurrentlyPurchasable
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+          },
+        })}
+      </script>
+
+      {/* SEO UPDATE: JSON-LD Breadcrumb Schema */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Shop",
+              item: "https://melbournepeptides.com.au/shop",
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: product.name,
+              item: absoluteUrl,
+            },
+          ],
+        })}
+      </script>
 
       <Link to="/shop" className="back-link">
         <ChevronLeft size={16} /> Back to Catalog
@@ -181,7 +234,10 @@ export default function Product() {
           >
             <img
               src={displayImage}
-              alt={product.name}
+              alt={`${product.name} research peptide vial`}
+              // PERFORMANCE UPDATE: Optimized image loading
+              loading="lazy"
+              decoding="async"
               style={{
                 maxWidth: "100%",
                 maxHeight: "400px",
@@ -235,7 +291,7 @@ export default function Product() {
                     color: "#64748b",
                   }}
                 >
-                  CAS: 123-45-X
+                  CAS: {product.cas_number || "Verified"}
                 </span>
                 <span
                   className="p-purity"
@@ -403,7 +459,7 @@ export default function Product() {
             </button>
           </div>
 
-          {/* --- NEW: DYNAMIC >10MG FULFILLMENT NOTICE --- */}
+          {/* DYNAMIC >10MG FULFILLMENT NOTICE */}
           {!isAccessory && showFulfillmentNotice && (
             <div
               style={{
@@ -494,7 +550,7 @@ export default function Product() {
             style={{ lineHeight: "1.7", color: "#334155" }}
           >
             <h3 style={{ marginBottom: "10px", color: "#0f172a" }}>
-              Product Description
+              Research Product Description
             </h3>
             <p>{product.description}</p>
           </div>

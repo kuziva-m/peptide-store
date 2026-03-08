@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -9,8 +9,7 @@ import Toast from "./components/Toast";
 import AnnouncementBar from "./components/AnnouncementBar";
 
 // --- POPUPS ---
-import DiscountPopup from "./components/DiscountPopup"; // <--- REACTIVATED!
-// import EmergencyPopup from "./components/EmergencyPopup"; // <--- DISABLED OLD ONE
+import DiscountPopup from "./components/DiscountPopup";
 
 // Pages
 import Home from "./pages/Home";
@@ -37,7 +36,7 @@ function App() {
   const isHiddenPage =
     location.pathname.startsWith("/admin") ||
     location.pathname === "/landing" ||
-    location.pathname === "/checkout"; // Hide navbar on checkout for focus
+    location.pathname === "/checkout";
 
   return (
     <div
@@ -54,8 +53,19 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop searchQuery={searchQuery} />} />
-          <Route path="/product/:id" element={<Product />} />
-          <Route path="/calculator" element={<Calculator />} />
+
+          {/* SEO FIX: Use :slug instead of :id */}
+          <Route path="/product/:slug" element={<Product />} />
+
+          {/* SEO FIX: Renamed path for search volume */}
+          <Route path="/peptide-calculator" element={<Calculator />} />
+
+          {/* REDIRECT: Prevents 404s for anyone using the old /calculator link */}
+          <Route
+            path="/calculator"
+            element={<Navigate to="/peptide-calculator" replace />}
+          />
+
           <Route path="/track" element={<TrackOrder />} />
           <Route path="/write-review" element={<WriteReview />} />
           <Route path="/admin" element={<Admin />} />
@@ -71,11 +81,7 @@ function App() {
       </div>
 
       <Toast />
-
-      {/* --- NEW EMAIL DISCOUNT POPUP --- */}
-      {/* Hidden on checkout and admin pages so it doesn't get in the way */}
       {!isHiddenPage && <DiscountPopup />}
-
       {!isHiddenPage && <WhatsAppButton />}
       {!isHiddenPage && <Footer />}
     </div>

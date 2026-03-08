@@ -73,7 +73,7 @@ export default function ProductCard({ product, loading }) {
       addToCart(
         {
           ...product,
-          id: product.id,
+          id: product.id, // Internal logic stays on numeric ID
           price: selectedVariant.price,
           image: selectedVariant.image_url || product.image_url,
           variantId: selectedVariant.id,
@@ -86,15 +86,15 @@ export default function ProductCard({ product, loading }) {
 
   return (
     <div className="product-card">
-      <Link to={`/product/${product.id}`} className="card-image-wrapper">
-        {/* DYNAMIC BADGE */}
+      {/* SEO FIX: Use product.slug instead of id */}
+      <Link to={`/product/${product.slug}`} className="card-image-wrapper">
         <div className={`status-badge-subtle ${badgeStatus}`}>
           <span className="status-dot"></span> {badgeText}
         </div>
 
         <img
           src={displayImage}
-          alt={`${product.name} - ${selectedVariant?.size_label || ""}`}
+          alt={`${product.name} research vial`} // SEO FIX: Descriptive alt text
           loading="lazy"
           style={{ opacity: canBuy ? 1 : 0.6, transition: "opacity 0.3s" }}
         />
@@ -102,8 +102,9 @@ export default function ProductCard({ product, loading }) {
 
       <div className="card-content">
         <div className="card-header">
+          {/* SEO FIX: Use product.slug instead of id */}
           <Link
-            to={`/product/${product.id}`}
+            to={`/product/${product.slug}`}
             style={{ textDecoration: "none" }}
           >
             <h3 className="product-name">{product.name}</h3>
@@ -112,7 +113,7 @@ export default function ProductCard({ product, loading }) {
           {!isAccessory && (
             <div className="science-meta">
               <span>PURITY: &gt;99%</span>
-              <span>CAS: 123-45-X</span>
+              <span>CAS: {product.cas_number || "Verified"}</span>
             </div>
           )}
         </div>

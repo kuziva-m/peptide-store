@@ -11,7 +11,7 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 // Environment Variables
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-const ADMIN_EMAIL = "Melbournepeptides1@gmail.com";
+const ADMIN_EMAIL = "Info@melbournepeptides.com.au";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
