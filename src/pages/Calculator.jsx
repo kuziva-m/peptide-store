@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Beaker, Info, Calculator as CalcIcon, Syringe } from "lucide-react";
+import SEO from "../components/SEO"; // SEO Component added
 import "./Calculator.css";
 
 const SYRINGE_SIZES = [
@@ -17,20 +18,10 @@ export default function Calculator() {
 
   // Calculations
   const result = useMemo(() => {
-    // 1. Calculate Concentration (mg/ml)
     const concentration = vialSizeMg / waterAmountMl;
-
-    // 2. Convert Dose to MG
     const doseMg = doseMcg / 1000;
-
-    // 3. Calculate Volume to Draw (ml)
     const volumeToDraw = doseMg / concentration;
-
-    // 4. Calculate Units (Standard U-100 Insulin Syringe)
-    // 1ml = 100 units, regardless of syringe total capacity
     const units = volumeToDraw * 100;
-
-    // 5. Calculate Visual Fill Percentage based on SELECTED syringe size
     const fillPercent = (volumeToDraw / syringeSize.size) * 100;
 
     return {
@@ -46,6 +37,13 @@ export default function Calculator() {
 
   return (
     <div className="calc-container">
+      {/* SEO FIX: Unique title and description for the tool */}
+      <SEO
+        title="Peptide Reconstitution Calculator"
+        description="Accurately calculate your research peptide dosage and bacteriostatic water requirements. Supports 0.3ml, 0.5ml, and 1.0ml U-100 syringes."
+        url="https://melbournepeptides.com.au/peptide-calculator"
+      />
+
       <div className="calc-page-header">
         <div className="icon-wrapper">
           <CalcIcon size={32} color="var(--primary)" />
@@ -59,20 +57,17 @@ export default function Calculator() {
       </div>
 
       <div className="calc-grid">
-        {/* --- INPUT CARD --- */}
+        {/* INPUT CARD */}
         <div className="calc-card input-section">
           <div className="section-label">Configuration</div>
 
-          {/* Syringe Selector */}
           <div className="selector-container">
             <label className="input-label">1. Select Syringe Volume</label>
             <div className="syringe-select-grid">
               {SYRINGE_SIZES.map((s) => (
                 <button
                   key={s.size}
-                  className={`syringe-option ${
-                    syringeSize.size === s.size ? "selected" : ""
-                  }`}
+                  className={`syringe-option ${syringeSize.size === s.size ? "selected" : ""}`}
                   onClick={() => setSyringeSize(s)}
                 >
                   <Syringe
@@ -83,8 +78,8 @@ export default function Calculator() {
                         s.size === 0.3
                           ? "scale(0.8)"
                           : s.size === 0.5
-                          ? "scale(0.9)"
-                          : "scale(1)",
+                            ? "scale(0.9)"
+                            : "scale(1)",
                     }}
                   />
                   <span>{s.short}</span>
@@ -98,7 +93,6 @@ export default function Calculator() {
 
           <div className="divider"></div>
 
-          {/* Inputs */}
           <div className="inputs-vertical">
             <div className="input-group">
               <label>2. Vial Quantity (Powder)</label>
@@ -161,7 +155,7 @@ export default function Calculator() {
           </div>
         </div>
 
-        {/* --- RESULT CARD --- */}
+        {/* RESULT CARD */}
         <div className="result-column">
           <div className="result-card">
             <div className="result-header">
@@ -199,12 +193,9 @@ export default function Calculator() {
               </div>
             </div>
 
-            {/* Syringe Visual - Hidden on Mobile via CSS */}
             <div className="syringe-wrapper">
               <div className="syringe-container">
                 <div className="syringe-ticks"></div>
-
-                {/* Liquid Fill */}
                 <div
                   className="syringe-fill"
                   style={{
@@ -214,14 +205,11 @@ export default function Calculator() {
                       : "rgba(13, 148, 136, 0.7)",
                   }}
                 ></div>
-
-                {/* Plunger */}
                 <div
                   className="syringe-plunger"
                   style={{ left: `${result.percentFill}%` }}
                 ></div>
               </div>
-
               <div className="syringe-labels">
                 <span>0</span>
                 <span>{syringeSize.size / 2}ml</span>

@@ -15,7 +15,7 @@ export default function ProductCard({ product, loading }) {
   // Initialize selected variant
   useEffect(() => {
     if (sortedVariants.length > 0) {
-      // Try to find the first IN STOCK variant to select by default
+      // Default to the first IN STOCK variant if possible
       const firstInStock = sortedVariants.find((v) => v.in_stock !== false);
       setSelectedVariant(firstInStock || sortedVariants[0]);
     }
@@ -35,12 +35,11 @@ export default function ProductCard({ product, loading }) {
     );
   }
 
-  // --- STOCK LOGIC ---
+  // Stock and Availability Logic
   const isProductActive = product.in_stock !== false;
   const isVariantInStock = selectedVariant?.in_stock !== false;
   const canBuy = isProductActive && isVariantInStock;
 
-  // Determine Badge State
   let badgeStatus = "in-stock";
   let badgeText = "In Stock";
 
@@ -52,7 +51,6 @@ export default function ProductCard({ product, loading }) {
     badgeText = "Sold Out";
   }
 
-  // Determine Image
   const displayImage =
     selectedVariant?.image_url ||
     product.image_url ||
@@ -73,7 +71,6 @@ export default function ProductCard({ product, loading }) {
       addToCart(
         {
           ...product,
-          id: product.id, // Internal logic stays on numeric ID
           price: selectedVariant.price,
           image: selectedVariant.image_url || product.image_url,
           variantId: selectedVariant.id,
@@ -86,7 +83,7 @@ export default function ProductCard({ product, loading }) {
 
   return (
     <div className="product-card">
-      {/* SEO FIX: Use product.slug instead of id */}
+      {/* SEO FIX: Use product.slug for semantic URL discovery */}
       <Link to={`/product/${product.slug}`} className="card-image-wrapper">
         <div className={`status-badge-subtle ${badgeStatus}`}>
           <span className="status-dot"></span> {badgeText}
@@ -94,7 +91,7 @@ export default function ProductCard({ product, loading }) {
 
         <img
           src={displayImage}
-          alt={`${product.name} research vial`} // SEO FIX: Descriptive alt text
+          alt={`${product.name} research peptide vial`} // SEO FIX: Descriptive alt text
           loading="lazy"
           style={{ opacity: canBuy ? 1 : 0.6, transition: "opacity 0.3s" }}
         />
@@ -102,9 +99,8 @@ export default function ProductCard({ product, loading }) {
 
       <div className="card-content">
         <div className="card-header">
-          {/* SEO FIX: Use product.slug instead of id */}
           <Link
-            to={`/product/${product.slug}`}
+            to={`/product/${product.slug}`} // SEO FIX: Use product.slug
             style={{ textDecoration: "none" }}
           >
             <h3 className="product-name">{product.name}</h3>
@@ -112,7 +108,8 @@ export default function ProductCard({ product, loading }) {
 
           {!isAccessory && (
             <div className="science-meta">
-              <span>PURITY: &gt;99%</span>
+              {/* SEO FIX: Use dynamic purity and CAS numbers from DB */}
+              <span>PURITY: {product.purity || ">99%"}</span>
               <span>CAS: {product.cas_number || "Verified"}</span>
             </div>
           )}
@@ -128,24 +125,20 @@ export default function ProductCard({ product, loading }) {
           </div>
 
           <div className="variant-pills">
-            {sortedVariants.map((v) => {
-              const isVStock = v.in_stock !== false;
-              return (
-                <button
-                  key={v.id}
-                  className={`variant-pill ${
-                    selectedVariant?.id === v.id ? "active" : ""
-                  } ${!isVStock ? "pill-disabled" : ""}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedVariant(v);
-                  }}
-                  title={!isVStock ? "Out of Stock" : ""}
-                >
-                  {v.size_label}
-                </button>
-              );
-            })}
+            {sortedVariants.map((v) => (
+              <button
+                key={v.id}
+                className={`variant-pill ${
+                  selectedVariant?.id === v.id ? "active" : ""
+                } ${v.in_stock === false ? "pill-disabled" : ""}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedVariant(v);
+                }}
+              >
+                {v.size_label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -156,7 +149,6 @@ export default function ProductCard({ product, loading }) {
           style={{
             backgroundColor: canBuy ? "var(--primary)" : "#94a3b8",
             cursor: canBuy ? "pointer" : "not-allowed",
-            opacity: canBuy ? 1 : 0.7,
           }}
         >
           {canBuy ? "Add to Cart" : "Out of Stock"}

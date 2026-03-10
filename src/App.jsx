@@ -27,6 +27,7 @@ import WriteReview from "./pages/WriteReview";
 import Terms from "./pages/Terms";
 import Landing from "./pages/Landing";
 import Checkout from "./pages/Checkout";
+import PeptideLandingPage from './pages/PeptideLandingPage';
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,6 +78,7 @@ function App() {
           <Route path="/success" element={<Success />} />
           <Route path="/landing" element={<Landing />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/:peptideSlug" element={<PeptideLandingPage />} />
         </Routes>
       </div>
 

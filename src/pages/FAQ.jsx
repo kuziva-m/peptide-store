@@ -9,6 +9,7 @@ import {
   Truck,
   Instagram,
 } from "lucide-react";
+import SEO from "../components/SEO"; // SEO Component added
 import "./FAQ.css";
 
 export default function FAQ() {
@@ -49,17 +50,23 @@ export default function FAQ() {
 
   return (
     <div className="page-wrapper">
+      {/* SEO FIX: Unique metadata specifically for the Help Center */}
+      <SEO
+        title="Help Center & FAQ"
+        description="Find answers to common research questions about peptide storage, reconstitution, shipping protocols, and 99% purity verification."
+        url="https://melbournepeptides.com.au/faq"
+      />
+
       <div
         className="container"
         style={{ padding: "80px 24px", maxWidth: "900px" }}
       >
-        {/* 1. HEADER (Matches Shop & Contact Page) */}
         <div style={{ textAlign: "center", marginBottom: "60px" }}>
           <h1
             style={{
               fontSize: "2.5rem",
               marginBottom: "16px",
-              color: "var(--medical-navy)", // Navy Text
+              color: "var(--medical-navy)",
               fontWeight: "700",
             }}
           >
@@ -67,7 +74,7 @@ export default function FAQ() {
           </h1>
           <p
             style={{
-              color: "var(--text-muted)", // Grey Text
+              color: "var(--text-muted)",
               fontSize: "1.1rem",
               maxWidth: "600px",
               margin: "0 auto",
@@ -79,7 +86,6 @@ export default function FAQ() {
           </p>
         </div>
 
-        {/* 2. FAQ CONTENT */}
         <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
           {faqCategories.length > 0 ? (
             faqCategories.map((category, catIndex) => (
@@ -95,7 +101,6 @@ export default function FAQ() {
                   {category.questions.map((item, qIndex) => {
                     const key = `${catIndex}-${qIndex}`;
                     const isOpen = openSection[key];
-
                     return (
                       <div key={qIndex} className="faq-item">
                         <button
@@ -110,7 +115,6 @@ export default function FAQ() {
                             <Plus size={18} color="#94a3b8" />
                           )}
                         </button>
-
                         <div className={`faq-answer ${isOpen ? "open" : ""}`}>
                           {item.a}
                         </div>
@@ -130,7 +134,6 @@ export default function FAQ() {
           )}
         </div>
 
-        {/* 3. SUPPORT BANNER (Instagram) */}
         <div className="support-banner">
           <div className="support-icon">
             <Instagram size={28} />
@@ -145,10 +148,8 @@ export default function FAQ() {
             Need technical assistance?
           </h3>
           <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
-            Our team is available to assist with inquiries and order status via
-            Instagram.
+            Our team is available to assist via Instagram.
           </p>
-
           <a
             href="https://ig.me/m/mpresearch.au"
             target="_blank"
