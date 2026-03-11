@@ -7,8 +7,6 @@ import ScrollToTop from "./components/ScrollToTop";
 import WhatsAppButton from "./components/WhatsAppButton";
 import Toast from "./components/Toast";
 import AnnouncementBar from "./components/AnnouncementBar";
-
-// --- POPUPS ---
 import DiscountPopup from "./components/DiscountPopup";
 
 // Pages
@@ -27,7 +25,9 @@ import WriteReview from "./pages/WriteReview";
 import Terms from "./pages/Terms";
 import Landing from "./pages/Landing";
 import Checkout from "./pages/Checkout";
-import PeptideLandingPage from './pages/PeptideLandingPage';
+import PeptideLandingPage from "./pages/PeptideLandingPage";
+import ReconstitutionGuide from "./pages/ReconstitutionGuide";
+import HalfLifeChart from "./pages/HalfLifeChart";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,6 +79,11 @@ function App() {
           <Route path="/landing" element={<Landing />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/:peptideSlug" element={<PeptideLandingPage />} />
+          <Route
+            path="/peptide-reconstitution-guide"
+            element={<ReconstitutionGuide />}
+          />
+          <Route path="/peptide-half-life-chart" element={<HalfLifeChart />} />
         </Routes>
       </div>
 
