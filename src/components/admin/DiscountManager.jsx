@@ -10,6 +10,7 @@ import {
   Ban,
   CheckCircle,
   Edit2,
+  Star,
 } from "lucide-react";
 
 export default function DiscountManager() {
@@ -18,7 +19,7 @@ export default function DiscountManager() {
 
   // UI State
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null); // If not null, we are editing
+  const [editingId, setEditingId] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -29,6 +30,7 @@ export default function DiscountManager() {
     active: true,
     has_limit: false,
     max_uses: 1,
+    is_creator_code: false, // NEW: Track if it's an influencer code
   });
 
   useEffect(() => {
@@ -38,7 +40,6 @@ export default function DiscountManager() {
   const fetchDiscountsAndUsage = async () => {
     setLoading(true);
 
-    // 1. Fetch Discounts
     const { data: discountData, error: discountError } = await supabase
       .from("discounts")
       .select("*")
@@ -47,7 +48,6 @@ export default function DiscountManager() {
     if (discountError)
       console.error("Error fetching discounts:", discountError);
 
-    // 2. Fetch Usage from Orders
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
       .select("discount_code")
@@ -56,7 +56,6 @@ export default function DiscountManager() {
 
     if (orderError) console.error("Error fetching orders:", orderError);
 
-    // 3. Count Usage
     const usageMap = {};
     if (orderData) {
       orderData.forEach((order) => {
@@ -67,7 +66,6 @@ export default function DiscountManager() {
       });
     }
 
-    // 4. Merge Data
     const mergedData = (discountData || []).map((d) => ({
       ...d,
       usageCount: usageMap[d.code.toUpperCase()] || 0,
@@ -84,8 +82,9 @@ export default function DiscountManager() {
       value: discount.value,
       free_shipping: discount.free_shipping,
       active: discount.active,
-      has_limit: discount.max_uses !== null, // Check box if max_uses exists
-      max_uses: discount.max_uses || 1, // Default to 1 if null
+      has_limit: discount.max_uses !== null,
+      max_uses: discount.max_uses || 1,
+      is_creator_code: discount.is_creator_code || false,
     });
     setEditingId(discount.id);
     setIsFormOpen(true);
@@ -101,19 +100,18 @@ export default function DiscountManager() {
       free_shipping: formData.free_shipping,
       active: formData.active,
       max_uses: formData.has_limit ? formData.max_uses : null,
+      is_creator_code: formData.is_creator_code,
     };
 
     let error;
 
     if (editingId) {
-      // UPDATE Existing
       const { error: updateError } = await supabase
         .from("discounts")
         .update(payload)
         .eq("id", editingId);
       error = updateError;
     } else {
-      // INSERT New
       const { error: insertError } = await supabase
         .from("discounts")
         .insert([payload]);
@@ -139,11 +137,12 @@ export default function DiscountManager() {
       active: true,
       has_limit: false,
       max_uses: 1,
+      is_creator_code: false,
     });
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this code?")) return;
+    if (!window.confirm("Delete this code?")) return;
     await supabase.from("discounts").delete().eq("id", id);
     fetchDiscountsAndUsage();
   };
@@ -165,7 +164,6 @@ export default function DiscountManager() {
         border: "1px solid #e2e8f0",
       }}
     >
-      {/* HEADER */}
       <div style={styles.header}>
         <h3 style={styles.title}>
           <Tag size={20} /> Discount Manager
@@ -177,7 +175,6 @@ export default function DiscountManager() {
         )}
       </div>
 
-      {/* FORM (Create or Edit) */}
       {isFormOpen && (
         <div style={styles.formCard}>
           <div style={styles.formHeader}>
@@ -241,6 +238,50 @@ export default function DiscountManager() {
                 marginTop: 5,
               }}
             >
+              {/* NEW: Creator Code Toggle */}
+              <div
+                style={{
+                  padding: "12px",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "8px",
+                }}
+              >
+                <label style={{ ...styles.checkboxLabel, color: "#166534" }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.is_creator_code}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        is_creator_code: e.target.checked,
+                      })
+                    }
+                    style={{ width: 16, height: 16 }}
+                  />
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Star size={16} /> Mark as Creator/Affiliate Code
+                  </span>
+                </label>
+                <p
+                  style={{
+                    margin: "4px 0 0 26px",
+                    fontSize: "0.8rem",
+                    color: "#15803d",
+                  }}
+                >
+                  This allows the code to be selected in the Creator Manager
+                  tab.
+                </p>
+              </div>
+
               {/* Usage Limit */}
               <div style={styles.optionRow}>
                 <label style={styles.checkboxLabel}>
@@ -254,7 +295,6 @@ export default function DiscountManager() {
                   />
                   <span>Limit number of uses?</span>
                 </label>
-
                 {formData.has_limit && (
                   <div
                     style={{
@@ -286,7 +326,6 @@ export default function DiscountManager() {
                 )}
               </div>
 
-              {/* Free Shipping */}
               <label style={styles.checkboxLabel}>
                 <input
                   type="checkbox"
@@ -322,7 +361,6 @@ export default function DiscountManager() {
         </div>
       )}
 
-      {/* TABLE */}
       {loading ? (
         <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
           <Loader className="spin-anim" /> Loading codes...
@@ -334,8 +372,9 @@ export default function DiscountManager() {
               style={{ borderBottom: "2px solid #f1f5f9", textAlign: "left" }}
             >
               <th style={styles.th}>Code</th>
+              <th style={styles.th}>Type</th>
               <th style={styles.th}>Effect</th>
-              <th style={styles.th}>Usage Limit</th>
+              <th style={styles.th}>Usage</th>
               <th style={styles.th}>Status</th>
               <th style={{ ...styles.th, textAlign: "right" }}>Actions</th>
             </tr>
@@ -355,6 +394,33 @@ export default function DiscountManager() {
                     >
                       {d.code}
                     </span>
+                  </td>
+                  <td style={styles.td}>
+                    {d.is_creator_code ? (
+                      <span
+                        style={{
+                          ...styles.tag,
+                          background: "#fef3c7",
+                          color: "#15803d",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          width: "fit-content",
+                        }}
+                      >
+                        <Star size={12} /> Creator
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          ...styles.tag,
+                          background: "#f1f5f9",
+                          color: "#64748b",
+                        }}
+                      >
+                        Standard
+                      </span>
+                    )}
                   </td>
                   <td style={styles.td}>
                     {d.type === "percentage"
@@ -426,20 +492,6 @@ export default function DiscountManager() {
                 </tr>
               );
             })}
-            {discounts.length === 0 && (
-              <tr>
-                <td
-                  colSpan="5"
-                  style={{
-                    padding: "30px",
-                    textAlign: "center",
-                    color: "#94a3b8",
-                  }}
-                >
-                  No discount codes found.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       )}
@@ -551,8 +603,6 @@ const styles = {
   td: { padding: "16px", fontSize: "0.9rem", color: "#334155" },
   tag: {
     marginLeft: "8px",
-    background: "#eff6ff",
-    color: "#1e40af",
     padding: "2px 8px",
     borderRadius: "12px",
     fontSize: "0.75rem",

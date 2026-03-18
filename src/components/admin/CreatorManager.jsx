@@ -7,13 +7,13 @@ import {
   Lock,
   User,
   Percent,
-  TrendingUp,
   DollarSign,
 } from "lucide-react";
 
 export default function CreatorManager() {
   const [affiliates, setAffiliates] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [creatorCodes, setCreatorCodes] = useState([]); // NEW: List of available creator codes
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -30,7 +30,7 @@ export default function CreatorManager() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [affiliatesRes, ordersRes] = await Promise.all([
+      const [affiliatesRes, ordersRes, codesRes] = await Promise.all([
         supabase
           .from("affiliates")
           .select("*")
@@ -39,10 +39,22 @@ export default function CreatorManager() {
           .from("orders")
           .select("discount_code, total_price")
           .not("discount_code", "is", null),
+        supabase
+          .from("discounts")
+          .select("code")
+          .eq("is_creator_code", true)
+          .eq("active", true),
       ]);
 
       if (affiliatesRes.data) setAffiliates(affiliatesRes.data);
       if (ordersRes.data) setOrders(ordersRes.data);
+      if (codesRes.data) {
+        setCreatorCodes(codesRes.data);
+        // Auto-select the first code if adding and none selected
+        if (codesRes.data.length > 0 && !code) {
+          setCode(codesRes.data[0].code);
+        }
+      }
     } catch (error) {
       console.error("Error fetching creator data:", error);
     } finally {
@@ -52,6 +64,8 @@ export default function CreatorManager() {
 
   const handleAddAffiliate = async (e) => {
     e.preventDefault();
+    if (!code) return alert("Please select a Creator Code first.");
+
     const rate = parseFloat(commission) / 100;
 
     const { error } = await supabase.from("affiliates").insert([
@@ -68,7 +82,6 @@ export default function CreatorManager() {
     } else {
       setIsAdding(false);
       setName("");
-      setCode("");
       setCommission("15");
       setPin("");
       fetchData();
@@ -82,12 +95,10 @@ export default function CreatorManager() {
       )
     )
       return;
-
     await supabase.from("affiliates").delete().eq("id", id);
     fetchData();
   };
 
-  // Helper to calculate stats per affiliate
   const getAffiliateStats = (discountCode) => {
     const affiliateOrders = orders.filter(
       (o) =>
@@ -146,29 +157,43 @@ export default function CreatorManager() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Sarah Fitness"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg"
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg bg-white"
                 />
               </div>
             </div>
+
+            {/* NEW: Dropdown for assigned codes */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">
-                Discount Code (Unique)
+                Assign Creator Code
               </label>
               <div className="relative">
                 <Tag
                   className="absolute left-3 top-2.5 text-gray-400"
                   size={16}
                 />
-                <input
-                  required
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="SARAH15"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg uppercase"
-                />
+                {creatorCodes.length > 0 ? (
+                  <select
+                    required
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border rounded-lg font-bold text-blue-700 bg-white"
+                  >
+                    {creatorCodes.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full pl-9 pr-3 py-2 border border-red-300 bg-red-50 text-red-600 rounded-lg text-sm">
+                    No Creator Codes found! Create one in the Discount Manager
+                    first.
+                  </div>
+                )}
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">
                 Commission Rate (%)
@@ -186,7 +211,7 @@ export default function CreatorManager() {
                   value={commission}
                   onChange={(e) => setCommission(e.target.value)}
                   placeholder="15"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg"
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg bg-white"
                 />
               </div>
             </div>
@@ -205,14 +230,15 @@ export default function CreatorManager() {
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   placeholder="e.g. 1234"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg"
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg bg-white"
                 />
               </div>
             </div>
             <div className="md:col-span-2 pt-2">
               <button
                 type="submit"
-                className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700"
+                disabled={!code || creatorCodes.length === 0}
+                className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save Creator
               </button>
