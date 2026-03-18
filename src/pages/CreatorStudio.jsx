@@ -49,11 +49,11 @@ export default function CreatorStudio() {
     if (playIntro) {
       const exitTimer = setTimeout(() => {
         setIsAnimating(false);
-      }, 500); // Rapid exit starts at 0.5s
+      }, 500);
 
       const unmountTimer = setTimeout(() => {
         setMountOverlay(false);
-      }, 900); // Completely gone at 0.9s
+      }, 900);
 
       return () => {
         clearTimeout(exitTimer);
@@ -67,7 +67,6 @@ export default function CreatorStudio() {
     setError(null);
 
     try {
-      // 1. Verify Affiliate
       const { data: affiliateData, error: affiliateError } = await supabase
         .from("affiliates")
         .select("*")
@@ -83,7 +82,6 @@ export default function CreatorStudio() {
       localStorage.setItem("creator_code", loginCode.trim());
       localStorage.setItem("creator_pin", loginPin.trim());
 
-      // 2. Fetch their orders
       setIsLoadingData(true);
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
@@ -95,7 +93,6 @@ export default function CreatorStudio() {
         setOrders(ordersData);
       }
 
-      // 3. Trigger the awesome entry animation!
       setPlayIntro(true);
     } catch (err) {
       setError(err.message);
@@ -119,7 +116,6 @@ export default function CreatorStudio() {
     setMountOverlay(true);
   };
 
-  // --- CALCULATIONS ---
   const totalSales = orders.reduce(
     (sum, order) => sum + Number(order.total_price || 0),
     0,
@@ -129,7 +125,6 @@ export default function CreatorStudio() {
     Number(affiliate?.commission_rate || 0) * 100
   ).toFixed(0);
 
-  // Mask customer last name for privacy (e.g., "John Doe" -> "John D.")
   const formatName = (fullName) => {
     if (!fullName) return "Guest";
     const parts = fullName.trim().split(" ");
@@ -140,210 +135,246 @@ export default function CreatorStudio() {
   };
 
   // ==========================================
-  // RENDER LOGIN VIEW
+  // RENDER SPLIT-SCREEN LOGIN VIEW
   // ==========================================
   if (!affiliate) {
     return (
-      <div
-        className="gradient-bg-anim"
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "20px",
-        }}
-      >
+      <div className="login-split-container">
         <SEO
           title="Creator Studio Login"
           description="Partner dashboard for Melbourne Peptides creators."
         />
 
-        <div
-          className="fade-in-ui"
-          style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(10px)",
-            padding: "40px",
-            borderRadius: "24px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-            width: "100%",
-            maxWidth: "420px",
-            border: "1px solid rgba(255,255,255,0.4)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: "24px",
-            }}
-          >
+        {/* LEFT SIDE: Form & Gradient */}
+        <div className="login-left gradient-bg-anim">
+          <div className="fade-in-ui login-card">
             <div
               style={{
-                width: "72px",
-                height: "72px",
-                background: "#f0f4ff",
-                borderRadius: "20px",
                 display: "flex",
-                alignItems: "center",
                 justifyContent: "center",
-                border: "2px solid #e0e7ff",
+                marginBottom: "24px",
               }}
             >
-              <TrendingUp size={36} color="#4635de" />
+              <div
+                style={{
+                  width: "72px",
+                  height: "72px",
+                  background: "#f0f4ff",
+                  borderRadius: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid #e0e7ff",
+                }}
+              >
+                <TrendingUp size={36} color="#4635de" />
+              </div>
+            </div>
+            <h1
+              style={{
+                fontSize: "1.8rem",
+                fontWeight: 800,
+                textAlign: "center",
+                color: "#0f172a",
+                marginBottom: "8px",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              Creator Studio
+            </h1>
+            <p
+              style={{
+                textAlign: "center",
+                color: "#64748b",
+                marginBottom: "32px",
+                fontSize: "0.95rem",
+              }}
+            >
+              Enter your partner details to access your portal.
+            </p>
+
+            {error && (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  color: "#ef4444",
+                  padding: "12px",
+                  borderRadius: "12px",
+                  fontSize: "0.9rem",
+                  textAlign: "center",
+                  marginBottom: "24px",
+                  border: "1px solid #fecaca",
+                  fontWeight: 600,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    color: "#334155",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Discount Code
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Tag
+                    style={{
+                      position: "absolute",
+                      left: "14px",
+                      top: "12px",
+                      color: "#94a3b8",
+                    }}
+                    size={18}
+                  />
+                  <input
+                    type="text"
+                    placeholder="e.g. SARAH15"
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px 12px 42px",
+                      borderRadius: "12px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "1rem",
+                      outline: "none",
+                      textTransform: "uppercase",
+                      transition: "border 0.2s",
+                    }}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    color: "#334155",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Access PIN
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Lock
+                    style={{
+                      position: "absolute",
+                      left: "14px",
+                      top: "12px",
+                      color: "#94a3b8",
+                    }}
+                    size={18}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Enter your PIN"
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px 12px 42px",
+                      borderRadius: "12px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "1rem",
+                      outline: "none",
+                      transition: "border 0.2s",
+                    }}
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleLogin()}
+                disabled={isLoggingIn || !code || !pin}
+                style={{
+                  width: "100%",
+                  background: "#4635de",
+                  color: "white",
+                  fontWeight: 800,
+                  padding: "14px",
+                  borderRadius: "12px",
+                  border: "none",
+                  cursor:
+                    isLoggingIn || !code || !pin ? "not-allowed" : "pointer",
+                  opacity: isLoggingIn || !code || !pin ? 0.7 : 1,
+                  fontSize: "1rem",
+                  marginTop: "8px",
+                  transition: "background 0.2s",
+                  boxShadow: "0 4px 12px rgba(70, 53, 222, 0.2)",
+                }}
+              >
+                {isLoggingIn ? "Authenticating..." : "Access Dashboard"}
+              </button>
             </div>
           </div>
-          <h1
-            style={{
-              fontSize: "1.8rem",
-              fontWeight: 800,
-              textAlign: "center",
-              color: "#0f172a",
-              marginBottom: "8px",
-              letterSpacing: "-0.5px",
-            }}
-          >
-            Creator Studio
-          </h1>
-          <p
-            style={{
-              textAlign: "center",
-              color: "#64748b",
-              marginBottom: "32px",
-              fontSize: "0.95rem",
-            }}
-          >
-            Enter your partner details to access your portal.
-          </p>
+        </div>
 
-          {error && (
-            <div
-              style={{
-                background: "#fef2f2",
-                color: "#ef4444",
-                padding: "12px",
-                borderRadius: "12px",
-                fontSize: "0.9rem",
-                textAlign: "center",
-                marginBottom: "24px",
-                border: "1px solid #fecaca",
-                fontWeight: 600,
-              }}
-            >
-              {error}
-            </div>
-          )}
+        {/* RIGHT SIDE: Cinematic Creator Image */}
+        <div
+          className="login-right hide-on-mobile"
+          style={{ position: "relative", flex: 1.2 }}
+        >
+          {/* New Image: High-end podcast/creator studio setup */}
+          <img
+            src="https://images.unsplash.com/photo-1598550880863-4e8aa3d0edb4?q=80&w=1400&auto=format&fit=crop"
+            alt="Content Creator Studio Setup"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          {/* Beautiful gradient overlay to match brand and make text readable */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to bottom right, rgba(15,23,42,0.4), rgba(70,53,222,0.7))",
+            }}
+          ></div>
 
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+            style={{
+              position: "absolute",
+              bottom: "60px",
+              left: "60px",
+              zIndex: 20,
+            }}
           >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  color: "#334155",
-                  marginBottom: "8px",
-                }}
-              >
-                Discount Code
-              </label>
-              <div style={{ position: "relative" }}>
-                <Tag
-                  style={{
-                    position: "absolute",
-                    left: "14px",
-                    top: "12px",
-                    color: "#94a3b8",
-                  }}
-                  size={18}
-                />
-                <input
-                  type="text"
-                  placeholder="e.g. SARAH15"
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px 12px 42px",
-                    borderRadius: "12px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    textTransform: "uppercase",
-                    transition: "border 0.2s",
-                  }}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  color: "#334155",
-                  marginBottom: "8px",
-                }}
-              >
-                Access PIN
-              </label>
-              <div style={{ position: "relative" }}>
-                <Lock
-                  style={{
-                    position: "absolute",
-                    left: "14px",
-                    top: "12px",
-                    color: "#94a3b8",
-                  }}
-                  size={18}
-                />
-                <input
-                  type="password"
-                  placeholder="Enter your PIN"
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px 12px 42px",
-                    borderRadius: "12px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    transition: "border 0.2s",
-                  }}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => handleLogin()}
-              disabled={isLoggingIn || !code || !pin}
+            <h3
               style={{
-                width: "100%",
-                background: "#4635de",
                 color: "white",
-                fontWeight: 800,
-                padding: "14px",
-                borderRadius: "12px",
-                border: "none",
-                cursor:
-                  isLoggingIn || !code || !pin ? "not-allowed" : "pointer",
-                opacity: isLoggingIn || !code || !pin ? 0.7 : 1,
-                fontSize: "1rem",
-                marginTop: "8px",
-                transition: "background 0.2s",
-                boxShadow: "0 4px 12px rgba(70, 53, 222, 0.2)",
+                fontSize: "2.4rem",
+                fontWeight: 900,
+                margin: "0 0 12px 0",
+                letterSpacing: "-1px",
+                textShadow: "0 4px 12px rgba(0,0,0,0.5)",
               }}
             >
-              {isLoggingIn ? "Authenticating..." : "Access Dashboard"}
-            </button>
+              Partner with Science
+            </h3>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.9)",
+                fontSize: "1.2rem",
+                fontWeight: 500,
+                margin: 0,
+                textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+              }}
+            >
+              Premium research compounds. Elite creator tracking.
+            </p>
           </div>
         </div>
       </div>
@@ -373,7 +404,6 @@ export default function CreatorStudio() {
           style={styles.fullScreenOverlay}
         >
           <div style={styles.animationCenterBox}>
-            {/* 7 UNIQUE HIGH-VELOCITY ICONS */}
             <div className="icon-bounce-1" style={styles.absoluteIconZero}>
               <TestTube size={110} color="#ffffff" strokeWidth={1.5} />
             </div>
@@ -396,7 +426,6 @@ export default function CreatorStudio() {
               <Zap size={44} color="#0284c7" strokeWidth={2.5} />
             </div>
 
-            {/* CENTRAL LOGO (White Box) */}
             <div className="pulse-glow-intense" style={styles.mainLogoBox}>
               <img
                 src="/logo.png"
@@ -422,19 +451,21 @@ export default function CreatorStudio() {
 
       {/* --- DASHBOARD UI --- */}
       <div className="fade-in-ui" style={{ position: "relative", zIndex: 1 }}>
-        {/* Header */}
+        {/* FIXED HEADER: High z-index + Solid Background */}
         <div
           style={{
-            background: "white",
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(12px)",
             borderBottom: "1px solid #e2e8f0",
             position: "sticky",
             top: 0,
-            zIndex: 10,
+            zIndex: 50,
             padding: "16px 24px",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
           }}
         >
           <div
+            className="dashboard-header-inner"
             style={{
               maxWidth: "1100px",
               margin: "0 auto",
@@ -463,6 +494,7 @@ export default function CreatorStudio() {
               </div>
               <div>
                 <h1
+                  className="dashboard-title"
                   style={{
                     margin: 0,
                     fontSize: "1.2rem",
@@ -495,6 +527,7 @@ export default function CreatorStudio() {
             </div>
             <button
               onClick={handleLogout}
+              className="logout-btn"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -510,12 +543,14 @@ export default function CreatorStudio() {
                 transition: "all 0.2s",
               }}
             >
-              <LogOut size={16} /> Logout
+              <LogOut size={16} />{" "}
+              <span className="hide-on-mobile">Logout</span>
             </button>
           </div>
         </div>
 
         <div
+          className="dashboard-content-wrapper"
           style={{
             maxWidth: "1100px",
             margin: "40px auto 0",
@@ -524,9 +559,10 @@ export default function CreatorStudio() {
         >
           {/* Metric Cards */}
           <div
+            className="metrics-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
               gap: "24px",
               marginBottom: "32px",
             }}
@@ -707,12 +743,16 @@ export default function CreatorStudio() {
               </span>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
+            <div
+              className="table-responsive-wrapper"
+              style={{ overflowX: "auto", width: "100%" }}
+            >
               <table
                 style={{
                   width: "100%",
                   borderCollapse: "collapse",
                   textAlign: "left",
+                  minWidth: "600px",
                 }}
               >
                 <thead>
@@ -845,6 +885,7 @@ export default function CreatorStudio() {
                                   alignItems: "center",
                                   justifyContent: "center",
                                   color: "#94a3b8",
+                                  flexShrink: 0,
                                 }}
                               >
                                 <User size={14} />
@@ -854,6 +895,7 @@ export default function CreatorStudio() {
                                   fontSize: "0.95rem",
                                   fontWeight: 600,
                                   color: "#0f172a",
+                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 {formatName(order.customer_name)}
@@ -896,6 +938,7 @@ export default function CreatorStudio() {
                                 padding: "6px 12px",
                                 borderRadius: "20px",
                                 fontSize: "0.9rem",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               +${commission.toFixed(2)}
@@ -958,11 +1001,12 @@ const styles = {
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
+    whiteSpace: "nowrap",
   },
   trBody: { borderBottom: "1px solid #f1f5f9", transition: "background 0.2s" },
   td: { padding: "16px 24px", verticalAlign: "middle" },
 
-  // Full Screen Animation Styles (Mirrored from Admin)
+  // Full Screen Animation Styles
   fullScreenOverlay: {
     position: "fixed",
     top: 0,
@@ -1029,7 +1073,7 @@ styleTag.innerHTML = `
   .gradient-bg-anim {
     background: linear-gradient(-45deg, #0f172a, #1e1b4b, #4635de, #0284c7, #0f172a);
     background-size: 400% 400%;
-    animation: gradientShift 3s ease infinite;
+    animation: gradientShift 4s ease infinite;
   }
   @keyframes gradientShift {
     0% { background-position: 0% 50%; }
@@ -1037,18 +1081,39 @@ styleTag.innerHTML = `
     100% { background-position: 0% 50%; }
   }
 
+  /* SPLIT SCREEN LOGIN LAYOUT */
+  .login-split-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background: #0f172a;
+  }
+  .login-left {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 10;
+    box-shadow: 20px 0 50px rgba(0,0,0,0.3);
+  }
+  .login-card {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    padding: 48px;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 440px;
+    border: 1px solid rgba(255,255,255,0.8);
+  }
+
   /* Overlay entry/exit animations */
   .slide-down-enter { animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .fade-slide-up-exit { animation: slideUpFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   
-  @keyframes slideDown {
-    0% { transform: translateY(-100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes slideUpFadeOut {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-20px); opacity: 0; visibility: hidden; }
-  }
+  @keyframes slideDown { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+  @keyframes slideUpFadeOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-20px); opacity: 0; visibility: hidden; } }
   
   /* Intense Logo Pulse */
   .pulse-glow-intense { animation: pulseGlowIntense 0.6s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
@@ -1082,6 +1147,18 @@ styleTag.innerHTML = `
   @keyframes popInUI { 
     0% { opacity: 0; transform: scale(0.98) translateY(10px); } 
     100% { opacity: 1; transform: scale(1) translateY(0); } 
+  }
+  
+  input:focus, select:focus { border-color: #4635de !important; box-shadow: 0 0 0 3px rgba(70, 53, 222, 0.1) !important; }
+
+  /* MOBILE OPTIMIZATIONS */
+  @media (max-width: 1024px) {
+    .hide-on-mobile { display: none !important; }
+    .dashboard-content-wrapper { margin-top: 24px !important; padding: 0 16px !important; }
+    .metrics-grid { gap: 16px !important; }
+    .dashboard-title { font-size: 1rem !important; }
+    .logout-btn { padding: 8px 12px !important; }
+    .login-card { padding: 32px !important; }
   }
 `;
 document.head.appendChild(styleTag);

@@ -17,6 +17,7 @@ import {
   Microscope,
   Activity,
   Zap,
+  Edit2, // NEW: Added Edit Icon
 } from "lucide-react";
 
 export default function CreatorManager() {
@@ -24,13 +25,16 @@ export default function CreatorManager() {
   const [orders, setOrders] = useState([]);
   const [creatorCodes, setCreatorCodes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
+
+  // Form & Edit States
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // Animation States
   const [isAnimating, setIsAnimating] = useState(true);
   const [mountOverlay, setMountOverlay] = useState(true);
 
-  // New Affiliate Form State
+  // Affiliate Form State
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [commission, setCommission] = useState("15");
@@ -42,7 +46,7 @@ export default function CreatorManager() {
       setIsAnimating(false);
     }, 500);
 
-    // 2. Unmount the overlay completely at 0.9s (gives the 0.4s exit anim time to play)
+    // 2. Unmount the overlay completely at 0.9s
     const unmountTimer = setTimeout(() => {
       setMountOverlay(false);
     }, 900);
@@ -76,7 +80,8 @@ export default function CreatorManager() {
       if (ordersRes.data) setOrders(ordersRes.data);
       if (codesRes.data) {
         setCreatorCodes(codesRes.data);
-        if (codesRes.data.length > 0 && !code) {
+        // Only auto-select if we aren't editing someone
+        if (codesRes.data.length > 0 && !code && !editingId) {
           setCode(codesRes.data[0].code);
         }
       }
@@ -87,30 +92,61 @@ export default function CreatorManager() {
     }
   };
 
-  const handleAddAffiliate = async (e) => {
+  const handleEdit = (affiliate) => {
+    setName(affiliate.name);
+    setCode(affiliate.discount_code);
+    setCommission((affiliate.commission_rate * 100).toString());
+    setPin(affiliate.pin);
+    setEditingId(affiliate.id);
+    setIsFormOpen(true);
+
+    // Smooth scroll to top when editing
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSaveAffiliate = async (e) => {
     e.preventDefault();
     if (!code) return alert("Please select a Creator Code first.");
 
     const rate = parseFloat(commission) / 100;
 
-    const { error } = await supabase.from("affiliates").insert([
-      {
-        name: name.trim(),
-        discount_code: code.trim().toUpperCase(),
-        commission_rate: rate,
-        pin: pin.trim(),
-      },
-    ]);
+    const payload = {
+      name: name.trim(),
+      discount_code: code.trim().toUpperCase(),
+      commission_rate: rate,
+      pin: pin.trim(),
+    };
+
+    let error;
+
+    // Check if we are updating or inserting
+    if (editingId) {
+      const { error: updateError } = await supabase
+        .from("affiliates")
+        .update(payload)
+        .eq("id", editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from("affiliates")
+        .insert([payload]);
+      error = insertError;
+    }
 
     if (error) {
-      alert(`Error adding creator: ${error.message}`);
+      alert(`Error saving creator: ${error.message}`);
     } else {
-      setIsAdding(false);
-      setName("");
-      setCommission("15");
-      setPin("");
+      handleCloseForm();
       fetchData();
     }
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingId(null);
+    setName("");
+    setCommission("15");
+    setPin("");
   };
 
   const handleDelete = async (id) => {
@@ -147,7 +183,7 @@ export default function CreatorManager() {
         >
           {/* Main Content Wrapper (Centered) */}
           <div style={styles.animationCenterBox}>
-            {/* 7 UNIQUE HIGH-VELOCITY ICONS */}
+            {/* 7 UNIQUE HIGH-VELOCITY ICONS (Strict Blue->White Spectrum, Unique Sizes, Upright Bouncing) */}
             <div className="icon-bounce-1" style={styles.absoluteIconZero}>
               <TestTube size={110} color="#ffffff" strokeWidth={1.5} />
             </div>
@@ -214,8 +250,11 @@ export default function CreatorManager() {
             </div>
             Creator Management
           </h3>
-          {!isAdding && (
-            <button onClick={() => setIsAdding(true)} style={styles.primaryBtn}>
+          {!isFormOpen && (
+            <button
+              onClick={() => setIsFormOpen(true)}
+              style={styles.primaryBtn}
+            >
               <Plus size={16} /> Add Creator
             </button>
           )}
@@ -227,21 +266,18 @@ export default function CreatorManager() {
         </p>
 
         {/* FORM CARD */}
-        {isAdding && (
+        {isFormOpen && (
           <div style={styles.formCard}>
             <div style={styles.formHeader}>
               <h4 style={{ margin: 0, color: "#0f172a", fontSize: "1.1rem" }}>
-                Register New Creator
+                {editingId ? "Edit Creator Details" : "Register New Creator"}
               </h4>
-              <button
-                onClick={() => setIsAdding(false)}
-                style={styles.closeBtn}
-              >
+              <button onClick={handleCloseForm} style={styles.closeBtn}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddAffiliate} style={styles.formGrid}>
+            <form onSubmit={handleSaveAffiliate} style={styles.formGrid}>
               <div>
                 <label style={styles.label}>Creator Name</label>
                 <div style={styles.inputWrapper}>
@@ -268,6 +304,11 @@ export default function CreatorManager() {
                       onChange={(e) => setCode(e.target.value)}
                       style={styles.selectWithIcon}
                     >
+                      {/* Ensure the currently edited code is an option even if somehow deactivated */}
+                      {editingId &&
+                        !creatorCodes.find((c) => c.code === code) && (
+                          <option value={code}>{code} (Current)</option>
+                        )}
                       {creatorCodes.map((c) => (
                         <option key={c.code} value={c.code}>
                           {c.code}
@@ -327,17 +368,18 @@ export default function CreatorManager() {
               >
                 <button
                   type="button"
-                  onClick={() => setIsAdding(false)}
+                  onClick={handleCloseForm}
                   style={styles.cancelBtn}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={!code || creatorCodes.length === 0}
+                  disabled={!code && creatorCodes.length === 0}
                   style={styles.saveBtn}
                 >
-                  <Save size={16} /> Save Creator
+                  <Save size={16} />{" "}
+                  {editingId ? "Update Creator" : "Save Creator"}
                 </button>
               </div>
             </form>
@@ -424,13 +466,29 @@ export default function CreatorManager() {
                           </div>
                         </td>
                         <td style={{ ...styles.td, textAlign: "right" }}>
-                          <button
-                            onClick={() => handleDelete(aff.id)}
-                            style={styles.deleteBtn}
-                            title="Remove Creator"
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              justifyContent: "flex-end",
+                            }}
                           >
-                            <Trash2 size={16} />
-                          </button>
+                            {/* NEW: Edit Button */}
+                            <button
+                              onClick={() => handleEdit(aff)}
+                              style={styles.editBtn}
+                              title="Edit Creator"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(aff.id)}
+                              style={styles.deleteBtn}
+                              title="Remove Creator"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -638,6 +696,15 @@ const styles = {
     fontSize: "0.95rem",
   },
 
+  editBtn: {
+    background: "#eff6ff",
+    border: "1px solid #dbeafe",
+    color: "#2563eb",
+    cursor: "pointer",
+    padding: "8px",
+    borderRadius: "8px",
+    transition: "all 0.2s",
+  },
   deleteBtn: {
     background: "#fef2f2",
     border: "1px solid #fee2e2",
@@ -807,8 +874,8 @@ styleTag.innerHTML = `
   .fade-in-text-delay { opacity: 0; animation: fadeInText 0.3s ease-out forwards 0.3s; }
   @keyframes fadeInText { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   
-  /* FIXED: Adjusted animation delay down to 0.5s to sync with the new rapid 0.5s exit timer */
-  .fade-in-ui { opacity: 0; animation: popInUI 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s; }
+  /* FIXED: Reduced to 0.3s so it pops in underneath precisely as the curtain begins to slide away */
+  .fade-in-ui { opacity: 0; animation: popInUI 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.3s; }
   @keyframes popInUI { 
     0% { opacity: 0; transform: scale(0.98) translateY(10px); } 
     100% { opacity: 1; transform: scale(1) translateY(0); } 

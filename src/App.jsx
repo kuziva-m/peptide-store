@@ -28,6 +28,7 @@ import Checkout from "./pages/Checkout";
 import PeptideLandingPage from "./pages/PeptideLandingPage";
 import ReconstitutionGuide from "./pages/ReconstitutionGuide";
 import HalfLifeChart from "./pages/HalfLifeChart";
+import CreatorStudio from "./pages/CreatorStudio";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,7 +38,8 @@ function App() {
   const isHiddenPage =
     location.pathname.startsWith("/admin") ||
     location.pathname === "/landing" ||
-    location.pathname === "/checkout";
+    location.pathname === "/checkout" ||
+    location.pathname === "/creator-studio";
 
   return (
     <div
@@ -89,6 +91,7 @@ function App() {
             element={<ReconstitutionGuide />}
           />
           <Route path="/peptide-half-life-chart" element={<HalfLifeChart />} />
+          <Route path="/creator-studio" element={<CreatorStudio />} />
         </Routes>
       </div>
 
