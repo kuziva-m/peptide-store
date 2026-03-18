@@ -19,6 +19,7 @@ import {
   Inbox,
   Home,
   BarChart3,
+  Star, // Imported Star icon for Creators
 } from "lucide-react";
 
 // Components
@@ -32,6 +33,7 @@ import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
 import EmailManager from "../components/admin/EmailManager";
 import AnalyticsDashboard from "../components/admin/AnalyticsDashboard";
+import CreatorManager from "../components/admin/CreatorManager"; // Imported new manager
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -74,6 +76,7 @@ export default function Admin() {
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "email", label: "Email", icon: Inbox },
     { id: "products", label: "Inventory", icon: Package },
+    { id: "creators", label: "Creators", icon: Star }, // Added Creators Tab
     { id: "discounts", label: "Codes", icon: Tag },
     { id: "subscribers", label: "Users", icon: Users },
     { id: "inquiries", label: "Inbox", icon: Mail },
@@ -284,6 +287,7 @@ export default function Admin() {
           {activeTab === "orders" && <OrderManager />}
           {activeTab === "analytics" && <AnalyticsDashboard />}
           {activeTab === "email" && <EmailManager />}
+          {activeTab === "creators" && <CreatorManager />}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}
           {activeTab === "products" && <ProductManager />}
