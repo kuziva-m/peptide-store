@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Edit2,
   Star,
+  Ticket,
 } from "lucide-react";
 
 export default function DiscountManager() {
@@ -18,6 +19,7 @@ export default function DiscountManager() {
   const [loading, setLoading] = useState(true);
 
   // UI State
+  const [activeTab, setActiveTab] = useState("standard"); // "standard" or "creator"
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -30,7 +32,7 @@ export default function DiscountManager() {
     active: true,
     has_limit: false,
     max_uses: 1,
-    is_creator_code: false, // NEW: Track if it's an influencer code
+    is_creator_code: false,
   });
 
   useEffect(() => {
@@ -73,6 +75,22 @@ export default function DiscountManager() {
 
     setDiscounts(mergedData);
     setLoading(false);
+  };
+
+  const handleOpenForm = () => {
+    // Smart default: If they are on the Creator tab, auto-check the creator box
+    setFormData({
+      code: "",
+      type: "percentage",
+      value: 10,
+      free_shipping: false,
+      active: true,
+      has_limit: false,
+      max_uses: 1,
+      is_creator_code: activeTab === "creator",
+    });
+    setEditingId(null);
+    setIsFormOpen(true);
   };
 
   const handleEdit = (discount) => {
@@ -121,7 +139,7 @@ export default function DiscountManager() {
     if (error) {
       alert("Error saving code: " + error.message);
     } else {
-      closeForm();
+      setIsFormOpen(false);
       fetchDiscountsAndUsage();
     }
   };
@@ -129,16 +147,6 @@ export default function DiscountManager() {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingId(null);
-    setFormData({
-      code: "",
-      type: "percentage",
-      value: 10,
-      free_shipping: false,
-      active: true,
-      has_limit: false,
-      max_uses: 1,
-      is_creator_code: false,
-    });
   };
 
   const handleDelete = async (id) => {
@@ -155,6 +163,11 @@ export default function DiscountManager() {
     fetchDiscountsAndUsage();
   };
 
+  // Filter discounts based on the active tab
+  const displayedDiscounts = discounts.filter((d) =>
+    activeTab === "creator" ? d.is_creator_code : !d.is_creator_code,
+  );
+
   return (
     <div
       style={{
@@ -169,11 +182,39 @@ export default function DiscountManager() {
           <Tag size={20} /> Discount Manager
         </h3>
         {!isFormOpen && (
-          <button onClick={() => setIsFormOpen(true)} style={styles.primaryBtn}>
+          <button onClick={handleOpenForm} style={styles.primaryBtn}>
             <Plus size={16} /> Create Code
           </button>
         )}
       </div>
+
+      {/* NEW: TAB SYSTEM */}
+      {!isFormOpen && (
+        <div style={styles.tabContainer}>
+          <button
+            onClick={() => setActiveTab("standard")}
+            style={{
+              ...styles.tabBtn,
+              ...(activeTab === "standard"
+                ? styles.activeTabBtn
+                : styles.inactiveTabBtn),
+            }}
+          >
+            <Ticket size={16} /> Standard Promo Codes
+          </button>
+          <button
+            onClick={() => setActiveTab("creator")}
+            style={{
+              ...styles.tabBtn,
+              ...(activeTab === "creator"
+                ? styles.activeTabBtn
+                : styles.inactiveTabBtn),
+            }}
+          >
+            <Star size={16} /> Creator / Affiliate Codes
+          </button>
+        </div>
+      )}
 
       {isFormOpen && (
         <div style={styles.formCard}>
@@ -238,16 +279,24 @@ export default function DiscountManager() {
                 marginTop: 5,
               }}
             >
-              {/* NEW: Creator Code Toggle */}
+              {/* Creator Code Toggle */}
               <div
                 style={{
                   padding: "12px",
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
+                  background: formData.is_creator_code ? "#f0fdf4" : "#f8fafc",
+                  border: formData.is_creator_code
+                    ? "1px solid #bbf7d0"
+                    : "1px solid #e2e8f0",
                   borderRadius: "8px",
+                  transition: "all 0.2s",
                 }}
               >
-                <label style={{ ...styles.checkboxLabel, color: "#166534" }}>
+                <label
+                  style={{
+                    ...styles.checkboxLabel,
+                    color: formData.is_creator_code ? "#166534" : "#475569",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={formData.is_creator_code}
@@ -267,18 +316,26 @@ export default function DiscountManager() {
                       fontWeight: 700,
                     }}
                   >
-                    <Star size={16} /> Mark as Creator/Affiliate Code
+                    <Star
+                      size={16}
+                      className={
+                        formData.is_creator_code
+                          ? "text-green-600"
+                          : "text-gray-400"
+                      }
+                    />{" "}
+                    Mark as Creator/Affiliate Code
                   </span>
                 </label>
                 <p
                   style={{
                     margin: "4px 0 0 26px",
                     fontSize: "0.8rem",
-                    color: "#15803d",
+                    color: formData.is_creator_code ? "#15803d" : "#64748b",
                   }}
                 >
-                  This allows the code to be selected in the Creator Manager
-                  tab.
+                  This allows the code to be selected in the Creator Manager tab
+                  and hides it from the standard promos list.
                 </p>
               </div>
 
@@ -372,7 +429,6 @@ export default function DiscountManager() {
               style={{ borderBottom: "2px solid #f1f5f9", textAlign: "left" }}
             >
               <th style={styles.th}>Code</th>
-              <th style={styles.th}>Type</th>
               <th style={styles.th}>Effect</th>
               <th style={styles.th}>Usage</th>
               <th style={styles.th}>Status</th>
@@ -380,7 +436,7 @@ export default function DiscountManager() {
             </tr>
           </thead>
           <tbody>
-            {discounts.map((d) => {
+            {displayedDiscounts.map((d) => {
               const isLimitReached = d.max_uses && d.usageCount >= d.max_uses;
               return (
                 <tr key={d.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -389,38 +445,12 @@ export default function DiscountManager() {
                       style={{
                         fontWeight: 700,
                         fontFamily: "monospace",
-                        fontSize: "1rem",
+                        fontSize: "1.05rem",
+                        color: "#0f172a",
                       }}
                     >
                       {d.code}
                     </span>
-                  </td>
-                  <td style={styles.td}>
-                    {d.is_creator_code ? (
-                      <span
-                        style={{
-                          ...styles.tag,
-                          background: "#fef3c7",
-                          color: "#15803d",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          width: "fit-content",
-                        }}
-                      >
-                        <Star size={12} /> Creator
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          ...styles.tag,
-                          background: "#f1f5f9",
-                          color: "#64748b",
-                        }}
-                      >
-                        Standard
-                      </span>
-                    )}
                   </td>
                   <td style={styles.td}>
                     {d.type === "percentage"
@@ -492,6 +522,22 @@ export default function DiscountManager() {
                 </tr>
               );
             })}
+            {displayedDiscounts.length === 0 && (
+              <tr>
+                <td
+                  colSpan="5"
+                  style={{
+                    padding: "40px",
+                    textAlign: "center",
+                    color: "#94a3b8",
+                  }}
+                >
+                  {activeTab === "creator"
+                    ? "No creator codes found. Click 'Create Code' to make one."
+                    : "No standard discount codes found. Click 'Create Code' to make one."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       )}
@@ -504,7 +550,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "24px",
+    marginBottom: "16px",
   },
   title: {
     margin: 0,
@@ -526,6 +572,30 @@ const styles = {
     fontWeight: 600,
     fontSize: "0.9rem",
   },
+
+  // Tab Styles
+  tabContainer: {
+    display: "flex",
+    gap: "8px",
+    borderBottom: "2px solid #f1f5f9",
+    paddingBottom: "16px",
+    marginBottom: "24px",
+  },
+  tabBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
+    border: "none",
+  },
+  activeTabBtn: { background: "#eff6ff", color: "#2563eb" },
+  inactiveTabBtn: { background: "transparent", color: "#64748b" },
+
   formCard: {
     background: "#f8fafc",
     padding: "20px",
@@ -603,6 +673,8 @@ const styles = {
   td: { padding: "16px", fontSize: "0.9rem", color: "#334155" },
   tag: {
     marginLeft: "8px",
+    background: "#eff6ff",
+    color: "#1e40af",
     padding: "2px 8px",
     borderRadius: "12px",
     fontSize: "0.75rem",
