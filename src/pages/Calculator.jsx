@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import {
   Beaker,
   Info,
@@ -7,6 +8,9 @@ import {
   Syringe,
   TestTube,
   Zap,
+  BookOpen,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import "./Calculator.css";
@@ -17,14 +21,99 @@ const SYRINGE_SIZES = [
   { size: 1.0, label: "1.0ml (100 Units)", short: "1.0ml" },
 ];
 
-export default function Calculator() {
-  // Inputs
-  const [syringeSize, setSyringeSize] = useState(SYRINGE_SIZES[2]);
-  const [vialSizeMg, setVialSizeMg] = useState(5);
-  const [waterAmountMl, setWaterAmountMl] = useState(2);
-  const [doseMcg, setDoseMcg] = useState(250);
+// Fully expanded defaults for instant UX snapping
+const MATH_DEFAULTS = {
+  default: { mg: 5, ml: 2, mcg: 250 },
+  "bpc-157": { mg: 5, ml: 2, mcg: 250 },
+  semaglutide: { mg: 5, ml: 2, mcg: 250 },
+  tirzepatide: { mg: 10, ml: 2, mcg: 2500 },
+  "tb-500": { mg: 5, ml: 2, mcg: 2500 },
+  "tb-500-tb4": { mg: 5, ml: 2, mcg: 2500 },
+  "ghk-cu": { mg: 50, ml: 5, mcg: 2000 },
+  "melanotan-2": { mg: 10, ml: 2, mcg: 250 },
+  "melanotan-ii": { mg: 10, ml: 2, mcg: 250 },
+  "cjc-1295": { mg: 2, ml: 1, mcg: 100 },
+  "cjc-1295-no-dac": { mg: 2, ml: 1, mcg: 100 },
+  ipamorelin: { mg: 5, ml: 2, mcg: 100 },
+  epitalon: { mg: 10, ml: 2, mcg: 1000 },
+  "hgh-191aa": { mg: 3.33, ml: 1, mcg: 333 },
+  "tri-heal-max": { mg: 45, ml: 3, mcg: 250 },
+  "wolverine-stack": { mg: 15, ml: 2, mcg: 250 },
+  retatrutide: { mg: 10, ml: 2, mcg: 2000 },
+  cagrilintide: { mg: 5, ml: 2, mcg: 250 },
+  mazdutide: { mg: 10, ml: 2, mcg: 2500 },
+  survodutide: { mg: 10, ml: 2, mcg: 2500 },
+  "igf-1-lr3": { mg: 1, ml: 1, mcg: 50 },
+  "ghrp-6": { mg: 5, ml: 2, mcg: 100 },
+  "ghrp-2": { mg: 5, ml: 2, mcg: 100 },
+  tesamorelin: { mg: 2, ml: 1, mcg: 1000 },
+  "mots-c": { mg: 10, ml: 2, mcg: 5000 },
+  semax: { mg: 10, ml: 2, mcg: 1000 },
+  selank: { mg: 10, ml: 2, mcg: 1000 },
+  kpv: { mg: 10, ml: 2, mcg: 250 },
+  sermorelin: { mg: 2, ml: 1, mcg: 200 },
+  "glow-blend": { mg: 70, ml: 3, mcg: 1000 },
+  "klow-blend": { mg: 80, ml: 3, mcg: 1000 },
+  "nad-plus": { mg: 500, ml: 5, mcg: 50000 },
+  "ll-37": { mg: 5, ml: 2, mcg: 100 },
+  "thymosin-alpha-1": { mg: 10, ml: 2, mcg: 1500 },
+  "pt-141-bremelanotide": { mg: 10, ml: 2, mcg: 1500 },
+  "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 2, mcg: 200 },
+};
 
-  // Calculations
+export default function Calculator() {
+  const { peptideId } = useParams();
+  const [dbData, setDbData] = useState(null);
+
+  const canonicalUrl = peptideId
+    ? `https://melbournepeptides.com.au/peptide-calculator/${peptideId}`
+    : "https://melbournepeptides.com.au/peptide-calculator";
+
+  const initialMath =
+    peptideId && MATH_DEFAULTS[peptideId]
+      ? MATH_DEFAULTS[peptideId]
+      : MATH_DEFAULTS.default;
+
+  const [syringeSize, setSyringeSize] = useState(SYRINGE_SIZES[2]);
+  const [vialSizeMg, setVialSizeMg] = useState(initialMath.mg);
+  const [waterAmountMl, setWaterAmountMl] = useState(initialMath.ml);
+  const [doseMcg, setDoseMcg] = useState(initialMath.mcg);
+
+  useEffect(() => {
+    const newDefaults =
+      peptideId && MATH_DEFAULTS[peptideId]
+        ? MATH_DEFAULTS[peptideId]
+        : MATH_DEFAULTS.default;
+    setVialSizeMg(newDefaults.mg);
+    setWaterAmountMl(newDefaults.ml);
+    setDoseMcg(newDefaults.mcg);
+
+    if (!peptideId) {
+      setDbData(null);
+      return;
+    }
+
+    async function fetchSEOData() {
+      let searchSlug = peptideId;
+      if (peptideId === "tb-500") searchSlug = "tb-500-tb4";
+      if (peptideId === "melanotan-2") searchSlug = "melanotan-ii";
+      if (peptideId === "cjc-1295") searchSlug = "cjc-1295-no-dac";
+
+      const { data } = await supabase
+        .from("products")
+        .select("name, calc_description, calc_example, calc_faq")
+        .eq("slug", searchSlug)
+        .single();
+
+      if (data && data.calc_description) {
+        setDbData(data);
+      } else {
+        setDbData(null);
+      }
+    }
+    fetchSEOData();
+  }, [peptideId]);
+
   const result = useMemo(() => {
     const concentration = vialSizeMg / waterAmountMl;
     const doseMg = doseMcg / 1000;
@@ -43,23 +132,29 @@ export default function Calculator() {
     };
   }, [vialSizeMg, waterAmountMl, doseMcg, syringeSize]);
 
-  return (
-    <div className="calc-container pb-20 bg-gray-50 font-sans">
-      <SEO
-        title="Peptide Reconstitution Calculator | BPC-157, TB-500 & More"
-        description="Accurately calculate your research peptide dosage. Includes specific dilution calculators for BPC-157, Semaglutide, TB-500, GHK-Cu, CJC-1295, and Melanotan."
-        url="https://melbournepeptides.com.au/peptide-calculator"
-      />
+  const activeTitle = dbData?.name
+    ? `${dbData.name} Dosage Calculator | Reconstitution Guide & Chart`
+    : "Peptide Dosage Calculator | BPC-157, TB-500 Reconstitution";
 
-      {/* SEO UPDATE: JSON-LD WebApplication Schema */}
+  const activeDesc = dbData?.calc_description
+    ? dbData.calc_description.substring(0, 155) + "..."
+    : "Accurately calculate your research peptide dosage. Includes specific dilution calculators for BPC-157, Semaglutide, TB-500, GHK-Cu, CJC-1295, and Melanotan.";
+
+  const activeH1 = dbData?.name
+    ? `${dbData.name} Dosage Calculator`
+    : "Peptide Dosage Calculator";
+
+  return (
+    <div className="calc-container pb-20 font-sans">
+      <SEO title={activeTitle} description={activeDesc} url={canonicalUrl} />
+
       <script type="application/ld+json">
         {JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebApplication",
-          name: "Peptide Reconstitution Calculator",
-          url: "https://melbournepeptides.com.au/peptide-calculator",
-          description:
-            "Accurately calculate your research peptide dosage and bacteriostatic water requirements.",
+          name: activeH1,
+          url: canonicalUrl,
+          description: activeDesc,
           applicationCategory: "HealthAndFitnessApplication",
           operatingSystem: "All",
           offers: {
@@ -70,175 +165,173 @@ export default function Calculator() {
         })}
       </script>
 
-      <div className="calc-page-header bg-white border-b border-gray-200 py-12 px-4 shadow-sm text-center mb-10">
-        <div className="max-w-4xl mx-auto flex flex-col items-center">
-          <div className="bg-blue-100 p-4 rounded-full mb-4">
-            <CalcIcon size={40} className="text-blue-600" />
+      {/* NEW: THE AUDITOR'S FAQ SCHEMA INJECTION */}
+      {dbData?.calc_faq && dbData.calc_faq.length > 0 && (
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: dbData.calc_faq.map((faq) => ({
+              "@type": "Question",
+              name: faq.q,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: faq.a,
+              },
+            })),
+          })}
+        </script>
+      )}
+
+      <div className="calc-page-header">
+        <div className="header-title-row">
+          <div className="icon-wrapper">
+            <CalcIcon size={24} color="#4635de" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
-            Peptide Dosage Calculator
-          </h1>
-          <p className="text-lg text-gray-600 font-light max-w-2xl">
-            Accurate reconstitution ratios and tick-mark measurements for
-            laboratory research.
-          </p>
+          <h1 className="calc-title">{activeH1}</h1>
         </div>
+        <p className="calc-subtitle">
+          Accurate reconstitution ratios and tick-mark measurements for
+          {dbData?.name ? ` ${dbData.name} ` : " laboratory "} research and
+          dilution protocols.
+        </p>
       </div>
 
-      <div className="calc-grid mb-16 max-w-6xl mx-auto px-4 gap-8">
+      <div className="calc-grid">
         {/* INPUT CARD */}
-        <div className="calc-card input-section bg-white p-6 sm:p-8 rounded-2xl shadow-md border border-gray-200">
-          <div className="text-lg font-bold text-gray-900 mb-6 border-b pb-2">
-            Configuration
-          </div>
+        <div className="calc-card input-section">
+          <div className="section-label">Configuration Parameters</div>
 
-          <div className="selector-container mb-6">
-            <label className="block text-sm font-bold text-gray-700 mb-3">
-              1. Select Syringe Volume
-            </label>
-            <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="selector-container">
+            <div className="input-group">
+              <label>1. Select Syringe Volume</label>
+            </div>
+            <div className="syringe-select-grid">
               {SYRINGE_SIZES.map((s) => (
-                <button
+                <div
                   key={s.size}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${syringeSize.size === s.size ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 hover:border-blue-300 text-gray-600"}`}
+                  className={`syringe-option ${syringeSize.size === s.size ? "selected" : ""}`}
                   onClick={() => setSyringeSize(s)}
                 >
-                  <Syringe size={20} className="mb-1" />
-                  <span className="text-sm font-bold">{s.short}</span>
-                </button>
+                  <Syringe className="syringe-icon" size={22} />
+                  <span>{s.short}</span>
+                </div>
               ))}
             </div>
-            <div className="text-xs text-gray-500 text-right">
-              Capacity:{" "}
-              <span className="font-bold text-gray-700">
-                {syringeSize.label}
-              </span>
+            <div className="selected-name-display">
+              Capacity: <span>{syringeSize.label}</span>
             </div>
           </div>
 
-          <div className="border-t border-gray-100 my-6"></div>
+          <div className="divider"></div>
 
-          <div className="space-y-6">
+          <div className="inputs-vertical">
             <div className="input-group">
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                2. Vial Quantity (Powder)
-              </label>
-              <div className="relative">
+              <label>2. Vial Quantity (Powder)</label>
+              <div className="input-wrapper">
                 <input
                   type="number"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-lg"
                   value={vialSizeMg}
                   onChange={(e) =>
                     setVialSizeMg(Math.max(0, parseFloat(e.target.value)))
                   }
                   step="1"
                 />
-                <span className="absolute right-4 top-3 text-gray-500 font-bold">
-                  mg
-                </span>
+                <span className="unit-badge">mg</span>
               </div>
             </div>
 
             <div className="input-group">
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                3. Bacteriostatic Water Added
-              </label>
-              <div className="relative">
+              <label>3. Bacteriostatic Water Added</label>
+              <div className="input-wrapper">
                 <input
                   type="number"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-lg"
                   value={waterAmountMl}
                   onChange={(e) =>
                     setWaterAmountMl(Math.max(0.1, parseFloat(e.target.value)))
                   }
                   step="0.1"
                 />
-                <span className="absolute right-4 top-3 text-gray-500 font-bold">
-                  ml
-                </span>
+                <span className="unit-badge">ml</span>
               </div>
-              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                <Beaker size={12} /> Standard amounts: 1ml, 2ml, 3ml
-              </p>
+              <div className="helper-text">
+                <Beaker size={14} /> Standard amounts: 1ml, 2ml, 3ml
+              </div>
             </div>
 
-            <div className="input-group bg-blue-50 p-4 rounded-xl border border-blue-100">
-              <label className="block text-sm font-bold text-blue-900 mb-2">
-                4. Desired Subject Dose
-              </label>
-              <div className="relative">
+            <div className="input-group highlight-group">
+              <label>4. Desired Subject Dose</label>
+              <div className="input-wrapper">
                 <input
                   type="number"
-                  className="w-full bg-white border-2 border-blue-400 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-bold text-lg text-blue-900"
                   value={doseMcg}
                   onChange={(e) =>
                     setDoseMcg(Math.max(0, parseFloat(e.target.value)))
                   }
                   step="50"
                 />
-                <span className="absolute right-4 top-3 text-blue-700 font-bold bg-blue-100 px-2 rounded">
-                  mcg
-                </span>
+                <span className="unit-badge">mcg</span>
               </div>
-              <p className="text-xs text-blue-700 mt-2 flex items-center gap-1">
-                <Info size={12} /> 1000mcg = 1mg
-              </p>
+              <div className="helper-text">
+                <Info size={14} /> 1000mcg = 1mg
+              </div>
             </div>
           </div>
         </div>
 
         {/* RESULT CARD */}
         <div className="result-column">
-          <div className="result-card bg-gray-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl sticky top-6">
-            <div className="border-b border-gray-700 pb-4 mb-6">
-              <span className="bg-blue-600 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
-                Result
-              </span>
-              <h3 className="text-xl font-bold mt-3">
-                Reconstitution Solution
-              </h3>
-              <p className="text-gray-400 text-sm mt-1">
+          <div className="result-card">
+            <div className="result-header">
+              <span className="res-badge">Calculation Result</span>
+              <h3>Reconstitution Solution</h3>
+              <p className="concentration-wrapper">
                 Concentration:{" "}
-                <strong className="text-white text-base">
+                <span className="concentration-text">
                   {result.concentration} mg/ml
-                </strong>
+                </span>
               </p>
             </div>
 
-            <div className="text-center mb-8">
-              <span className="text-gray-400 text-sm block mb-2">
-                Draw to Tick Mark:
-              </span>
+            <div className="result-main">
+              <div className="result-label">Draw to Tick Mark:</div>
               <div
-                className={`text-6xl font-black tracking-tighter ${result.isOverfill ? "text-red-500 text-4xl" : "text-green-400"}`}
+                className="big-number"
+                style={
+                  result.isOverfill
+                    ? {
+                        background: "none",
+                        color: "#ef4444",
+                        WebkitTextFillColor: "#ef4444",
+                        fontSize: "2.5rem",
+                      }
+                    : {}
+                }
               >
                 {result.isOverfill ? "EXCEEDS SYRINGE" : result.units}
               </div>
               {!result.isOverfill && (
-                <div className="text-gray-300 font-bold uppercase tracking-widest mt-1">
-                  Units (IU)
-                </div>
+                <div className="unit-label">Units (IU)</div>
               )}
-              <p className="text-gray-500 text-xs mt-3">
+              <div className="syringe-type-text">
                 on a {syringeSize.short} U-100 Insulin Syringe
-              </p>
+              </div>
             </div>
 
-            <div className="bg-gray-800 rounded-xl p-4 mb-8 flex justify-between items-center border border-gray-700">
-              <div>
-                <span className="block text-xs text-gray-400">Dose</span>
-                <strong className="text-lg">{doseMcg} mcg</strong>
+            <div className="summary-box">
+              <div className="summary-row">
+                <span>Subject Dose</span>
+                <strong>{doseMcg} mcg</strong>
               </div>
-              <div className="w-px h-8 bg-gray-600"></div>
-              <div className="text-right">
-                <span className="block text-xs text-gray-400">Volume</span>
-                <strong className="text-lg text-blue-400">
+              <div className="summary-divider"></div>
+              <div className="summary-row" style={{ textAlign: "right" }}>
+                <span>Extract Volume</span>
+                <strong className="volume-highlight">
                   {result.volumeMl} ml
                 </strong>
               </div>
             </div>
 
-            {/* SYRINGE VISUAL (Kept original CSS logic) */}
             <div className="syringe-wrapper">
               <div className="syringe-container">
                 <div className="syringe-ticks"></div>
@@ -266,272 +359,484 @@ export default function Calculator() {
         </div>
       </div>
 
-      {/* SEO SECTION: MAIN PEPTIDE ANCHORS */}
-      <div className="max-w-6xl mx-auto mt-16 px-4 border-t border-gray-200 pt-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Specific Peptide Calculators & Examples
+      {/* THE DYNAMIC DATABASE CONTENT INJECTION */}
+      {dbData && (
+        <div
+          className="seo-section-wrapper"
+          style={{ marginTop: "40px", paddingTop: "40px" }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: "32px",
+              borderRadius: "20px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+              marginBottom: "32px",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "1.6rem",
+                fontWeight: "800",
+                color: "#0f172a",
+                marginBottom: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <BookOpen size={24} color="#4635de" /> About {dbData.name}{" "}
+              Reconstitution
+            </h2>
+            <p
+              style={{
+                color: "#475569",
+                fontSize: "1rem",
+                lineHeight: "1.7",
+                marginBottom: "24px",
+              }}
+            >
+              {dbData.calc_description}
+            </p>
+
+            {dbData.calc_example && (
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  borderLeft: "4px solid #16a34a",
+                  padding: "20px",
+                  borderRadius: "0 12px 12px 0",
+                }}
+              >
+                <strong
+                  style={{
+                    display: "block",
+                    color: "#166534",
+                    marginBottom: "8px",
+                    fontSize: "1rem",
+                  }}
+                >
+                  Practical Example:
+                </strong>
+                <span style={{ color: "#15803d", lineHeight: "1.6" }}>
+                  {dbData.calc_example}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Dynamic FAQ Render */}
+          {dbData.calc_faq && dbData.calc_faq.length > 0 && (
+            <div
+              style={{
+                background: "white",
+                padding: "32px",
+                borderRadius: "20px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: "800",
+                  color: "#0f172a",
+                  marginBottom: "24px",
+                }}
+              >
+                {dbData.name} Dosing FAQs
+              </h3>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "24px",
+                }}
+              >
+                {dbData.calc_faq.map((faq, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      paddingBottom:
+                        idx !== dbData.calc_faq.length - 1 ? "24px" : "0",
+                      borderBottom:
+                        idx !== dbData.calc_faq.length - 1
+                          ? "1px solid #f1f5f9"
+                          : "none",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontWeight: "700",
+                        color: "#1e293b",
+                        marginBottom: "8px",
+                        fontSize: "1.05rem",
+                      }}
+                    >
+                      {faq.q}
+                    </h4>
+                    <p
+                      style={{ color: "#475569", lineHeight: "1.6", margin: 0 }}
+                    >
+                      {faq.a}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="seo-section-wrapper">
+        <h2 className="seo-section-title text-center">
+          How to Use the Peptide Calculator
+        </h2>
+        <div className="steps-grid">
+          <div className="step-card">
+            <div className="step-number">1</div>
+            <h4>Select Syringe</h4>
+            <p>
+              Choose the capacity of your insulin syringe. The standard for
+              research is a 1.0ml (100 Unit) U-100 syringe.
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">2</div>
+            <h4>Enter Vial Size</h4>
+            <p>
+              Input the total amount of lyophilized powder in your vial in
+              milligrams (e.g., 5mg or 10mg).
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">3</div>
+            <h4>Add Bac Water</h4>
+            <p>
+              Enter the volume of bacteriostatic water (in ml) you intend to
+              inject into the vial for reconstitution.
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">4</div>
+            <h4>Set Target Dose</h4>
+            <p>
+              Input the exact microgram (mcg) dosage required for your subject
+              to instantly view the required unit draw.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="seo-section-wrapper">
+        <h2 className="seo-section-title text-center">
+          Peptide Dosage Chart & Cheat Sheet
+        </h2>
+        <p
+          className="calc-subtitle"
+          style={{ margin: "0 auto 30px", textAlign: "center" }}
+        >
+          Quick reference dilution table for standard research protocols.
+        </p>
+        <div className="premium-table-wrapper">
+          <table className="premium-table">
+            <thead>
+              <tr>
+                <th>Peptide Type</th>
+                <th>Vial Size</th>
+                <th>Water Added</th>
+                <th>Target Dose</th>
+                <th>Syringe Draw</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>BPC-157</strong>
+                </td>
+                <td>5mg</td>
+                <td>2ml</td>
+                <td>250mcg</td>
+                <td className="highlight-cell">10 Units</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>TB-500</strong>
+                </td>
+                <td>5mg</td>
+                <td>2ml</td>
+                <td>2.5mg (2500mcg)</td>
+                <td className="highlight-cell">100 Units (1ml)</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Melanotan 2</strong>
+                </td>
+                <td>10mg</td>
+                <td>2ml</td>
+                <td>250mcg</td>
+                <td className="highlight-cell">5 Units</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>CJC-1295</strong>
+                </td>
+                <td>2mg</td>
+                <td>1ml</td>
+                <td>100mcg</td>
+                <td className="highlight-cell">5 Units</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Semaglutide</strong>
+                </td>
+                <td>5mg</td>
+                <td>2ml</td>
+                <td>250mcg</td>
+                <td className="highlight-cell">10 Units</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>GHK-Cu</strong>
+                </td>
+                <td>50mg</td>
+                <td>5ml</td>
+                <td>2mg (2000mcg)</td>
+                <td className="highlight-cell">20 Units</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="seo-section-wrapper">
+        <h2 className="seo-section-title text-center">
+          Peptide Dosage Calculator Examples
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Main 5 Peptides... */}
-          <div
-            id="bpc157"
-            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 scroll-mt-24"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <TestTube className="text-blue-600" size={20} /> BPC-157
+        <div className="peptide-examples-grid">
+          <div id="bpc157" className="peptide-example-card">
+            <h3 className="peptide-example-title">
+              <TestTube className="icon-blue" size={20} /> BPC-157 Dosage
               Calculator
             </h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Commonly supplied in 5mg or 10mg lyophilized vials for tissue
-              repair models.
+            <p className="peptide-example-desc">
+              Use this dilution calculator to determine how many units to draw
+              for BPC-157 tissue repair models.
             </p>
-            <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm border border-gray-200 mb-4">
-              10mg BPC-157 + 2ml Water ={" "}
-              <strong className="text-green-600">5mg/ml concentration</strong>
+            <div className="peptide-formula-box">
+              10mg BPC-157 + 2ml Bac Water ={" "}
+              <strong className="formula-highlight">
+                5mg/ml concentration
+              </strong>
             </div>
-            <Link
-              to="/bpc-157"
-              className="text-blue-600 font-bold text-sm hover:underline"
-            >
-              View BPC-157 Research →
+            <Link to="/peptide-calculator/bpc-157" className="peptide-link">
+              Open BPC-157 Calculator →
             </Link>
           </div>
 
-          <div
-            id="semaglutide"
-            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 scroll-mt-24"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <TestTube className="text-blue-600" size={20} /> Semaglutide
+          <div id="semaglutide" className="peptide-example-card">
+            <h3 className="peptide-example-title">
+              <TestTube className="icon-blue" size={20} /> Semaglutide Dilution
               Calculator
             </h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="peptide-example-desc">
               Requires precise micro-dosing dilutions for GLP-1 receptor
-              studies.
+              studies. Calculate your exact bac water ratio here.
             </p>
-            <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm border border-gray-200 mb-4">
-              5mg Semaglutide + 2ml Water ={" "}
-              <strong className="text-green-600">2.5mg/ml concentration</strong>
+            <div className="peptide-formula-box">
+              5mg Semaglutide + 2ml Bac Water ={" "}
+              <strong className="formula-highlight">
+                2.5mg/ml concentration
+              </strong>
             </div>
-            <Link
-              to="/semaglutide"
-              className="text-blue-600 font-bold text-sm hover:underline"
-            >
-              View Semaglutide Research →
+            <Link to="/peptide-calculator/semaglutide" className="peptide-link">
+              Open Semaglutide Calculator →
             </Link>
           </div>
 
-          <div
-            id="tirzepatide"
-            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 scroll-mt-24"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <TestTube className="text-blue-600" size={20} /> Tirzepatide
+          <div id="tirzepatide" className="peptide-example-card">
+            <h3 className="peptide-example-title">
+              <TestTube className="icon-blue" size={20} /> Tirzepatide
+              Reconstitution
+            </h3>
+            <p className="peptide-example-desc">
+              Often reconstituted from larger 10mg or 15mg vials for
+              dual-agonist models requiring specific unit tracking.
+            </p>
+            <div className="peptide-formula-box">
+              10mg Tirzepatide + 2ml Bac Water ={" "}
+              <strong className="formula-highlight">
+                5mg/ml concentration
+              </strong>
+            </div>
+            <Link to="/peptide-calculator/tirzepatide" className="peptide-link">
+              Open Tirzepatide Calculator →
+            </Link>
+          </div>
+
+          <div id="tb500" className="peptide-example-card">
+            <h3 className="peptide-example-title">
+              <TestTube className="icon-blue" size={20} /> TB-500 Dosage
               Calculator
             </h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Often reconstituted from larger 10mg or 15mg vials for
-              dual-agonist models.
-            </p>
-            <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm border border-gray-200 mb-4">
-              10mg Tirzepatide + 2ml Water ={" "}
-              <strong className="text-green-600">5mg/ml concentration</strong>
-            </div>
-            <Link
-              to="/tirzepatide"
-              className="text-blue-600 font-bold text-sm hover:underline"
-            >
-              View Tirzepatide Research →
-            </Link>
-          </div>
-
-          <div
-            id="tb500"
-            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 scroll-mt-24"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <TestTube className="text-blue-600" size={20} /> TB-500 Calculator
-            </h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="peptide-example-desc">
               Thymosin Beta-4 requires careful volumetric calculations for
-              systemic models.
+              systemic models. Calculate TB-500 dosing accurately.
             </p>
-            <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm border border-gray-200 mb-4">
-              5mg TB-500 + 2ml Water ={" "}
-              <strong className="text-green-600">2.5mg/ml concentration</strong>
+            <div className="peptide-formula-box">
+              5mg TB-500 + 2ml Bac Water ={" "}
+              <strong className="formula-highlight">
+                2.5mg/ml concentration
+              </strong>
             </div>
-            <Link
-              to="/tb-500-tb4"
-              className="text-blue-600 font-bold text-sm hover:underline"
-            >
-              View TB-500 Research →
-            </Link>
-          </div>
-
-          <div
-            id="ghkcu"
-            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 scroll-mt-24 lg:col-span-2"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <TestTube className="text-blue-600" size={20} /> GHK-Cu Calculator
-            </h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Requires significantly higher dilution volumes (up to 5ml water)
-              due to its 50mg raw vial size to prevent subject tissue
-              irritation.
-            </p>
-            <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm border border-gray-200 mb-4">
-              50mg GHK-Cu + 5ml Water ={" "}
-              <strong className="text-green-600">10mg/ml concentration</strong>
-            </div>
-            <Link
-              to="/ghk-cu"
-              className="text-blue-600 font-bold text-sm hover:underline"
-            >
-              View GHK-Cu Research →
+            <Link to="/peptide-calculator/tb-500" className="peptide-link">
+              Open TB-500 Calculator →
             </Link>
           </div>
         </div>
 
-        {/* SEO QUICK INDEX (The Fix for the other 30 keywords!) */}
-        <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <Zap className="text-blue-500" /> Quick Calculator Index
+        <h3 className="seo-section-subtitle">
+          <Zap className="icon-blue" size={24} /> Quick Calculator Index
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div
-            id="melanotan2"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">
-              Melanotan 2
-            </h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              10mg + 2ml ={" "}
-              <span className="text-green-600 font-bold">5mg/ml</span>
+
+        <div className="quick-index-grid">
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">Melanotan 2</h4>
+            <p className="quick-index-formula">
+              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
             </p>
             <Link
-              to="/melanotan-ii"
-              className="text-blue-600 text-xs font-bold hover:underline"
+              to="/peptide-calculator/melanotan-2"
+              className="quick-index-link"
             >
-              MT-2 Guide →
+              MT2 Calculator →
             </Link>
           </div>
 
-          <div
-            id="cjc1295"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">
-              CJC-1295 (No DAC)
-            </h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              2mg + 1ml ={" "}
-              <span className="text-green-600 font-bold">2mg/ml</span>
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">CJC-1295</h4>
+            <p className="quick-index-formula">
+              2mg + 1ml = <span className="formula-highlight">2mg/ml</span>
             </p>
             <Link
-              to="/cjc-1295-no-dac"
-              className="text-blue-600 text-xs font-bold hover:underline"
+              to="/peptide-calculator/cjc-1295"
+              className="quick-index-link"
             >
-              CJC Guide →
+              CJC Calculator →
             </Link>
           </div>
 
-          <div
-            id="ipamorelin"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">Ipamorelin</h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              5mg + 2ml ={" "}
-              <span className="text-green-600 font-bold">2.5mg/ml</span>
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">Ipamorelin</h4>
+            <p className="quick-index-formula">
+              5mg + 2ml = <span className="formula-highlight">2.5mg/ml</span>
             </p>
             <Link
-              to="/ipamorelin"
-              className="text-blue-600 text-xs font-bold hover:underline"
+              to="/peptide-calculator/ipamorelin"
+              className="quick-index-link"
             >
-              Ipamorelin Guide →
+              Ipamorelin Calc →
             </Link>
           </div>
 
-          <div
-            id="epitalon"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">Epitalon</h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              10mg + 2ml ={" "}
-              <span className="text-green-600 font-bold">5mg/ml</span>
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">Epitalon</h4>
+            <p className="quick-index-formula">
+              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
             </p>
             <Link
-              to="/epitalon"
-              className="text-blue-600 text-xs font-bold hover:underline"
+              to="/peptide-calculator/epitalon"
+              className="quick-index-link"
             >
-              Epitalon Guide →
+              Epitalon Calc →
             </Link>
           </div>
 
-          <div
-            id="retatrutide"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">
-              Retatrutide
-            </h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              10mg + 2ml ={" "}
-              <span className="text-green-600 font-bold">5mg/ml</span>
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">GHK-Cu</h4>
+            <p className="quick-index-formula">
+              50mg + 5ml = <span className="formula-highlight">10mg/ml</span>
             </p>
-            <Link
-              to="/retatrutide"
-              className="text-blue-600 text-xs font-bold hover:underline"
-            >
-              Retatrutide Guide →
+            <Link to="/peptide-calculator/ghk-cu" className="quick-index-link">
+              GHK-Cu Calc →
             </Link>
           </div>
 
-          <div
-            id="hgh"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">
-              HGH (191aa)
-            </h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              10IU + 1ml ={" "}
-              <span className="text-green-600 font-bold">10IU/ml</span>
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">HGH (191aa)</h4>
+            <p className="quick-index-formula">
+              10IU + 1ml = <span className="formula-highlight">10IU/ml</span>
             </p>
             <Link
-              to="/hgh-191aa"
-              className="text-blue-600 text-xs font-bold hover:underline"
+              to="/peptide-calculator/hgh-191aa"
+              className="quick-index-link"
             >
-              HGH Guide →
+              HGH Calc →
             </Link>
           </div>
 
-          <div
-            id="igf1"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">IGF-1 LR3</h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">
-              1mg + 1ml ={" "}
-              <span className="text-green-600 font-bold">1mg/ml</span>
+          {/* A few new dynamic links added for internal authority */}
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">Cagrilintide</h4>
+            <p className="quick-index-formula">
+              5mg + 2ml = <span className="formula-highlight">2.5mg/ml</span>
             </p>
             <Link
-              to="/igf-1-lr3"
-              className="text-blue-600 text-xs font-bold hover:underline"
+              to="/peptide-calculator/cagrilintide"
+              className="quick-index-link"
             >
-              IGF-1 Guide →
+              Cagrilintide Calc →
             </Link>
           </div>
 
-          <div
-            id="pt141"
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm scroll-mt-24 hover:border-blue-300 transition opacity-50"
-          >
-            <h4 className="font-bold text-gray-900 text-sm mb-1">PT-141</h4>
-            <p className="text-xs text-gray-500 font-mono mb-2">Coming Soon</p>
+          <div className="quick-index-card">
+            <h4 className="quick-index-title">MOTS-c</h4>
+            <p className="quick-index-formula">
+              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
+            </p>
+            <Link to="/peptide-calculator/mots-c" className="quick-index-link">
+              MOTS-c Calc →
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* TRUST LAYER CONTENT */}
+      <div className="seo-section-wrapper trust-layer">
+        <div className="trust-grid">
+          <div className="trust-card">
+            <BookOpen size={28} className="icon-blue mb-4" />
+            <h3>What is Peptide Reconstitution?</h3>
+            <p>
+              Reconstitution is the process of mixing lyophilized (freeze-dried)
+              research peptides with a sterile solvent—most commonly
+              Bacteriostatic Water. This transforms the stable powder into a
+              liquid solution suitable for laboratory measurement and subject
+              administration.
+            </p>
+          </div>
+          <div className="trust-card">
+            <ShieldCheck size={28} className="icon-blue mb-4" />
+            <h3>Why Accurate Dosage Matters</h3>
+            <p>
+              In scientific research, precise micro-dosing is critical for
+              ensuring data integrity and subject safety. Utilizing a peptide
+              dosage calculator eliminates human math errors when converting
+              milligrams (mg) to micrograms (mcg) across various syringe
+              capacities.
+            </p>
+          </div>
+          <div className="trust-card">
+            <AlertTriangle size={28} className="icon-blue mb-4" />
+            <h3>Common Mixing Mistakes</h3>
+            <p>
+              The most frequent error in laboratories is failing to account for
+              the displacement volume of the powder itself, or using the wrong
+              syringe type (U-40 vs U-100). Always ensure you are calculating
+              against a standard U-100 insulin syringe for our formulas.
+            </p>
           </div>
         </div>
       </div>

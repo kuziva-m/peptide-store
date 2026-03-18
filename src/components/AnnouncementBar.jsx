@@ -1,5 +1,5 @@
 import "./AnnouncementBar.css";
-import { Landmark, Truck, Zap } from "lucide-react";
+import { Landmark, Truck, Zap, Box } from "lucide-react";
 
 export default function AnnouncementBar() {
   // Add as many messages here as you want!
@@ -15,6 +15,10 @@ export default function AnnouncementBar() {
     {
       icon: <Zap size={14} color="#fbbf24" />,
       text: "Free Express Shipping on orders over $250",
+    },
+    {
+      icon: <Box size={14} color="#fbbf24" />,
+      text: "Every order comes with a free peptide container!",
     },
   ];
 

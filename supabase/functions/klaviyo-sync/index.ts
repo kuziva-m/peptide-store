@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       if (!response.ok) {
         const errText = await response.text();
         console.error("Klaviyo Subscriber Error:", errText);
-        throw new Error("Failed to push subscriber to Klaviyo");
+        throw new Error(`Klaviyo rejected subscriber: ${errText}`);
       }
 
       return new Response(
@@ -98,38 +98,43 @@ Deno.serve(async (req) => {
     }
 
     // ==========================================
-    // SCENARIO 2: NEW PAID ORDER
+    // SCENARIO 2: NEW PLACED ORDER
     // ==========================================
-    if (table === "orders" && (type === "INSERT" || type === "UPDATE")) {
-      // Only fire if the order status is paid
-      if (record.status !== "paid") {
-        return new Response(
-          JSON.stringify({ message: "Order not paid, ignoring." }),
-          { headers: corsHeaders, status: 200 },
-        );
-      }
-
+    if (table === "orders" && type === "INSERT") {
+      
       const klaviyoEventPayload = {
         data: {
           type: "event",
           attributes: {
+            // KLAVIYO FIX: Wrapped profile in data > type > attributes
             profile: {
-              email: record.customer_email,
-              first_name: record.customer_name?.split(" ")[0] || "",
-              last_name:
-                record.customer_name?.split(" ").slice(1).join(" ") || "",
+              data: {
+                type: "profile",
+                attributes: {
+                  email: record.customer_email,
+                  first_name: record.customer_name?.split(" ")[0] || "",
+                  last_name: record.customer_name?.split(" ").slice(1).join(" ") || "",
+                }
+              }
             },
+            // KLAVIYO FIX: Wrapped metric in data > type > attributes
             metric: {
-              name: "Placed Order",
+              data: {
+                type: "metric",
+                attributes: {
+                  name: "Placed Order"
+                }
+              }
             },
             properties: {
               OrderId: record.id,
               Value: record.total_amount,
-              Items: record.items, // Passes the JSON array of products purchased
-              ShippingMethod: record.shipping_method,
-              PaymentMethod: record.payment_method,
+              Items: record.items, 
+              ShippingMethod: record.shipping_method || "Standard",
+              PaymentMethod: "Bank Transfer",
+              OrderStatus: record.status
             },
-            time: record.created_at,
+            time: record.created_at || new Date().toISOString(),
             value: record.total_amount,
           },
         },
@@ -149,7 +154,7 @@ Deno.serve(async (req) => {
       if (!response.ok) {
         const errText = await response.text();
         console.error("Klaviyo Order Event Error:", errText);
-        throw new Error("Failed to push order event to Klaviyo");
+        throw new Error(`Klaviyo rejected order event: ${errText}`);
       }
 
       return new Response(
@@ -173,7 +178,6 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    // FIX: Check if the error is a standard Error object to satisfy TypeScript strict mode
     const errorMessage =
       error instanceof Error ? error.message : "An unknown error occurred";
 

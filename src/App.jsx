@@ -60,6 +60,11 @@ function App() {
 
           {/* SEO FIX: Renamed path for search volume */}
           <Route path="/peptide-calculator" element={<Calculator />} />
+          {/* SEO SCALING: Dynamic keyword calculator routes */}
+          <Route
+            path="/peptide-calculator/:peptideId"
+            element={<Calculator />}
+          />
 
           {/* REDIRECT: Prevents 404s for anyone using the old /calculator link */}
           <Route

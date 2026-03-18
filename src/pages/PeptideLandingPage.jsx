@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import SEO from "../components/SEO"; // <-- IMPORT ADDED
 
 export default function PeptideLandingPage() {
   const { peptideSlug } = useParams();
@@ -24,11 +25,9 @@ export default function PeptideLandingPage() {
       }
 
       setPageData(seo);
-      document.title = `${seo.h1_title} | Australian Research Peptides`;
 
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc)
-        metaDesc.setAttribute("content", seo.meta_description || "");
+      // Removed manual document.title and meta description hacking here.
+      // The <SEO> component below handles it properly for Googlebot!
 
       if (seo.product_id) {
         const { data: prodData } = await supabase
@@ -95,6 +94,13 @@ export default function PeptideLandingPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 font-sans">
+      {/* PROPER SEO COMPONENT ADDED HERE */}
+      <SEO
+        title={`${pageData.h1_title}`}
+        description={pageData.meta_description}
+        url={`https://melbournepeptides.com.au/${peptideSlug}`}
+      />
+
       {faqSchema && (
         <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
       )}
@@ -255,7 +261,7 @@ export default function PeptideLandingPage() {
                 </p>
               </div>
               <Link
-                to={`/product/${product.id}`}
+                to={`/product/${product.slug}`}
                 className="flex items-center justify-center w-full bg-blue-600 text-white py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base hover:bg-blue-700 transition shadow-sm hover:shadow-md"
               >
                 View Pricing & Availability →

@@ -76,6 +76,7 @@ export default function Home() {
       <SEO
         title="Home"
         description="Australia's #1 source for premium peptides. Lab-tested BPC-157, Melanotan 2, GHK-Cu and more. 99% purity guaranteed with fast express shipping from Melbourne."
+        url="https://melbournepeptides.com.au/"
       />
 
       <section className="hero-banner-wrapper">

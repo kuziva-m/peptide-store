@@ -150,6 +150,12 @@ export default function Product() {
     ? `${product.description.substring(0, 140)}. Buy ${product.name} research peptide in Australia with fast shipping.`
     : `Buy ${product.name} research peptide in Australia.`;
 
+  // --- SEO CANONICAL FIX ---
+  // If it's a peptide, point Google to the SEO Landing Page. If accessory, keep it here.
+  const seoCanonicalUrl = isAccessory
+    ? absoluteUrl
+    : `https://melbournepeptides.com.au/${slug}`;
+
   // --- NEW: DYNAMIC >10MG CHECK ---
   const sizeLabel = selectedVariant?.size_label || "";
   const numericMatch = sizeLabel.match(/\d+/);
@@ -163,16 +169,14 @@ export default function Product() {
         description={metaDescription}
         image={displayImage}
         type="product"
-        url={absoluteUrl}
+        url={seoCanonicalUrl} // <-- NOW USES THE FIX
       />
 
-      {/* SEO UPDATE: JSON-LD Product Schema for Rich Snippets */}
-      {/* SEO UPDATE: JSON-LD Product Schema for Rich Snippets (Now with Stars!) */}
       <script type="application/ld+json">
         {JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Product",
-          "@id": absoluteUrl,
+          "@id": seoCanonicalUrl, // <-- ALSO UPDATED HERE
           name: product.name,
           image: displayImage,
           description: metaDescription,
@@ -187,7 +191,7 @@ export default function Product() {
           },
           offers: {
             "@type": "Offer",
-            url: absoluteUrl,
+            url: seoCanonicalUrl, // <-- ALSO UPDATED HERE
             priceCurrency: "AUD",
             price: selectedVariant?.price,
             priceValidUntil: "2026-12-31",
@@ -198,7 +202,6 @@ export default function Product() {
         })}
       </script>
 
-      {/* SEO UPDATE: JSON-LD Breadcrumb Schema */}
       <script type="application/ld+json">
         {JSON.stringify({
           "@context": "https://schema.org",
@@ -214,7 +217,7 @@ export default function Product() {
               "@type": "ListItem",
               position: 2,
               name: product.name,
-              item: absoluteUrl,
+              item: seoCanonicalUrl, // <-- ALSO UPDATED HERE
             },
           ],
         })}
