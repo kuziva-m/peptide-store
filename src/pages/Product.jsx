@@ -363,7 +363,12 @@ export default function Product() {
               style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}
             >
               {product.variants
-                ?.sort((a, b) => a.price - b.price)
+                ?.sort((a, b) => {
+                  // Push default to the front, sort remainder by price
+                  if (a.is_default && !b.is_default) return -1;
+                  if (!a.is_default && b.is_default) return 1;
+                  return a.price - b.price;
+                })
                 .map((v) => {
                   const isThisVariantInStock = v.in_stock !== false;
 
