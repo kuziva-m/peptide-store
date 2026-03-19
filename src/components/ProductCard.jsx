@@ -6,20 +6,29 @@ import "./ProductCard.css";
 export default function ProductCard({ product, loading }) {
   const { addToCart } = useCart();
 
-  // Sort variants by price low-to-high
+  // Sort variants: Default always first, then by price low-to-high
   const sortedVariants =
-    product?.variants?.sort((a, b) => a.price - b.price) || [];
+    product?.variants?.sort((a, b) => {
+      if (a.is_default && !b.is_default) return -1;
+      if (!a.is_default && b.is_default) return 1;
+      return a.price - b.price;
+    }) || [];
 
   const [selectedVariant, setSelectedVariant] = useState(null);
 
   // Initialize selected variant
   useEffect(() => {
     if (sortedVariants.length > 0) {
-      // Default to the first IN STOCK variant if possible
+      // Check if the admin manually starred a variant as the default
+      const defaultVariant = sortedVariants.find((v) => v.is_default === true);
+
+      // Default to the first IN STOCK variant if no default is set
       const firstInStock = sortedVariants.find((v) => v.in_stock !== false);
-      setSelectedVariant(firstInStock || sortedVariants[0]);
+
+      // Prioritize: 1. Default Starred -> 2. Cheapest In Stock -> 3. Cheapest overall
+      setSelectedVariant(defaultVariant || firstInStock || sortedVariants[0]);
     }
-  }, [product]);
+  }, [product, sortedVariants]);
 
   // SKELETON LOADING STATE
   if (loading || !product) {

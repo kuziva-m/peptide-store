@@ -1,7 +1,7 @@
 {
   "projects": {
-    "default": "peptide-store",
-    "staging": "peptide-store"
+    "default": "melboune-peptides",
+    "staging": "melboune-peptides"
   },
   "targets": {},
   "etags": {}
