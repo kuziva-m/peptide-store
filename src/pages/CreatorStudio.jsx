@@ -326,13 +326,17 @@ export default function CreatorStudio() {
         {/* RIGHT SIDE: Cinematic Creator Image */}
         <div
           className="login-right hide-on-mobile"
-          style={{ position: "relative", flex: 1.2 }}
+          style={{ position: "relative", flex: 1.2, height: "100%" }}
         >
-          {/* New Image: High-end podcast/creator studio setup */}
           <img
             src="https://images.unsplash.com/photo-1598550880863-4e8aa3d0edb4?q=80&w=1400&auto=format&fit=crop"
             alt="Content Creator Studio Setup"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
           />
           {/* Beautiful gradient overlay to match brand and make text readable */}
           <div
@@ -1006,7 +1010,7 @@ const styles = {
   trBody: { borderBottom: "1px solid #f1f5f9", transition: "background 0.2s" },
   td: { padding: "16px 24px", verticalAlign: "middle" },
 
-  // Full Screen Animation Styles
+  // Full Screen Animation Styles (Mirrored from Admin)
   fullScreenOverlay: {
     position: "fixed",
     top: 0,
@@ -1081,12 +1085,13 @@ styleTag.innerHTML = `
     100% { background-position: 0% 50%; }
   }
 
-  /* SPLIT SCREEN LOGIN LAYOUT */
+  /* NEW: STRICT VIEWPORT-LOCKED SPLIT SCREEN */
   .login-split-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh; /* Locked to screen height to prevent image stretching */
     width: 100%;
     background: #0f172a;
+    overflow: hidden; /* Prevents container from growing */
   }
   .login-left {
     flex: 1;
@@ -1096,6 +1101,7 @@ styleTag.innerHTML = `
     padding: 20px;
     z-index: 10;
     box-shadow: 20px 0 50px rgba(0,0,0,0.3);
+    overflow-y: auto; /* Allows form to scroll independently on very small laptops */
   }
   .login-card {
     background: rgba(255, 255, 255, 0.98);
@@ -1106,6 +1112,7 @@ styleTag.innerHTML = `
     width: 100%;
     max-width: 440px;
     border: 1px solid rgba(255,255,255,0.8);
+    margin: auto 0; /* Keeps card centered even if scrolling */
   }
 
   /* Overlay entry/exit animations */
@@ -1159,6 +1166,9 @@ styleTag.innerHTML = `
     .dashboard-title { font-size: 1rem !important; }
     .logout-btn { padding: 8px 12px !important; }
     .login-card { padding: 32px !important; }
+    /* Adjust form for mobile if height gets tight */
+    .login-split-container { height: auto; min-height: 100vh; overflow: visible; }
+    .login-left { height: auto; min-height: 100vh; overflow: visible; }
   }
 `;
 document.head.appendChild(styleTag);

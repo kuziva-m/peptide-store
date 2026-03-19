@@ -16,6 +16,7 @@ import {
   XCircle,
   Eye,
   EyeOff,
+  Star, // NEW: Imported Star for the Default toggle
 } from "lucide-react";
 
 // --- CATEGORIES LIST ---
@@ -316,11 +317,9 @@ function ProductRow({
     }
   };
 
-  // 1. UPDATED SAVE FUNCTION: Saves Main Product + ALL Variants
   const handleSaveDetails = async () => {
     setIsSaving(true);
 
-    // Save main product
     const { error: productError } = await supabase
       .from("products")
       .update({ name: name, image_url: image })
@@ -332,7 +331,6 @@ function ProductRow({
       return;
     }
 
-    // Save all variants currently in local state
     const variantPromises = variants.map((v) =>
       supabase
         .from("variants")
@@ -341,7 +339,8 @@ function ProductRow({
           price: v.price,
           image_url: v.image_url,
           in_stock: v.in_stock,
-          is_hidden: v.is_hidden, // Save the hide toggle!
+          is_hidden: v.is_hidden,
+          is_default: v.is_default || false, // NEW: Save default status
         })
         .eq("id", v.id),
     );
@@ -369,17 +368,28 @@ function ProductRow({
         price: 10,
         in_stock: true,
         is_hidden: false,
+        is_default: false,
       })
       .select()
       .single();
     if (data) setVariants([...variants, data]);
   };
 
-  // 2. UPDATED UPDATE FUNCTION: Only updates local state so it doesn't overwhelm database
   const updateVariantLocal = (id, field, value) => {
-    setVariants(
-      variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
-    );
+    // NEW: If setting a variant as default, we must un-default all others
+    if (field === "is_default" && value === true) {
+      setVariants(
+        variants.map((v) =>
+          v.id === id
+            ? { ...v, is_default: true }
+            : { ...v, is_default: false },
+        ),
+      );
+    } else {
+      setVariants(
+        variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
+      );
+    }
   };
 
   const deleteVariant = async (id) => {
@@ -475,7 +485,6 @@ function ProductRow({
               </div>
             </div>
 
-            {/* MOVED SAVE BUTTON HERE SO IT'S OBVIOUS IT SAVES EVERYTHING */}
             <button
               onClick={handleSaveDetails}
               style={{
@@ -513,10 +522,12 @@ function ProductRow({
           <div
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
+            {/* UPDATED GRID TEMPLATE: Added space for the 'Def' (Default) column */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "100px 80px 100px 1fr 1fr 35px 35px", // Added space for hide button
+                gridTemplateColumns:
+                  "100px 80px 100px 1fr 100px 35px 35px 35px",
                 gap: "10px",
                 paddingLeft: "10px",
                 fontSize: "0.8rem",
@@ -529,6 +540,7 @@ function ProductRow({
               <span>Price ($)</span>
               <span>Image URL</span>
               <span>Upload</span>
+              <span>Def</span> {/* NEW: Default Column */}
               <span>Hide</span>
               <span>Del</span>
             </div>
@@ -554,19 +566,20 @@ function ProductRow({
 function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
   const isInStock = data.in_stock !== false;
   const isHidden = data.is_hidden === true;
+  const isDefault = data.is_default === true;
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "100px 80px 100px 1fr 1fr 35px 35px",
+        gridTemplateColumns: "100px 80px 100px 1fr 100px 35px 35px 35px",
         gap: "10px",
         alignItems: "center",
         padding: "10px",
-        backgroundColor: isHidden ? "#f8fafc" : "white", // Greys out if hidden
-        opacity: isHidden ? 0.6 : 1, // Fades out if hidden
+        backgroundColor: isHidden ? "#f8fafc" : isDefault ? "#fefce8" : "white", // Highlight gold if default
+        opacity: isHidden ? 0.6 : 1,
         borderRadius: "8px",
-        border: "1px solid #e2e8f0",
+        border: isDefault ? "1px solid #fde047" : "1px solid #e2e8f0",
         transition: "all 0.2s ease",
       }}
     >
@@ -612,7 +625,7 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
       />
       <label style={styles.uploadBtnSmall}>
         <Upload size={14} style={{ marginRight: 4 }} />
-        <span style={{ fontSize: "0.75rem" }}>Upload</span>
+        <span style={{ fontSize: "0.75rem" }}>Up</span>
         <input
           type="file"
           hidden
@@ -623,7 +636,24 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
         />
       </label>
 
-      {/* NEW: HIDE BUTTON */}
+      {/* NEW: DEFAULT TOGGLE BUTTON */}
+      <button
+        onClick={() => updateLocal(data.id, "is_default", true)}
+        title={isDefault ? "Current Default Variant" : "Set as Default"}
+        style={{
+          color: isDefault ? "#eab308" : "#cbd5e1",
+          background: "none",
+          border: "none",
+          cursor: isDefault ? "default" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Star size={18} fill={isDefault ? "#eab308" : "none"} />
+      </button>
+
+      {/* HIDE BUTTON */}
       <button
         onClick={() => updateLocal(data.id, "is_hidden", !isHidden)}
         title={isHidden ? "Unhide Variant" : "Hide Variant"}

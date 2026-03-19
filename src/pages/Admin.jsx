@@ -32,8 +32,7 @@ import SubscriberManager from "../components/admin/SubscriberManager";
 import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
 import EmailManager from "../components/admin/EmailManager";
-import AnalyticsDashboard from "../components/admin/AnalyticsDashboard";
-import CreatorManager from "../components/admin/CreatorManager"; // Imported new manager
+import CreatorManager from "../components/admin/CreatorManager";
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -70,13 +69,11 @@ export default function Admin() {
 
   const handleLogout = () => supabase.auth.signOut();
 
-  // --- REORGANIZED MENUS ---
   const PRIMARY_MENU = [
     { id: "orders", label: "Orders", icon: ShoppingBag },
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "email", label: "Email", icon: Inbox },
     { id: "products", label: "Inventory", icon: Package },
-    { id: "creators", label: "Creators", icon: Star }, // Added Creators Tab
+    { id: "creators", label: "Creators", icon: Star },
     { id: "discounts", label: "Codes", icon: Tag },
     { id: "subscribers", label: "Users", icon: Users },
     { id: "inquiries", label: "Inbox", icon: Mail },
@@ -285,7 +282,6 @@ export default function Admin() {
       <main style={styles.mainContent}>
         <div style={styles.contentCard}>
           {activeTab === "orders" && <OrderManager />}
-          {activeTab === "analytics" && <AnalyticsDashboard />}
           {activeTab === "email" && <EmailManager />}
           {activeTab === "creators" && <CreatorManager />}
           {activeTab === "inquiries" && <InquiryManager />}

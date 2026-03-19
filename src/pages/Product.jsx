@@ -64,9 +64,12 @@ export default function Product() {
           };
           setProduct(productWithVisibleVariants);
 
-          // Auto-select the cheapest visible variant
+          // SEO UPDATE: Look for a manually set default variant first
           const sorted = visibleVariants.sort((a, b) => a.price - b.price);
-          setSelectedVariant(sorted[0]);
+          const defaultVariant = sorted.find((v) => v.is_default === true);
+
+          // If the admin checked the star, use that. Otherwise, fallback to cheapest.
+          setSelectedVariant(defaultVariant || sorted[0]);
         }
       }
       setLoading(false);

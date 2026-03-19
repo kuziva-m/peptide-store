@@ -12,6 +12,11 @@ import {
   Edit2,
   Star,
   Ticket,
+  BarChart2,
+  DollarSign,
+  Package,
+  TrendingUp,
+  User,
 } from "lucide-react";
 
 export default function DiscountManager() {
@@ -22,6 +27,10 @@ export default function DiscountManager() {
   const [activeTab, setActiveTab] = useState("standard"); // "standard" or "creator"
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  // NEW: Stats Modal State
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [selectedStats, setSelectedStats] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -50,35 +59,57 @@ export default function DiscountManager() {
     if (discountError)
       console.error("Error fetching discounts:", discountError);
 
+    // NEW: Fetching much more data from orders to build our stats
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
-      .select("discount_code")
+      .select("discount_code, total_price, created_at, customer_name")
       .neq("status", "cancelled")
       .neq("status", "pending");
 
     if (orderError) console.error("Error fetching orders:", orderError);
 
+    // NEW: Build a rich usage map containing revenue and order history
     const usageMap = {};
     if (orderData) {
       orderData.forEach((order) => {
         if (order.discount_code) {
           const code = order.discount_code.toUpperCase();
-          usageMap[code] = (usageMap[code] || 0) + 1;
+          if (!usageMap[code]) {
+            usageMap[code] = { count: 0, revenue: 0, orders: [] };
+          }
+          usageMap[code].count += 1;
+          usageMap[code].revenue += Number(order.total_price || 0);
+          usageMap[code].orders.push(order);
         }
       });
     }
 
-    const mergedData = (discountData || []).map((d) => ({
-      ...d,
-      usageCount: usageMap[d.code.toUpperCase()] || 0,
-    }));
+    const mergedData = (discountData || []).map((d) => {
+      const codeUpper = d.code.toUpperCase();
+      const codeStats = usageMap[codeUpper] || {
+        count: 0,
+        revenue: 0,
+        orders: [],
+      };
+
+      // Sort orders newest first
+      codeStats.orders.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at),
+      );
+
+      return {
+        ...d,
+        usageCount: codeStats.count,
+        totalRevenue: codeStats.revenue,
+        orderHistory: codeStats.orders,
+      };
+    });
 
     setDiscounts(mergedData);
     setLoading(false);
   };
 
   const handleOpenForm = () => {
-    // Smart default: If they are on the Creator tab, auto-check the creator box
     setFormData({
       code: "",
       type: "percentage",
@@ -163,7 +194,11 @@ export default function DiscountManager() {
     fetchDiscountsAndUsage();
   };
 
-  // Filter discounts based on the active tab
+  const openStatsModal = (discount) => {
+    setSelectedStats(discount);
+    setStatsModalOpen(true);
+  };
+
   const displayedDiscounts = discounts.filter((d) =>
     activeTab === "creator" ? d.is_creator_code : !d.is_creator_code,
   );
@@ -175,8 +210,184 @@ export default function DiscountManager() {
         background: "white",
         borderRadius: "12px",
         border: "1px solid #e2e8f0",
+        position: "relative",
       }}
     >
+      {/* --- STATS MODAL OVERLAY --- */}
+      {statsModalOpen && selectedStats && (
+        <div style={styles.modalOverlay}>
+          <div className="fade-in-ui" style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.2rem",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                  }}
+                >
+                  Code Performance
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "0.9rem",
+                    color: "#4635de",
+                    fontWeight: 700,
+                    background: "#f0f4ff",
+                    display: "inline-block",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  {selectedStats.code}
+                </p>
+              </div>
+              <button
+                onClick={() => setStatsModalOpen(false)}
+                style={styles.closeBtn}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Metrics Grid */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: "16px",
+                padding: "24px",
+                background: "#f8fafc",
+                borderBottom: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={styles.statBox}>
+                <Package
+                  size={20}
+                  color="#3b82f6"
+                  style={{ marginBottom: 8 }}
+                />
+                <p style={styles.statLabel}>Total Uses</p>
+                <h2 style={styles.statValue}>{selectedStats.usageCount}</h2>
+              </div>
+              <div style={styles.statBox}>
+                <DollarSign
+                  size={20}
+                  color="#10b981"
+                  style={{ marginBottom: 8 }}
+                />
+                <p style={styles.statLabel}>Revenue Generated</p>
+                <h2 style={styles.statValue}>
+                  ${selectedStats.totalRevenue.toFixed(2)}
+                </h2>
+              </div>
+              <div style={styles.statBox}>
+                <TrendingUp
+                  size={20}
+                  color="#8b5cf6"
+                  style={{ marginBottom: 8 }}
+                />
+                <p style={styles.statLabel}>Avg. Order Value</p>
+                <h2 style={styles.statValue}>
+                  $
+                  {selectedStats.usageCount > 0
+                    ? (
+                        selectedStats.totalRevenue / selectedStats.usageCount
+                      ).toFixed(2)
+                    : "0.00"}
+                </h2>
+              </div>
+            </div>
+
+            {/* Orders Table */}
+            <div
+              style={{ padding: "24px", maxHeight: "400px", overflowY: "auto" }}
+            >
+              <h4
+                style={{
+                  margin: "0 0 16px 0",
+                  fontSize: "1rem",
+                  color: "#0f172a",
+                }}
+              >
+                Recent Orders
+              </h4>
+              {selectedStats.orderHistory.length === 0 ? (
+                <p
+                  style={{
+                    color: "#64748b",
+                    textAlign: "center",
+                    padding: "20px 0",
+                  }}
+                >
+                  No orders have used this code yet.
+                </p>
+              ) : (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "left",
+                  }}
+                >
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid #f1f5f9" }}>
+                      <th style={styles.thSmall}>Date</th>
+                      <th style={styles.thSmall}>Customer</th>
+                      <th style={{ ...styles.thSmall, textAlign: "right" }}>
+                        Order Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedStats.orderHistory.map((order, idx) => (
+                      <tr
+                        key={idx}
+                        style={{ borderBottom: "1px solid #f1f5f9" }}
+                      >
+                        <td style={styles.tdSmall}>
+                          {new Date(order.created_at).toLocaleDateString(
+                            "en-AU",
+                            { month: "short", day: "numeric", year: "numeric" },
+                          )}
+                        </td>
+                        <td style={styles.tdSmall}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            <User size={12} color="#94a3b8" />
+                            <span style={{ fontWeight: 600, color: "#334155" }}>
+                              {order.customer_name || "Guest"}
+                            </span>
+                          </div>
+                        </td>
+                        <td
+                          style={{
+                            ...styles.tdSmall,
+                            textAlign: "right",
+                            fontWeight: 700,
+                            color: "#059669",
+                          }}
+                        >
+                          ${Number(order.total_price || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MAIN HEADER --- */}
       <div style={styles.header}>
         <h3 style={styles.title}>
           <Tag size={20} /> Discount Manager
@@ -188,7 +399,7 @@ export default function DiscountManager() {
         )}
       </div>
 
-      {/* NEW: TAB SYSTEM */}
+      {/* TAB SYSTEM */}
       {!isFormOpen && (
         <div style={styles.tabContainer}>
           <button
@@ -216,6 +427,7 @@ export default function DiscountManager() {
         </div>
       )}
 
+      {/* FORM */}
       {isFormOpen && (
         <div style={styles.formCard}>
           <div style={styles.formHeader}>
@@ -279,7 +491,6 @@ export default function DiscountManager() {
                 marginTop: 5,
               }}
             >
-              {/* Creator Code Toggle */}
               <div
                 style={{
                   padding: "12px",
@@ -327,19 +538,8 @@ export default function DiscountManager() {
                     Mark as Creator/Affiliate Code
                   </span>
                 </label>
-                <p
-                  style={{
-                    margin: "4px 0 0 26px",
-                    fontSize: "0.8rem",
-                    color: formData.is_creator_code ? "#15803d" : "#64748b",
-                  }}
-                >
-                  This allows the code to be selected in the Creator Manager tab
-                  and hides it from the standard promos list.
-                </p>
               </div>
 
-              {/* Usage Limit */}
               <div style={styles.optionRow}>
                 <label style={styles.checkboxLabel}>
                   <input
@@ -418,6 +618,7 @@ export default function DiscountManager() {
         </div>
       )}
 
+      {/* TABLE */}
       {loading ? (
         <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
           <Loader className="spin-anim" /> Loading codes...
@@ -505,15 +706,25 @@ export default function DiscountManager() {
                         justifyContent: "flex-end",
                       }}
                     >
+                      {/* NEW: View Stats Button */}
+                      <button
+                        onClick={() => openStatsModal(d)}
+                        style={styles.statsBtn}
+                        title="View Performance Stats"
+                      >
+                        <BarChart2 size={16} />
+                      </button>
                       <button
                         onClick={() => handleEdit(d)}
                         style={styles.editBtn}
+                        title="Edit Code"
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(d.id)}
                         style={styles.deleteBtn}
+                        title="Delete Code"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -573,7 +784,6 @@ const styles = {
     fontSize: "0.9rem",
   },
 
-  // Tab Styles
   tabContainer: {
     display: "flex",
     gap: "8px",
@@ -662,6 +872,7 @@ const styles = {
     fontWeight: 500,
   },
   optionRow: { display: "flex", flexDirection: "column", gap: 5 },
+
   th: {
     padding: "12px 16px",
     fontSize: "0.85rem",
@@ -699,6 +910,17 @@ const styles = {
     cursor: "pointer",
     fontWeight: "600",
   },
+
+  // Action Buttons
+  statsBtn: {
+    background: "#f3e8ff",
+    border: "1px solid #e9d5ff",
+    color: "#9333ea",
+    cursor: "pointer",
+    padding: 6,
+    borderRadius: 4,
+    transition: "all 0.2s",
+  },
   editBtn: {
     background: "#eff6ff",
     border: "1px solid #dbeafe",
@@ -715,4 +937,76 @@ const styles = {
     padding: 6,
     borderRadius: 4,
   },
+
+  // Modal Styles
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(15, 23, 42, 0.6)",
+    backdropFilter: "blur(4px)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+    padding: "20px",
+  },
+  modalContent: {
+    background: "white",
+    borderRadius: "16px",
+    width: "100%",
+    maxWidth: "700px",
+    overflow: "hidden",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+  },
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "24px",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  statBox: {
+    background: "white",
+    padding: "16px",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+  },
+  statLabel: {
+    fontSize: "0.75rem",
+    fontWeight: 800,
+    color: "#64748b",
+    textTransform: "uppercase",
+    margin: "0 0 4px 0",
+  },
+  statValue: {
+    fontSize: "1.6rem",
+    fontWeight: 900,
+    color: "#0f172a",
+    margin: 0,
+    letterSpacing: "-0.5px",
+  },
+  thSmall: {
+    padding: "12px 16px",
+    fontSize: "0.75rem",
+    color: "#64748b",
+    fontWeight: "800",
+    textTransform: "uppercase",
+    background: "#f8fafc",
+  },
+  tdSmall: { padding: "12px 16px", fontSize: "0.85rem", color: "#334155" },
 };
+
+// CSS Injection for modal animation
+const styleTag = document.createElement("style");
+styleTag.innerHTML = `
+  .fade-in-ui { opacity: 0; animation: popInUI 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  @keyframes popInUI { 
+    0% { opacity: 0; transform: scale(0.98) translateY(10px); } 
+    100% { opacity: 1; transform: scale(1) translateY(0); } 
+  }
+`;
+document.head.appendChild(styleTag);
