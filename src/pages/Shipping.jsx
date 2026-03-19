@@ -10,7 +10,11 @@ export default function Shipping() {
       className="container"
       style={{ padding: "80px 24px", maxWidth: "900px" }}
     >
-      <SEO title="Shipping & Returns" />
+      <SEO
+        title="Shipping & Returns"
+        description="Review Melbourne Peptides shipping rates, dispatch times, and returns guidance for Australian research orders."
+        url="https://melbournepeptides.com.au/shipping"
+      />
       <h1
         style={{
           fontSize: "2.5rem",
