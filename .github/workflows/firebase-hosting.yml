@@ -37,7 +37,7 @@ jobs:
       with:
         repoToken: ${{ secrets.GITHUB_TOKEN }}
         firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PEPTIDE_STORE }}
-        projectId: peptide-store
+        projectId: melboune-peptides
 
   build_and_deploy_live:
     if: github.event_name == 'push'
@@ -66,4 +66,4 @@ jobs:
       with:
         channelId: live
         firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PEPTIDE_STORE }}
-        projectId: peptide-store
+        projectId: melboune-peptides
