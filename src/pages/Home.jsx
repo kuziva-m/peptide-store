@@ -13,7 +13,7 @@ import {
   User,
   Heart,
   Video,
-  Syringe, // Added Syringe icon
+  Syringe,
 } from "lucide-react";
 import "./Home.css";
 
@@ -24,25 +24,25 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data: settings } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "home_content")
-        .single();
-      if (settings) setContent(settings.value);
+      const [settingsRes, reviewsRes, productsRes] = await Promise.all([
+        supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "home_content")
+          .single(),
+        supabase
+          .from("reviews")
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(3),
+        supabase.from("products").select(`*, variants (*)`),
+      ]);
 
-      const { data: reviewsData } = await supabase
-        .from("reviews")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(3);
-      if (reviewsData) setReviews(reviewsData);
+      if (settingsRes.data) setContent(settingsRes.data.value);
+      if (reviewsRes.data) setReviews(reviewsRes.data);
 
-      const { data: allProducts } = await supabase
-        .from("products")
-        .select(`*, variants (*)`);
-
+      const allProducts = productsRes.data;
       if (allProducts) {
         const targetNames = ["Retatrutide", "Melanotan", "BPC-157", "GHK-Cu"];
         const sorted = targetNames
@@ -68,6 +68,7 @@ export default function Home() {
         }
       }
     }
+
     fetchData();
   }, []);
 
@@ -81,22 +82,18 @@ export default function Home() {
 
       <section className="hero-banner-wrapper">
         <div className="container" style={{ padding: 0, maxWidth: "100%" }}>
-          {/* FIX: Removed 'aspectRatio' and 'objectFit' to stop cropping.
-              Added 'maxHeight' to keep it reasonable. 
-              
-              IMPORTANT: Update width="1920" and height="600" below to match
-              your REAL image dimensions to keep the Speed Score high.
-          */}
           <img
             src="/hero-banner.jpeg"
-            alt="Welcome"
+            alt="Melbourne Peptides premium research compounds"
             className="hero-banner-img"
             width="1920"
             height="600"
+            loading="eager"
+            fetchPriority="high"
             style={{
               width: "100%",
               height: "auto",
-              maxHeight: "80vh", // Ensures it doesn't get too tall on big screens
+              maxHeight: "80vh",
               display: "block",
             }}
           />
@@ -162,7 +159,6 @@ export default function Home() {
               <p>Pre-mixed stacks</p>
             </Link>
 
-            {/* UPDATED: Changed Icon to Syringe and Text Description */}
             <Link to="/shop?category=Accessories" className="cat-card">
               <div className="cat-icon">
                 <Syringe size={32} />
@@ -236,6 +232,8 @@ export default function Home() {
               <img
                 src="/images/testimonials/user1.jpeg"
                 alt="Happy Customer 1"
+                loading="lazy"
+                decoding="async"
                 style={imageStyle}
               />
             </div>
@@ -243,6 +241,8 @@ export default function Home() {
               <img
                 src="/images/testimonials/user2.jpeg"
                 alt="Happy Customer 2"
+                loading="lazy"
+                decoding="async"
                 style={imageStyle}
               />
             </div>
@@ -250,6 +250,8 @@ export default function Home() {
               <img
                 src="/images/testimonials/user3.jpeg"
                 alt="Happy Customer 3"
+                loading="lazy"
+                decoding="async"
                 style={imageStyle}
               />
             </div>
@@ -272,6 +274,8 @@ export default function Home() {
                         <img
                           src={review.avatar_url}
                           alt={review.name}
+                          loading="lazy"
+                          decoding="async"
                           style={{
                             width: "100%",
                             height: "100%",
