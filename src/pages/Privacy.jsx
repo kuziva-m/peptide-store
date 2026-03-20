@@ -147,7 +147,11 @@ export default function Privacy() {
 
   return (
     <div className="privacy-page">
-      <SEO title="Privacy Policy" />
+      <SEO
+        title="Privacy Policy"
+        description="Read the Melbourne Peptides privacy policy covering customer data, orders, and website usage."
+        url="https://melbournepeptides.com.au/privacy"
+      />
 
       <div className="container">
         <div className="privacy-header">
