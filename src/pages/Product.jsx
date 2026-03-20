@@ -173,6 +173,7 @@ export default function Product() {
         image={displayImage}
         type="product"
         url={seoCanonicalUrl} // <-- NOW USES THE FIX
+        noindex={!isAccessory}
       />
 
       <script type="application/ld+json">
