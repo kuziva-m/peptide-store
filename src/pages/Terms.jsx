@@ -6,7 +6,11 @@ export default function Terms() {
       className="container"
       style={{ padding: "80px 24px", maxWidth: "800px" }}
     >
-      <SEO title="Terms of Service" />
+      <SEO
+        title="Terms of Service"
+        description="Read the Melbourne Peptides terms of service for research-use-only products, orders, shipping, and liability."
+        url="https://melbournepeptides.com.au/terms"
+      />
       <h1 style={{ marginBottom: "2rem" }}>Terms of Service</h1>
 
       <div

@@ -22,7 +22,6 @@ export default defineConfig({
             "react",
             "react-dom",
             "react-router-dom",
-            "react-helmet-async",
           ],
           // Split heavy UI icons into their own file
           icons: ["lucide-react"],
