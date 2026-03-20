@@ -72,7 +72,11 @@ export default function ProductCard({ product, loading }) {
     }).format(amount);
   };
 
-  const isAccessory = product.category === "Accessories";
+  const isAccessory =
+    product.category === "Accessories" ||
+    product.category === "Syringes" ||
+    product.category === "Prep Pads";
+  const detailHref = isAccessory ? `/product/${product.slug}` : `/${product.slug}`;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -93,7 +97,7 @@ export default function ProductCard({ product, loading }) {
   return (
     <div className="product-card">
       {/* SEO FIX: Use product.slug for semantic URL discovery */}
-      <Link to={`/product/${product.slug}`} className="card-image-wrapper">
+      <Link to={detailHref} className="card-image-wrapper">
         <div className={`status-badge-subtle ${badgeStatus}`}>
           <span className="status-dot"></span> {badgeText}
         </div>
@@ -109,7 +113,7 @@ export default function ProductCard({ product, loading }) {
       <div className="card-content">
         <div className="card-header">
           <Link
-            to={`/product/${product.slug}`} // SEO FIX: Use product.slug
+            to={detailHref} // SEO FIX: Use product.slug
             style={{ textDecoration: "none" }}
           >
             <h3 className="product-name">{product.name}</h3>

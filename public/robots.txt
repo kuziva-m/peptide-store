@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /creator-studio
+Disallow: /landing
+Disallow: /success
+Disallow: /track
+Disallow: /write-review
 
 Sitemap: https://melbournepeptides.com.au/sitemap.xml
