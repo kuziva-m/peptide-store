@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global process */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -119,6 +121,7 @@ function loadEnv() {
       const key = line.slice(0, index).trim();
       const rawValue = line.slice(index + 1).trim();
       if (!key || process.env[key]) continue;
+      process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
       process.env[key] = rawValue.replace(/^['\"]|['\"]$/g, "");
     }
   }
@@ -129,6 +132,7 @@ function escapeHtml(value = "") {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
@@ -751,6 +755,20 @@ function writeRouteHtml(routes) {
 
   for (const route of routes) {
     const html = injectRouteMeta(template, route);
+
+    if (route.path === "/") {
+      fs.writeFileSync(path.join(distDir, "index.html"), html);
+      continue;
+    }
+
+    const routePath = route.path.replace(/^\//, "");
+    const directoryIndexPath = path.join(distDir, routePath, "index.html");
+    const cleanUrlHtmlPath = path.join(distDir, `${routePath}.html`);
+
+    fs.mkdirSync(path.dirname(directoryIndexPath), { recursive: true });
+    fs.mkdirSync(path.dirname(cleanUrlHtmlPath), { recursive: true });
+    fs.writeFileSync(directoryIndexPath, html);
+    fs.writeFileSync(cleanUrlHtmlPath, html);
     const outputPath =
       route.path === "/"
         ? path.join(distDir, "index.html")
