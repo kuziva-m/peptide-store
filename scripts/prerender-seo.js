@@ -122,7 +122,6 @@ function loadEnv() {
       const rawValue = line.slice(index + 1).trim();
       if (!key || process.env[key]) continue;
       process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
-      process.env[key] = rawValue.replace(/^['\"]|['\"]$/g, "");
     }
   }
 }
@@ -133,7 +132,6 @@ function escapeHtml(value = "") {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -268,7 +266,8 @@ function buildStaticRoutes(faqCategories = []) {
     }),
     createMeta({
       path: "/shop",
-      title: "Shop Peptides Australia | HPLC Tested 99% Purity | Melbourne Peptides",
+      title:
+        "Shop Peptides Australia | HPLC Tested 99% Purity | Melbourne Peptides",
       description:
         "Browse Melbourne Peptides' catalog of research peptides, blends, and accessories with a self-referencing canonical shop URL.",
       type: "website",
@@ -286,64 +285,77 @@ function buildStaticRoutes(faqCategories = []) {
       title: "Contact Support | Melbourne Peptides",
       description:
         "Contact Melbourne Peptides for product support, wholesale inquiries, and dispatch assistance in Australia.",
-      jsonLd: [createWebPageJsonLd({
-        title: "Contact Support | Melbourne Peptides",
-        description:
-          "Contact Melbourne Peptides for product support, wholesale inquiries, and dispatch assistance in Australia.",
-        canonical: `${SITE.baseUrl}/contact`,
-      })],
+      jsonLd: [
+        createWebPageJsonLd({
+          title: "Contact Support | Melbourne Peptides",
+          description:
+            "Contact Melbourne Peptides for product support, wholesale inquiries, and dispatch assistance in Australia.",
+          canonical: `${SITE.baseUrl}/contact`,
+        }),
+      ],
     }),
     createMeta({
       path: "/shipping",
       title: "Shipping & Returns | Melbourne Peptides",
       description:
         "Review Melbourne Peptides shipping rates, dispatch timing, and returns guidance for Australian research orders.",
-      jsonLd: [createWebPageJsonLd({
-        title: "Shipping & Returns | Melbourne Peptides",
-        description:
-          "Review Melbourne Peptides shipping rates, dispatch timing, and returns guidance for Australian research orders.",
-        canonical: `${SITE.baseUrl}/shipping`,
-      })],
+      jsonLd: [
+        createWebPageJsonLd({
+          title: "Shipping & Returns | Melbourne Peptides",
+          description:
+            "Review Melbourne Peptides shipping rates, dispatch timing, and returns guidance for Australian research orders.",
+          canonical: `${SITE.baseUrl}/shipping`,
+        }),
+      ],
     }),
     createMeta({
       path: "/faq",
       title: "Help Center & FAQ | Melbourne Peptides",
       description:
         "Answers to common peptide research questions about storage, shipping, purity, and laboratory handling.",
-      jsonLd: faqJsonLd ? [faqJsonLd] : [createWebPageJsonLd({
-        title: "Help Center & FAQ | Melbourne Peptides",
-        description:
-          "Answers to common peptide research questions about storage, shipping, purity, and laboratory handling.",
-        canonical: `${SITE.baseUrl}/faq`,
-      })],
+      jsonLd: faqJsonLd
+        ? [faqJsonLd]
+        : [
+            createWebPageJsonLd({
+              title: "Help Center & FAQ | Melbourne Peptides",
+              description:
+                "Answers to common peptide research questions about storage, shipping, purity, and laboratory handling.",
+              canonical: `${SITE.baseUrl}/faq`,
+            }),
+          ],
     }),
     createMeta({
       path: "/privacy",
       title: "Privacy Policy | Melbourne Peptides",
       description:
         "Read the Melbourne Peptides privacy policy covering customer data, order information, and website usage.",
-      jsonLd: [createWebPageJsonLd({
-        title: "Privacy Policy | Melbourne Peptides",
-        description:
-          "Read the Melbourne Peptides privacy policy covering customer data, order information, and website usage.",
-        canonical: `${SITE.baseUrl}/privacy`,
-      })],
+      jsonLd: [
+        createWebPageJsonLd({
+          title: "Privacy Policy | Melbourne Peptides",
+          description:
+            "Read the Melbourne Peptides privacy policy covering customer data, order information, and website usage.",
+          canonical: `${SITE.baseUrl}/privacy`,
+        }),
+      ],
     }),
     createMeta({
       path: "/terms",
       title: "Terms of Service | Melbourne Peptides",
       description:
         "Read the Melbourne Peptides terms of service for research-use-only products, orders, shipping, and liability.",
-      jsonLd: [createWebPageJsonLd({
-        title: "Terms of Service | Melbourne Peptides",
-        description:
-          "Read the Melbourne Peptides terms of service for research-use-only products, orders, shipping, and liability.",
-        canonical: `${SITE.baseUrl}/terms`,
-      })],
+      jsonLd: [
+        createWebPageJsonLd({
+          title: "Terms of Service | Melbourne Peptides",
+          description:
+            "Read the Melbourne Peptides terms of service for research-use-only products, orders, shipping, and liability.",
+          canonical: `${SITE.baseUrl}/terms`,
+        }),
+      ],
     }),
     createMeta({
       path: "/peptide-calculator",
-      title: "Peptide Dosage Calculator | BPC-157, TB-500 Reconstitution | Melbourne Peptides",
+      title:
+        "Peptide Dosage Calculator | BPC-157, TB-500 Reconstitution | Melbourne Peptides",
       description:
         "Calculate research peptide dilution ratios and syringe units with Melbourne Peptides' peptide dosage calculator.",
       jsonLd: [
@@ -364,7 +376,8 @@ function buildStaticRoutes(faqCategories = []) {
     }),
     createMeta({
       path: "/peptide-reconstitution-guide",
-      title: "How to Reconstitute Peptides | Step-by-Step Guide | Melbourne Peptides",
+      title:
+        "How to Reconstitute Peptides | Step-by-Step Guide | Melbourne Peptides",
       description:
         "Learn how to reconstitute research peptides with bacteriostatic water, dilution ratios, and storage best practices.",
       jsonLd: [
@@ -493,7 +506,13 @@ function buildFallbackLandingRoutes(slugs) {
       path: `/${slug}`,
       title,
       description: `Research overview, handling guidance, and internal references for ${slugToTitle(slug)}.`,
-      jsonLd: [createWebPageJsonLd({ title, description: `Research overview, handling guidance, and internal references for ${slugToTitle(slug)}.`, canonical })],
+      jsonLd: [
+        createWebPageJsonLd({
+          title,
+          description: `Research overview, handling guidance, and internal references for ${slugToTitle(slug)}.`,
+          canonical,
+        }),
+      ],
     });
   });
 }
@@ -646,6 +665,16 @@ function dedupeRoutes(routes) {
   return [...map.values()].sort((a, b) => a.path.localeCompare(b.path));
 }
 
+function dedupeJsonLd(jsonLd = []) {
+  const seen = new Set();
+  return jsonLd.filter((entry) => {
+    const serialized = JSON.stringify(entry);
+    if (seen.has(serialized)) return false;
+    seen.add(serialized);
+    return true;
+  });
+}
+
 async function fetchSupabaseCollection(endpoint) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -660,7 +689,9 @@ async function fetchSupabaseCollection(endpoint) {
   });
 
   if (!response.ok) {
-    throw new Error(`Supabase request failed for ${endpoint}: ${response.status}`);
+    throw new Error(
+      `Supabase request failed for ${endpoint}: ${response.status}`,
+    );
   }
 
   return response.json();
@@ -679,7 +710,10 @@ async function buildSeoContext() {
         "products?select=id,slug,name,description,category,image_url,updated_at,calc_description,calc_faq,variants(price,image_url,in_stock)&order=name.asc",
       )) || [];
   } catch (error) {
-    console.warn("SEO prerender: using fallback product routes.", error.message);
+    console.warn(
+      "SEO prerender: using fallback product routes.",
+      error.message,
+    );
   }
 
   try {
@@ -688,7 +722,10 @@ async function buildSeoContext() {
         "seo_landing_pages?select=slug,h1_title,meta_description,faqs,updated_at,product_id&order=slug.asc",
       )) || [];
   } catch (error) {
-    console.warn("SEO prerender: using fallback landing routes.", error.message);
+    console.warn(
+      "SEO prerender: using fallback landing routes.",
+      error.message,
+    );
   }
 
   try {
@@ -700,7 +737,9 @@ async function buildSeoContext() {
     console.warn("SEO prerender: FAQ schema fallback in use.", error.message);
   }
 
-  const productBySlug = new Map(products.map((product) => [product.slug, product]));
+  const productBySlug = new Map(
+    products.map((product) => [product.slug, product]),
+  );
   const productById = new Map(products.map((product) => [product.id, product]));
 
   const staticRoutes = buildStaticRoutes(faqCategories);
@@ -729,11 +768,45 @@ async function buildSeoContext() {
 }
 
 function injectRouteMeta(template, route) {
-  const jsonLdScripts = route.jsonLd.length
-    ? `${route.jsonLd
+  const routeLabel = route.title
+    .replace(/\s*\|\s*Melbourne Peptides$/, "")
+    .trim();
+  const shellTitle =
+    route.path === "/"
+      ? "Melbourne Peptides"
+      : route.path === "/shop"
+        ? "Shop Research Peptides"
+        : routeLabel;
+  const shellDescription =
+    route.path === "/"
+      ? "Loading premium research compounds and peptide resources."
+      : route.path === "/shop"
+        ? "Loading the Melbourne Peptides catalog of research peptides, blends, and accessories."
+        : `Loading ${routeLabel.toLowerCase()} from Melbourne Peptides.`;
+  const noscriptTitle =
+    route.path === "/"
+      ? "Melbourne Peptides"
+      : route.path === "/shop"
+        ? "Shop Research Peptides"
+        : routeLabel;
+  const noscriptPrimary =
+    route.path === "/shop"
+      ? "JavaScript is required for the interactive Melbourne Peptides catalog, product filtering, and cart features."
+      : route.path === "/"
+        ? "JavaScript is required for the interactive Melbourne Peptides store, calculator tools, and account features."
+        : `JavaScript is required for the interactive features on ${routeLabel}.`;
+  const noscriptSecondary =
+    route.path === "/shop"
+      ? "You can still review our shop metadata, canonical URL, and linked research resources from this page source."
+      : route.path === "/"
+        ? "You can still access our core research pages, contact information, and policy documents directly via their canonical URLs."
+        : `You can still access this page directly at ${route.canonical}.`;
+  const uniqueJsonLd = dedupeJsonLd(route.jsonLd);
+  const jsonLdScripts = uniqueJsonLd.length
+    ? `${uniqueJsonLd
         .map(
           (entry) =>
-            `<script type="application/ld+json">${JSON.stringify(entry)}</script>`,
+            `<script type="application/ld+json">${JSON.stringify(entry).replace(/<\//g, "<\\/")}</script>`,
         )
         .join("\n    ")}`
     : "";
@@ -744,7 +817,15 @@ function injectRouteMeta(template, route) {
     .replaceAll("__SEO_CANONICAL__", escapeHtml(route.canonical))
     .replaceAll("__SEO_ROBOTS__", escapeHtml(route.robots))
     .replaceAll("__SEO_OG_TYPE__", escapeHtml(route.type || "website"))
-    .replaceAll("__SEO_OG_IMAGE__", escapeHtml(route.image || SITE.defaultImage))
+    .replaceAll(
+      "__SEO_OG_IMAGE__",
+      escapeHtml(route.image || SITE.defaultImage),
+    )
+    .replaceAll("__SEO_SHELL_TITLE__", escapeHtml(shellTitle))
+    .replaceAll("__SEO_SHELL_DESCRIPTION__", escapeHtml(shellDescription))
+    .replaceAll("__SEO_NOSCRIPT_TITLE__", escapeHtml(noscriptTitle))
+    .replaceAll("__SEO_NOSCRIPT_PRIMARY__", escapeHtml(noscriptPrimary))
+    .replaceAll("__SEO_NOSCRIPT_SECONDARY__", escapeHtml(noscriptSecondary))
     .replaceAll("__SEO_JSON_LD__", jsonLdScripts);
 }
 
@@ -769,13 +850,6 @@ function writeRouteHtml(routes) {
     fs.mkdirSync(path.dirname(cleanUrlHtmlPath), { recursive: true });
     fs.writeFileSync(directoryIndexPath, html);
     fs.writeFileSync(cleanUrlHtmlPath, html);
-    const outputPath =
-      route.path === "/"
-        ? path.join(distDir, "index.html")
-        : path.join(distDir, route.path.replace(/^\//, ""), "index.html");
-
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, html);
   }
 }
 
@@ -793,10 +867,13 @@ function buildSitemap(routes) {
               ? "0.8"
               : route.path.startsWith("/product/")
                 ? "0.6"
-                : route.path.startsWith("/") && route.path.split("/").length === 2
+                : route.path.startsWith("/") &&
+                    route.path.split("/").length === 2
                   ? "0.85"
                   : "0.7";
-      const changefreq = route.path.startsWith("/product/") ? "weekly" : "monthly";
+      const changefreq = route.path.startsWith("/product/")
+        ? "weekly"
+        : "monthly";
       return `  <url>\n    <loc>${escapeXml(route.canonical)}</loc>\n    <lastmod>${escapeXml((route.lastmod || lastmod).split("T")[0])}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
     })
     .join("\n");
@@ -808,7 +885,10 @@ function buildRobotsTxt() {
   return `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nDisallow: /creator-studio\nDisallow: /landing\nDisallow: /success\nDisallow: /track\nDisallow: /write-review\n\nSitemap: ${SITE.baseUrl}/sitemap.xml\n`;
 }
 
-function writeCrawlAssets(routes, { writePublic = true, writeDist = true } = {}) {
+function writeCrawlAssets(
+  routes,
+  { writePublic = true, writeDist = true } = {},
+) {
   const sitemap = buildSitemap(routes);
   const robotsTxt = buildRobotsTxt();
 
@@ -836,7 +916,8 @@ export async function generateSeoAssets({
 }
 
 const isDirectRun =
-  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   generateSeoAssets().catch((error) => {
