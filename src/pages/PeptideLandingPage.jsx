@@ -59,19 +59,6 @@ export default function PeptideLandingPage() {
   const productImage =
     product?.image_url || product?.image || "/placeholder.png";
 
-  const faqSchema =
-    pageData.faqs && pageData.faqs.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: pageData.faqs.map((faq) => ({
-            "@type": "Question",
-            name: faq.q,
-            acceptedAnswer: { "@type": "Answer", text: faq.a },
-          })),
-        }
-      : null;
-
   const formatText = (text) => {
     if (!text) return null;
     return text.split("\n").map((line, i) => {
@@ -100,11 +87,6 @@ export default function PeptideLandingPage() {
         description={pageData.meta_description}
         url={`https://melbournepeptides.com.au/${peptideSlug}`}
       />
-
-      {faqSchema && (
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
-      )}
-
       {/* Hero Header */}
       <div className="bg-white border-b border-gray-200 py-12 px-4 sm:px-6 lg:px-8 mb-10 text-center shadow-sm">
         <div className="max-w-4xl mx-auto">
