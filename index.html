@@ -73,6 +73,16 @@
         min-height: 100vh;
         background: #f4f6f8;
         color: #1e293b;
+        font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #f4f6f8;
+        color: #1e293b;
         font-family:
           "Poppins",
           system-ui,
@@ -196,6 +206,29 @@
         font-size: 0.98rem;
         line-height: 1.6;
       }
+
+      .app-noscript {
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .app-noscript h1 {
+        margin: 0 0 12px;
+        color: #0f172a;
+        font-size: clamp(1.5rem, 2vw, 1.9rem);
+      }
+
+      .app-noscript p {
+        margin: 0 0 12px;
+        color: #475569;
+        line-height: 1.7;
+      }
+
+      .app-noscript p:last-child {
+        margin-bottom: 0;
+      }
+    </style>
     </style>
     </script>
   </head>
@@ -214,6 +247,18 @@
       <div class="app-boot-shell" aria-hidden="true">
         <div class="app-boot-card">
           <div class="app-boot-mark">MP</div>
+          <h1>__SEO_SHELL_TITLE__</h1>
+          <p>__SEO_SHELL_DESCRIPTION__</p>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="app-noscript">
+        <h1>__SEO_NOSCRIPT_TITLE__</h1>
+        <p>__SEO_NOSCRIPT_PRIMARY__</p>
+        <p>__SEO_NOSCRIPT_SECONDARY__</p>
+      </div>
           <h1>Melbourne Peptides</h1>
           <p>Loading premium research compounds and peptide resources.</p>
         </div>

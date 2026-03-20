@@ -646,6 +646,16 @@ function dedupeRoutes(routes) {
   return [...map.values()].sort((a, b) => a.path.localeCompare(b.path));
 }
 
+function dedupeJsonLd(jsonLd = []) {
+  const seen = new Set();
+  return jsonLd.filter((entry) => {
+    const serialized = JSON.stringify(entry);
+    if (seen.has(serialized)) return false;
+    seen.add(serialized);
+    return true;
+  });
+}
+
 async function fetchSupabaseCollection(endpoint) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -729,6 +739,43 @@ async function buildSeoContext() {
 }
 
 function injectRouteMeta(template, route) {
+  const routeLabel = route.title.replace(/\s*\|\s*Melbourne Peptides$/, "").trim();
+  const shellTitle =
+    route.path === "/"
+      ? "Melbourne Peptides"
+      : route.path === "/shop"
+        ? "Shop Research Peptides"
+        : routeLabel;
+  const shellDescription =
+    route.path === "/"
+      ? "Loading premium research compounds and peptide resources."
+      : route.path === "/shop"
+        ? "Loading the Melbourne Peptides catalog of research peptides, blends, and accessories."
+        : `Loading ${routeLabel.toLowerCase()} from Melbourne Peptides.`;
+  const noscriptTitle =
+    route.path === "/"
+      ? "Melbourne Peptides"
+      : route.path === "/shop"
+        ? "Shop Research Peptides"
+        : routeLabel;
+  const noscriptPrimary =
+    route.path === "/shop"
+      ? "JavaScript is required for the interactive Melbourne Peptides catalog, product filtering, and cart features."
+      : route.path === "/"
+        ? "JavaScript is required for the interactive Melbourne Peptides store, calculator tools, and account features."
+        : `JavaScript is required for the interactive features on ${routeLabel}.`;
+  const noscriptSecondary =
+    route.path === "/shop"
+      ? "You can still review our shop metadata, canonical URL, and linked research resources from this page source."
+      : route.path === "/"
+        ? "You can still access our core research pages, contact information, and policy documents directly via their canonical URLs."
+        : `You can still access this page directly at ${route.canonical}.`;
+  const uniqueJsonLd = dedupeJsonLd(route.jsonLd);
+  const jsonLdScripts = uniqueJsonLd.length
+    ? `${uniqueJsonLd
+        .map(
+          (entry) =>
+            `<script type="application/ld+json">${JSON.stringify(entry).replace(/<\//g, "<\\/")}</script>`,
   const jsonLdScripts = route.jsonLd.length
     ? `${route.jsonLd
         .map(
@@ -745,6 +792,11 @@ function injectRouteMeta(template, route) {
     .replaceAll("__SEO_ROBOTS__", escapeHtml(route.robots))
     .replaceAll("__SEO_OG_TYPE__", escapeHtml(route.type || "website"))
     .replaceAll("__SEO_OG_IMAGE__", escapeHtml(route.image || SITE.defaultImage))
+    .replaceAll("__SEO_SHELL_TITLE__", escapeHtml(shellTitle))
+    .replaceAll("__SEO_SHELL_DESCRIPTION__", escapeHtml(shellDescription))
+    .replaceAll("__SEO_NOSCRIPT_TITLE__", escapeHtml(noscriptTitle))
+    .replaceAll("__SEO_NOSCRIPT_PRIMARY__", escapeHtml(noscriptPrimary))
+    .replaceAll("__SEO_NOSCRIPT_SECONDARY__", escapeHtml(noscriptSecondary))
     .replaceAll("__SEO_JSON_LD__", jsonLdScripts);
 }
 
