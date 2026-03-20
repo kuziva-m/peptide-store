@@ -122,6 +122,7 @@ function loadEnv() {
       const rawValue = line.slice(index + 1).trim();
       if (!key || process.env[key]) continue;
       process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
+      process.env[key] = rawValue.replace(/^['\"]|['\"]$/g, "");
     }
   }
 }
@@ -132,6 +133,7 @@ function escapeHtml(value = "") {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -767,6 +769,13 @@ function writeRouteHtml(routes) {
     fs.mkdirSync(path.dirname(cleanUrlHtmlPath), { recursive: true });
     fs.writeFileSync(directoryIndexPath, html);
     fs.writeFileSync(cleanUrlHtmlPath, html);
+    const outputPath =
+      route.path === "/"
+        ? path.join(distDir, "index.html")
+        : path.join(distDir, route.path.replace(/^\//, ""), "index.html");
+
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, html);
   }
 }
 
