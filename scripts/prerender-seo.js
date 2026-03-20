@@ -776,31 +776,47 @@ function injectRouteMeta(template, route) {
       ? "Melbourne Peptides"
       : route.path === "/shop"
         ? "Shop Research Peptides"
-        : routeLabel;
+        : route.path === "/peptide-calculator"
+          ? "Peptide Dosage Calculator"
+          : routeLabel;
   const shellDescription =
     route.path === "/"
       ? "Loading premium research compounds and peptide resources."
       : route.path === "/shop"
         ? "Loading the Melbourne Peptides catalog of research peptides, blends, and accessories."
-        : `Loading ${routeLabel.toLowerCase()} from Melbourne Peptides.`;
+        : route.path === "/peptide-calculator"
+          ? "Loading the Melbourne Peptides peptide dosage calculator and reconstitution tools."
+          : route.path.startsWith("/peptide-calculator/")
+            ? `Loading calculator tools and dosage guidance for ${routeLabel.toLowerCase()}.`
+            : `Loading ${routeLabel.toLowerCase()} from Melbourne Peptides.`;
   const noscriptTitle =
     route.path === "/"
       ? "Melbourne Peptides"
       : route.path === "/shop"
         ? "Shop Research Peptides"
-        : routeLabel;
+        : route.path === "/peptide-calculator"
+          ? "Peptide Dosage Calculator"
+          : routeLabel;
   const noscriptPrimary =
     route.path === "/shop"
       ? "JavaScript is required for the interactive Melbourne Peptides catalog, product filtering, and cart features."
-      : route.path === "/"
-        ? "JavaScript is required for the interactive Melbourne Peptides store, calculator tools, and account features."
-        : `JavaScript is required for the interactive features on ${routeLabel}.`;
+      : route.path === "/peptide-calculator"
+        ? "JavaScript is required for the interactive peptide dosage calculator, dilution inputs, and syringe-unit tools."
+        : route.path.startsWith("/peptide-calculator/")
+          ? `JavaScript is required for the interactive ${routeLabel.toLowerCase()} inputs, dilution calculations, and syringe-unit conversions.`
+          : route.path === "/"
+            ? "JavaScript is required for the interactive Melbourne Peptides store, calculator tools, and account features."
+            : `JavaScript is required for the interactive features on ${routeLabel}.`;
   const noscriptSecondary =
     route.path === "/shop"
       ? "You can still review our shop metadata, canonical URL, and linked research resources from this page source."
-      : route.path === "/"
-        ? "You can still access our core research pages, contact information, and policy documents directly via their canonical URLs."
-        : `You can still access this page directly at ${route.canonical}.`;
+      : route.path === "/peptide-calculator"
+        ? "You can still review the peptide calculator metadata, canonical URL, and related reference content from this page source."
+        : route.path.startsWith("/peptide-calculator/")
+          ? `You can still review the calculator metadata and canonical URL for ${routeLabel} at ${route.canonical}.`
+          : route.path === "/"
+            ? "You can still access our core research pages, contact information, and policy documents directly via their canonical URLs."
+            : `You can still access this page directly at ${route.canonical}.`;
   const uniqueJsonLd = dedupeJsonLd(route.jsonLd);
   const jsonLdScripts = uniqueJsonLd.length
     ? `${uniqueJsonLd
@@ -829,10 +845,37 @@ function injectRouteMeta(template, route) {
     .replaceAll("__SEO_JSON_LD__", jsonLdScripts);
 }
 
+function loadPrerenderTemplate(distDir) {
+  const sourceTemplatePath = path.join(repoRoot, "index.html");
+  const builtIndexPath = path.join(distDir, "index.html");
+  const sourceTemplate = fs.readFileSync(sourceTemplatePath, "utf8");
+  const builtIndex = fs.readFileSync(builtIndexPath, "utf8");
+
+  const sourceStyleClose = sourceTemplate.lastIndexOf("</style>");
+  const sourceHeadClose = sourceTemplate.lastIndexOf("</head>");
+  const builtStyleClose = builtIndex.lastIndexOf("</style>");
+  const builtHeadClose = builtIndex.lastIndexOf("</head>");
+
+  if (
+    sourceStyleClose === -1 ||
+    sourceHeadClose === -1 ||
+    builtStyleClose === -1 ||
+    builtHeadClose === -1
+  ) {
+    throw new Error("SEO prerender template parsing failed.");
+  }
+
+  const builtHeadAssets = builtIndex.slice(
+    builtStyleClose + "</style>".length,
+    builtHeadClose,
+  );
+
+  return `${sourceTemplate.slice(0, sourceStyleClose + "</style>".length)}${builtHeadAssets}${sourceTemplate.slice(sourceHeadClose)}`;
+}
+
 function writeRouteHtml(routes) {
   const distDir = path.join(repoRoot, "dist");
-  const templatePath = path.join(distDir, "index.html");
-  const template = fs.readFileSync(templatePath, "utf8");
+  const template = loadPrerenderTemplate(distDir);
 
   for (const route of routes) {
     const html = injectRouteMeta(template, route);
