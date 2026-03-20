@@ -266,6 +266,7 @@ function buildStaticRoutes(faqCategories = []) {
     }),
     createMeta({
       path: "/shop",
+      title: "Shop Peptides Australia | HPLC Tested 99% Purity | Melbourne Peptides",
       title:
         "Shop Peptides Australia | HPLC Tested 99% Purity | Melbourne Peptides",
       description:
@@ -285,6 +286,12 @@ function buildStaticRoutes(faqCategories = []) {
       title: "Contact Support | Melbourne Peptides",
       description:
         "Contact Melbourne Peptides for product support, wholesale inquiries, and dispatch assistance in Australia.",
+      jsonLd: [createWebPageJsonLd({
+        title: "Contact Support | Melbourne Peptides",
+        description:
+          "Contact Melbourne Peptides for product support, wholesale inquiries, and dispatch assistance in Australia.",
+        canonical: `${SITE.baseUrl}/contact`,
+      })],
       jsonLd: [
         createWebPageJsonLd({
           title: "Contact Support | Melbourne Peptides",
@@ -299,6 +306,12 @@ function buildStaticRoutes(faqCategories = []) {
       title: "Shipping & Returns | Melbourne Peptides",
       description:
         "Review Melbourne Peptides shipping rates, dispatch timing, and returns guidance for Australian research orders.",
+      jsonLd: [createWebPageJsonLd({
+        title: "Shipping & Returns | Melbourne Peptides",
+        description:
+          "Review Melbourne Peptides shipping rates, dispatch timing, and returns guidance for Australian research orders.",
+        canonical: `${SITE.baseUrl}/shipping`,
+      })],
       jsonLd: [
         createWebPageJsonLd({
           title: "Shipping & Returns | Melbourne Peptides",
@@ -313,6 +326,12 @@ function buildStaticRoutes(faqCategories = []) {
       title: "Help Center & FAQ | Melbourne Peptides",
       description:
         "Answers to common peptide research questions about storage, shipping, purity, and laboratory handling.",
+      jsonLd: faqJsonLd ? [faqJsonLd] : [createWebPageJsonLd({
+        title: "Help Center & FAQ | Melbourne Peptides",
+        description:
+          "Answers to common peptide research questions about storage, shipping, purity, and laboratory handling.",
+        canonical: `${SITE.baseUrl}/faq`,
+      })],
       jsonLd: faqJsonLd
         ? [faqJsonLd]
         : [
@@ -329,6 +348,12 @@ function buildStaticRoutes(faqCategories = []) {
       title: "Privacy Policy | Melbourne Peptides",
       description:
         "Read the Melbourne Peptides privacy policy covering customer data, order information, and website usage.",
+      jsonLd: [createWebPageJsonLd({
+        title: "Privacy Policy | Melbourne Peptides",
+        description:
+          "Read the Melbourne Peptides privacy policy covering customer data, order information, and website usage.",
+        canonical: `${SITE.baseUrl}/privacy`,
+      })],
       jsonLd: [
         createWebPageJsonLd({
           title: "Privacy Policy | Melbourne Peptides",
@@ -343,6 +368,16 @@ function buildStaticRoutes(faqCategories = []) {
       title: "Terms of Service | Melbourne Peptides",
       description:
         "Read the Melbourne Peptides terms of service for research-use-only products, orders, shipping, and liability.",
+      jsonLd: [createWebPageJsonLd({
+        title: "Terms of Service | Melbourne Peptides",
+        description:
+          "Read the Melbourne Peptides terms of service for research-use-only products, orders, shipping, and liability.",
+        canonical: `${SITE.baseUrl}/terms`,
+      })],
+    }),
+    createMeta({
+      path: "/peptide-calculator",
+      title: "Peptide Dosage Calculator | BPC-157, TB-500 Reconstitution | Melbourne Peptides",
       jsonLd: [
         createWebPageJsonLd({
           title: "Terms of Service | Melbourne Peptides",
@@ -376,6 +411,7 @@ function buildStaticRoutes(faqCategories = []) {
     }),
     createMeta({
       path: "/peptide-reconstitution-guide",
+      title: "How to Reconstitute Peptides | Step-by-Step Guide | Melbourne Peptides",
       title:
         "How to Reconstitute Peptides | Step-by-Step Guide | Melbourne Peptides",
       description:
@@ -506,6 +542,7 @@ function buildFallbackLandingRoutes(slugs) {
       path: `/${slug}`,
       title,
       description: `Research overview, handling guidance, and internal references for ${slugToTitle(slug)}.`,
+      jsonLd: [createWebPageJsonLd({ title, description: `Research overview, handling guidance, and internal references for ${slugToTitle(slug)}.`, canonical })],
       jsonLd: [
         createWebPageJsonLd({
           title,
@@ -689,6 +726,7 @@ async function fetchSupabaseCollection(endpoint) {
   });
 
   if (!response.ok) {
+    throw new Error(`Supabase request failed for ${endpoint}: ${response.status}`);
     throw new Error(
       `Supabase request failed for ${endpoint}: ${response.status}`,
     );
@@ -710,6 +748,7 @@ async function buildSeoContext() {
         "products?select=id,slug,name,description,category,image_url,updated_at,calc_description,calc_faq,variants(price,image_url,in_stock)&order=name.asc",
       )) || [];
   } catch (error) {
+    console.warn("SEO prerender: using fallback product routes.", error.message);
     console.warn(
       "SEO prerender: using fallback product routes.",
       error.message,
@@ -722,6 +761,7 @@ async function buildSeoContext() {
         "seo_landing_pages?select=slug,h1_title,meta_description,faqs,updated_at,product_id&order=slug.asc",
       )) || [];
   } catch (error) {
+    console.warn("SEO prerender: using fallback landing routes.", error.message);
     console.warn(
       "SEO prerender: using fallback landing routes.",
       error.message,
@@ -737,6 +777,7 @@ async function buildSeoContext() {
     console.warn("SEO prerender: FAQ schema fallback in use.", error.message);
   }
 
+  const productBySlug = new Map(products.map((product) => [product.slug, product]));
   const productBySlug = new Map(
     products.map((product) => [product.slug, product]),
   );
@@ -768,6 +809,7 @@ async function buildSeoContext() {
 }
 
 function injectRouteMeta(template, route) {
+  const routeLabel = route.title.replace(/\s*\|\s*Melbourne Peptides$/, "").trim();
   const routeLabel = route.title
     .replace(/\s*\|\s*Melbourne Peptides$/, "")
     .trim();
@@ -776,28 +818,44 @@ function injectRouteMeta(template, route) {
       ? "Melbourne Peptides"
       : route.path === "/shop"
         ? "Shop Research Peptides"
+        : route.path === "/peptide-calculator"
+          ? "Peptide Dosage Calculator"
         : routeLabel;
   const shellDescription =
     route.path === "/"
       ? "Loading premium research compounds and peptide resources."
       : route.path === "/shop"
         ? "Loading the Melbourne Peptides catalog of research peptides, blends, and accessories."
+        : route.path === "/peptide-calculator"
+          ? "Loading the Melbourne Peptides peptide dosage calculator and reconstitution tools."
+          : route.path.startsWith("/peptide-calculator/")
+            ? `Loading calculator tools and dosage guidance for ${routeLabel.toLowerCase()}.`
         : `Loading ${routeLabel.toLowerCase()} from Melbourne Peptides.`;
   const noscriptTitle =
     route.path === "/"
       ? "Melbourne Peptides"
       : route.path === "/shop"
         ? "Shop Research Peptides"
+        : route.path === "/peptide-calculator"
+          ? "Peptide Dosage Calculator"
         : routeLabel;
   const noscriptPrimary =
     route.path === "/shop"
       ? "JavaScript is required for the interactive Melbourne Peptides catalog, product filtering, and cart features."
+      : route.path === "/peptide-calculator"
+        ? "JavaScript is required for the interactive peptide dosage calculator, dilution inputs, and syringe-unit tools."
+        : route.path.startsWith("/peptide-calculator/")
+          ? `JavaScript is required for the interactive ${routeLabel.toLowerCase()} inputs, dilution calculations, and syringe-unit conversions.`
       : route.path === "/"
         ? "JavaScript is required for the interactive Melbourne Peptides store, calculator tools, and account features."
         : `JavaScript is required for the interactive features on ${routeLabel}.`;
   const noscriptSecondary =
     route.path === "/shop"
       ? "You can still review our shop metadata, canonical URL, and linked research resources from this page source."
+      : route.path === "/peptide-calculator"
+        ? "You can still review the peptide calculator metadata, canonical URL, and related reference content from this page source."
+        : route.path.startsWith("/peptide-calculator/")
+          ? `You can still review the calculator metadata and canonical URL for ${routeLabel} at ${route.canonical}.`
       : route.path === "/"
         ? "You can still access our core research pages, contact information, and policy documents directly via their canonical URLs."
         : `You can still access this page directly at ${route.canonical}.`;
@@ -817,6 +875,7 @@ function injectRouteMeta(template, route) {
     .replaceAll("__SEO_CANONICAL__", escapeHtml(route.canonical))
     .replaceAll("__SEO_ROBOTS__", escapeHtml(route.robots))
     .replaceAll("__SEO_OG_TYPE__", escapeHtml(route.type || "website"))
+    .replaceAll("__SEO_OG_IMAGE__", escapeHtml(route.image || SITE.defaultImage))
     .replaceAll(
       "__SEO_OG_IMAGE__",
       escapeHtml(route.image || SITE.defaultImage),
@@ -829,6 +888,34 @@ function injectRouteMeta(template, route) {
     .replaceAll("__SEO_JSON_LD__", jsonLdScripts);
 }
 
+function loadPrerenderTemplate(distDir) {
+  const sourceTemplatePath = path.join(repoRoot, "index.html");
+  const builtIndexPath = path.join(distDir, "index.html");
+  const sourceTemplate = fs.readFileSync(sourceTemplatePath, "utf8");
+  const builtIndex = fs.readFileSync(builtIndexPath, "utf8");
+
+  const sourceStyleClose = sourceTemplate.lastIndexOf("</style>");
+  const sourceHeadClose = sourceTemplate.lastIndexOf("</head>");
+  const builtStyleClose = builtIndex.lastIndexOf("</style>");
+  const builtHeadClose = builtIndex.lastIndexOf("</head>");
+
+  if (
+    sourceStyleClose === -1 ||
+    sourceHeadClose === -1 ||
+    builtStyleClose === -1 ||
+    builtHeadClose === -1
+  ) {
+    throw new Error("SEO prerender template parsing failed.");
+  }
+
+  const builtHeadAssets = builtIndex.slice(builtStyleClose + "</style>".length, builtHeadClose);
+
+  return `${sourceTemplate.slice(0, sourceStyleClose + "</style>".length)}${builtHeadAssets}${sourceTemplate.slice(sourceHeadClose)}`;
+}
+
+function writeRouteHtml(routes) {
+  const distDir = path.join(repoRoot, "dist");
+  const template = loadPrerenderTemplate(distDir);
 function writeRouteHtml(routes) {
   const distDir = path.join(repoRoot, "dist");
   const templatePath = path.join(distDir, "index.html");
@@ -867,6 +954,10 @@ function buildSitemap(routes) {
               ? "0.8"
               : route.path.startsWith("/product/")
                 ? "0.6"
+                : route.path.startsWith("/") && route.path.split("/").length === 2
+                  ? "0.85"
+                  : "0.7";
+      const changefreq = route.path.startsWith("/product/") ? "weekly" : "monthly";
                 : route.path.startsWith("/") &&
                     route.path.split("/").length === 2
                   ? "0.85"
@@ -885,6 +976,7 @@ function buildRobotsTxt() {
   return `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nDisallow: /creator-studio\nDisallow: /landing\nDisallow: /success\nDisallow: /track\nDisallow: /write-review\n\nSitemap: ${SITE.baseUrl}/sitemap.xml\n`;
 }
 
+function writeCrawlAssets(routes, { writePublic = true, writeDist = true } = {}) {
 function writeCrawlAssets(
   routes,
   { writePublic = true, writeDist = true } = {},
@@ -916,6 +1008,7 @@ export async function generateSeoAssets({
 }
 
 const isDirectRun =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
