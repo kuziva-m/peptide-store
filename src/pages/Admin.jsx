@@ -19,7 +19,8 @@ import {
   Inbox,
   Home,
   BarChart3,
-  Star, // Imported Star icon for Creators
+  Star,
+  Globe, // NEW: Imported Globe icon for SEO Pages
 } from "lucide-react";
 
 // Components
@@ -33,6 +34,7 @@ import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
 import EmailManager from "../components/admin/EmailManager";
 import CreatorManager from "../components/admin/CreatorManager";
+import SeoLandingManager from "../components/admin/SeoLandingManager"; // NEW: Import the SEO Manager
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -82,6 +84,7 @@ export default function Admin() {
   const SECONDARY_MENU = [
     { id: "reviews", label: "Reviews", icon: MessageSquare },
     { id: "content", label: "Content", icon: FileText },
+    { id: "seo_pages", label: "SEO Pages", icon: Globe }, // NEW: Added SEO Pages to the top menu!
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
@@ -290,6 +293,8 @@ export default function Admin() {
           {activeTab === "discounts" && <DiscountManager />}
           {activeTab === "reviews" && <ReviewManager />}
           {activeTab === "content" && <ContentEditor />}
+          {activeTab === "seo_pages" && <SeoLandingManager />}{" "}
+          {/* NEW: Render the component */}
           {activeTab === "settings" && <SettingsManager />}
         </div>
       </main>
