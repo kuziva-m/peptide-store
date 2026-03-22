@@ -1,13 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  X,
-  Minus,
-  Plus,
-  ShoppingBag,
-  ArrowRight,
-  Trash2,
-  Sparkles,
-} from "lucide-react";
+import { X, Minus, Plus, ShoppingBag, ArrowRight, Trash2 } from "lucide-react";
 import { useCart } from "../lib/CartContext";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -28,6 +20,9 @@ export default function CartDrawer() {
   const navigate = useNavigate();
   const [suggestedProducts, setSuggestedProducts] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [selectedSuggestedVariants, setSelectedSuggestedVariants] = useState(
+    {},
+  );
 
   const suggestedSlugs = useMemo(
     () => getSuggestedProductSlugsForCart(cart),
@@ -41,20 +36,33 @@ export default function CartDrawer() {
     return String(v);
   };
 
-  const getDefaultVariant = (product) => {
+  const isVariantPurchasable = (variant) => {
+    if (!variant) return false;
+    const inStock = variant.in_stock !== false && variant.in_stock !== "false";
+    const preorder =
+      variant.is_preorder === true || variant.is_preorder === "true";
+    return inStock || preorder;
+  };
+
+  const getPurchasableVariants = (product) => {
     const visibleVariants = (product.variants || []).filter(
       (v) => v.is_hidden !== true && v.is_hidden !== "true",
     );
 
-    if (!visibleVariants.length) return null;
-
-    const sorted = [...visibleVariants].sort((a, b) => {
+    return visibleVariants.filter(isVariantPurchasable).sort((a, b) => {
       if (a.is_default && !b.is_default) return -1;
       if (!a.is_default && b.is_default) return 1;
       return (a.price || 0) - (b.price || 0);
     });
+  };
 
-    return sorted.find((v) => v.is_default === true) || sorted[0];
+  const getDefaultVariant = (product) => {
+    const purchasableVariants = getPurchasableVariants(product);
+    if (!purchasableVariants.length) return null;
+    return (
+      purchasableVariants.find((v) => v.is_default === true) ||
+      purchasableVariants[0]
+    );
   };
 
   useEffect(() => {
@@ -73,6 +81,7 @@ export default function CartDrawer() {
     async function fetchSuggestedProducts() {
       if (!isCartOpen || suggestedSlugs.length === 0) {
         setSuggestedProducts([]);
+        setSelectedSuggestedVariants({});
         return;
       }
 
@@ -85,6 +94,7 @@ export default function CartDrawer() {
 
       if (error || !data) {
         setSuggestedProducts([]);
+        setSelectedSuggestedVariants({});
         setLoadingSuggestions(false);
         return;
       }
@@ -93,15 +103,27 @@ export default function CartDrawer() {
         .map((slug) => data.find((item) => item.slug === slug))
         .filter(Boolean)
         .map((product) => {
-          const defaultVariant = getDefaultVariant(product);
+          const purchasableVariants = getPurchasableVariants(product);
+          const defaultVariant =
+            purchasableVariants.find((v) => v.is_default === true) ||
+            purchasableVariants[0] ||
+            null;
+
           return {
             ...product,
+            purchasableVariants,
             defaultVariant,
           };
         })
         .filter((product) => product.defaultVariant);
 
+      const nextSelectedVariants = {};
+      hydrated.forEach((product) => {
+        nextSelectedVariants[product.id] = product.defaultVariant.id;
+      });
+
       setSuggestedProducts(hydrated);
+      setSelectedSuggestedVariants(nextSelectedVariants);
       setLoadingSuggestions(false);
     }
 
@@ -114,18 +136,40 @@ export default function CartDrawer() {
   };
 
   const handleAddSuggested = (product) => {
-    if (!product?.defaultVariant) return;
+    if (!product?.purchasableVariants?.length) return;
+
+    const selectedVariantId = selectedSuggestedVariants[product.id];
+    const selectedVariant =
+      product.purchasableVariants.find((v) => v.id === selectedVariantId) ||
+      product.defaultVariant;
+
+    if (!selectedVariant) return;
 
     addToCart(
       {
         ...product,
         id: product.id,
-        price: product.defaultVariant.price,
-        image: product.defaultVariant.image_url || product.image_url,
-        variantId: product.defaultVariant.id,
+        price: selectedVariant.price,
+        image: selectedVariant.image_url || product.image_url,
+        variantId: selectedVariant.id,
       },
       1,
-      product.defaultVariant.size_label,
+      selectedVariant.size_label,
+    );
+  };
+
+  const handleSuggestedVariantChange = (productId, variantId) => {
+    setSelectedSuggestedVariants((prev) => ({
+      ...prev,
+      [productId]: variantId,
+    }));
+  };
+
+  const getSelectedSuggestedVariant = (product) => {
+    const selectedVariantId = selectedSuggestedVariants[product.id];
+    return (
+      product.purchasableVariants.find((v) => v.id === selectedVariantId) ||
+      product.defaultVariant
     );
   };
 
@@ -206,7 +250,7 @@ export default function CartDrawer() {
                             </button>
                           </div>
 
-                          <div style={{ textAlign: "right" }}>
+                          <div className="cart-item-price-col">
                             <p className="cart-item-price">
                               ${(item.price * item.quantity).toFixed(2)}
                             </p>
@@ -227,138 +271,97 @@ export default function CartDrawer() {
               </div>
 
               {(loadingSuggestions || suggestedProducts.length > 0) && (
-                <div
-                  style={{
-                    marginTop: "20px",
-                    paddingTop: "20px",
-                    borderTop: "1px solid #e2e8f0",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginBottom: "14px",
-                    }}
-                  >
-                    <Sparkles size={16} color="#4635de" />
-                    <h4
-                      style={{
-                        margin: 0,
-                        fontSize: "14px",
-                        fontWeight: "800",
-                        color: "#0f172a",
-                        letterSpacing: "0.2px",
-                      }}
-                    >
-                      Suggested for your order
-                    </h4>
+                <section className="cart-suggestions-section">
+                  <div className="cart-suggestions-header">
+                    <ShoppingBag size={15} />
+                    <h4>Suggested for your order</h4>
                   </div>
 
                   {loadingSuggestions ? (
-                    <p
-                      style={{
-                        margin: 0,
-                        color: "#64748b",
-                        fontSize: "13px",
-                      }}
-                    >
+                    <p className="cart-suggestions-loading">
                       Loading suggestions...
                     </p>
                   ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "12px",
-                      }}
-                    >
-                      {suggestedProducts.slice(0, 4).map((product) => (
-                        <div
-                          key={product.id}
-                          style={{
-                            display: "flex",
-                            gap: "10px",
-                            alignItems: "center",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: "12px",
-                            padding: "10px",
-                            background: "#fff",
-                          }}
-                        >
-                          <Link
-                            to={`/product/${product.slug}`}
-                            onClick={toggleCart}
-                            style={{ flexShrink: 0 }}
-                          >
-                            <img
-                              src={
-                                product.defaultVariant?.image_url ||
-                                product.image_url
-                              }
-                              alt={product.name}
-                              style={{
-                                width: "54px",
-                                height: "54px",
-                                objectFit: "cover",
-                                borderRadius: "10px",
-                              }}
-                            />
-                          </Link>
+                    <div className="cart-suggestions-list">
+                      {suggestedProducts.slice(0, 4).map((product) => {
+                        const selectedVariant =
+                          getSelectedSuggestedVariant(product);
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
+                        return (
+                          <div
+                            key={product.id}
+                            className="cart-suggestion-card"
+                          >
                             <Link
                               to={`/product/${product.slug}`}
                               onClick={toggleCart}
-                              style={{
-                                display: "block",
-                                color: "#0f172a",
-                                textDecoration: "none",
-                                fontWeight: "700",
-                                fontSize: "13px",
-                                lineHeight: "1.35",
-                                marginBottom: "4px",
-                              }}
+                              className="cart-suggestion-image-link"
                             >
-                              {product.name}
+                              <img
+                                src={
+                                  selectedVariant?.image_url ||
+                                  product.image_url
+                                }
+                                alt={product.name}
+                                className="cart-suggestion-image"
+                              />
                             </Link>
 
-                            <p
-                              style={{
-                                margin: 0,
-                                color: "#64748b",
-                                fontSize: "12px",
-                              }}
-                            >
-                              {product.defaultVariant?.size_label} · $
-                              {Number(
-                                product.defaultVariant?.price || 0,
-                              ).toFixed(2)}
-                            </p>
-                          </div>
+                            <div className="cart-suggestion-content">
+                              <Link
+                                to={`/product/${product.slug}`}
+                                onClick={toggleCart}
+                                className="cart-suggestion-name"
+                              >
+                                {product.name}
+                              </Link>
 
-                          <button
-                            onClick={() => handleAddSuggested(product)}
-                            style={{
-                              border: "none",
-                              background: "#4635de",
-                              color: "white",
-                              borderRadius: "8px",
-                              padding: "8px 10px",
-                              fontSize: "12px",
-                              fontWeight: "700",
-                              cursor: "pointer",
-                              flexShrink: 0,
-                            }}
-                          >
-                            Add
-                          </button>
-                        </div>
-                      ))}
+                              {product.purchasableVariants.length > 1 ? (
+                                <select
+                                  className="cart-suggestion-variant-select"
+                                  value={selectedVariant?.id || ""}
+                                  onChange={(e) =>
+                                    handleSuggestedVariantChange(
+                                      product.id,
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  {product.purchasableVariants.map(
+                                    (variant) => (
+                                      <option
+                                        key={variant.id}
+                                        value={variant.id}
+                                      >
+                                        {variant.size_label} · $
+                                        {Number(variant.price || 0).toFixed(2)}
+                                      </option>
+                                    ),
+                                  )}
+                                </select>
+                              ) : (
+                                <p className="cart-suggestion-meta">
+                                  {selectedVariant?.size_label} · $
+                                  {Number(selectedVariant?.price || 0).toFixed(
+                                    2,
+                                  )}
+                                </p>
+                              )}
+                            </div>
+
+                            <button
+                              onClick={() => handleAddSuggested(product)}
+                              className="cart-suggestion-add-btn"
+                              disabled={!selectedVariant}
+                            >
+                              Add
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
-                </div>
+                </section>
               )}
             </div>
 

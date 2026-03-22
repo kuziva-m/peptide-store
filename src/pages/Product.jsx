@@ -15,10 +15,10 @@ import {
   Minus,
   Info,
 } from "lucide-react";
+import { getRelatedProductSlugsForProduct } from "../lib/productRelationships";
 import "./Product.css";
 
 export default function Product() {
-  // SEO UPDATE: URL now uses semantic slugs instead of numeric IDs
   const { slug } = useParams();
   const { addToCart } = useCart();
 
@@ -27,10 +27,11 @@ export default function Product() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [errorMsg, setErrorMsg] = useState("");
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
 
   useEffect(() => {
     async function fetchProduct() {
-      // SEO UPDATE: Check for slug instead of id
       if (!slug || slug === "undefined") {
         setErrorMsg("Invalid Product URL");
         setLoading(false);
@@ -40,7 +41,6 @@ export default function Product() {
       const { data, error } = await supabase
         .from("products")
         .select(`*, variants (*)`)
-        // SEO UPDATE: Database lookup now uses the 'slug' column
         .eq("slug", slug)
         .single();
 
@@ -49,7 +49,6 @@ export default function Product() {
       }
 
       if (data) {
-        // FILTER OUT HIDDEN VARIANTS
         const visibleVariants = (data.variants || []).filter(
           (v) => v.is_hidden !== true && v.is_hidden !== "true",
         );
@@ -64,22 +63,83 @@ export default function Product() {
           };
           setProduct(productWithVisibleVariants);
 
-          // FIXED & UPDATED: Safe copy to prevent React crashes, sort Default first, then price
           const sorted = [...visibleVariants].sort((a, b) => {
             if (a.is_default && !b.is_default) return -1;
             if (!a.is_default && b.is_default) return 1;
             return (a.price || 0) - (b.price || 0);
           });
-          const defaultVariant = sorted.find((v) => v.is_default === true);
 
-          // If the admin checked the star, use that. Otherwise, fallback to cheapest.
+          const defaultVariant = sorted.find((v) => v.is_default === true);
           setSelectedVariant(defaultVariant || sorted[0]);
         }
       }
+
       setLoading(false);
     }
+
     fetchProduct();
   }, [slug]);
+
+  useEffect(() => {
+    async function fetchRelatedProducts() {
+      if (!product?.slug) {
+        setRelatedProducts([]);
+        return;
+      }
+
+      const relatedSlugs = getRelatedProductSlugsForProduct(product.slug);
+
+      if (!relatedSlugs.length) {
+        setRelatedProducts([]);
+        return;
+      }
+
+      setLoadingRelated(true);
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("*, variants (*)")
+        .in("slug", relatedSlugs);
+
+      if (error || !data) {
+        setRelatedProducts([]);
+        setLoadingRelated(false);
+        return;
+      }
+
+      const ordered = relatedSlugs
+        .map((relatedSlug) => data.find((item) => item.slug === relatedSlug))
+        .filter(Boolean)
+        .map((item) => {
+          const visibleVariants = (item.variants || []).filter(
+            (v) => v.is_hidden !== true && v.is_hidden !== "true",
+          );
+
+          const sortedVariants = [...visibleVariants].sort((a, b) => {
+            if (a.is_default && !b.is_default) return -1;
+            if (!a.is_default && b.is_default) return 1;
+            return (a.price || 0) - (b.price || 0);
+          });
+
+          const defaultVariant =
+            sortedVariants.find((v) => v.is_default === true) ||
+            sortedVariants[0] ||
+            null;
+
+          return {
+            ...item,
+            variants: visibleVariants,
+            defaultVariant,
+          };
+        })
+        .filter((item) => item.slug !== product.slug && item.defaultVariant);
+
+      setRelatedProducts(ordered.slice(0, 6));
+      setLoadingRelated(false);
+    }
+
+    fetchRelatedProducts();
+  }, [product]);
 
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return;
@@ -97,6 +157,24 @@ export default function Product() {
     );
   };
 
+  const handleAddSuggestedProduct = (suggestedProduct) => {
+    if (!suggestedProduct?.defaultVariant) return;
+
+    addToCart(
+      {
+        ...suggestedProduct,
+        id: suggestedProduct.id,
+        price: suggestedProduct.defaultVariant.price,
+        image:
+          suggestedProduct.defaultVariant.image_url ||
+          suggestedProduct.image_url,
+        variantId: suggestedProduct.defaultVariant.id,
+      },
+      1,
+      suggestedProduct.defaultVariant.size_label,
+    );
+  };
+
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-AU", {
       style: "currency",
@@ -104,7 +182,7 @@ export default function Product() {
     }).format(amount);
   };
 
-  if (loading)
+  if (loading) {
     return (
       <div
         className="container"
@@ -113,8 +191,9 @@ export default function Product() {
         Loading Data...
       </div>
     );
+  }
 
-  if (!product)
+  if (!product) {
     return (
       <div
         className="container"
@@ -131,6 +210,7 @@ export default function Product() {
         </Link>
       </div>
     );
+  }
 
   const absoluteUrl = `https://melbournepeptides.com.au/product/${slug}`;
   const displayImage =
@@ -138,12 +218,10 @@ export default function Product() {
     product.image_url ||
     "https://via.placeholder.com/600";
 
-  // --- NEW: INDIVIDUAL VARIANT STOCK & PREORDER LOGIC ---
   const isMainProductInStock = product.in_stock !== false;
   const isSelectedVariantInStock = selectedVariant?.in_stock !== false;
   const isPreorder = selectedVariant?.is_preorder === true;
 
-  // Allow purchasing if product is active AND (it is in stock OR marked as preorder)
   const isCurrentlyPurchasable =
     isMainProductInStock && (isSelectedVariantInStock || isPreorder);
 
@@ -155,18 +233,14 @@ export default function Product() {
     product.category === "Syringes" ||
     product.category === "Prep Pads";
 
-  // SEO UPDATE: Optimized meta description for search results
   const metaDescription = product.description
     ? `${product.description.substring(0, 140)}. Buy ${product.name} research peptide in Australia with fast shipping.`
     : `Buy ${product.name} research peptide in Australia.`;
 
-  // --- SEO CANONICAL FIX ---
-  // If it's a peptide, point Google to the SEO Landing Page. If accessory, keep it here.
   const seoCanonicalUrl = isAccessory
     ? absoluteUrl
     : `https://melbournepeptides.com.au/${slug}`;
 
-  // --- NEW: DYNAMIC >10MG CHECK ---
   const sizeLabel = selectedVariant?.size_label || "";
   const numericMatch = sizeLabel.match(/\d+/);
   const sizeNumber = numericMatch ? parseInt(numericMatch[0], 10) : 0;
@@ -179,7 +253,7 @@ export default function Product() {
         description={metaDescription}
         image={displayImage}
         type="product"
-        url={seoCanonicalUrl} // <-- NOW USES THE FIX
+        url={seoCanonicalUrl}
         noindex={!isAccessory}
       />
 
@@ -187,7 +261,7 @@ export default function Product() {
         {JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Product",
-          "@id": seoCanonicalUrl, // <-- ALSO UPDATED HERE
+          "@id": seoCanonicalUrl,
           name: product.name,
           image: displayImage,
           description: metaDescription,
@@ -202,7 +276,7 @@ export default function Product() {
           },
           offers: {
             "@type": "Offer",
-            url: seoCanonicalUrl, // <-- ALSO UPDATED HERE
+            url: seoCanonicalUrl,
             priceCurrency: "AUD",
             price: selectedVariant?.price,
             priceValidUntil: "2026-12-31",
@@ -228,7 +302,7 @@ export default function Product() {
               "@type": "ListItem",
               position: 2,
               name: product.name,
-              item: seoCanonicalUrl, // <-- ALSO UPDATED HERE
+              item: seoCanonicalUrl,
             },
           ],
         })}
@@ -255,7 +329,6 @@ export default function Product() {
             <img
               src={displayImage}
               alt={`${product.name} research peptide vial`}
-              // PERFORMANCE UPDATE: Optimized image loading
               loading="lazy"
               decoding="async"
               style={{
@@ -298,7 +371,6 @@ export default function Product() {
               {product.category || "Product"}
             </span>
 
-            {/* HIDE CAS & PURITY IF ACCESSORY */}
             {!isAccessory && (
               <>
                 <span
@@ -370,10 +442,8 @@ export default function Product() {
               className="variant-grid"
               style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}
             >
-              {/* FIXED: Copy the array before sorting to prevent React mutation crashes! */}
               {[...(product.variants || [])]
                 .sort((a, b) => {
-                  // Push default to the front, sort remainder by price
                   if (a.is_default && !b.is_default) return -1;
                   if (!a.is_default && b.is_default) return 1;
                   return (a.price || 0) - (b.price || 0);
@@ -400,7 +470,6 @@ export default function Product() {
                         fontWeight: "600",
                         cursor: "pointer",
                         minWidth: "80px",
-                        // Opacity is full if it's in stock OR a preorder
                         opacity:
                           isThisVariantInStock || isThisVariantPreorder
                             ? 1
@@ -495,7 +564,6 @@ export default function Product() {
             </button>
           </div>
 
-          {/* DYNAMIC >10MG FULFILLMENT NOTICE */}
           {!isAccessory && showFulfillmentNotice && (
             <div
               style={{
@@ -527,7 +595,140 @@ export default function Product() {
             </div>
           )}
 
-          {/* HIDE LAB RESULTS FOR ACCESSORIES */}
+          {relatedProducts.length > 0 && (
+            <div
+              style={{
+                marginBottom: "30px",
+                padding: "22px",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "14px",
+              }}
+            >
+              <h3
+                style={{
+                  margin: "0 0 16px 0",
+                  color: "#0f172a",
+                  fontSize: "1.15rem",
+                  fontWeight: "800",
+                }}
+              >
+                People also bought
+              </h3>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                {relatedProducts.slice(0, 4).map((related) => (
+                  <div
+                    key={related.id}
+                    style={{
+                      background: "white",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "12px",
+                      padding: "14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    <Link
+                      to={`/product/${related.slug}`}
+                      style={{
+                        textDecoration: "none",
+                        color: "inherit",
+                      }}
+                    >
+                      <div
+                        style={{
+                          background:
+                            "radial-gradient(circle at center, #ffffff 50%, #f1f5f9 100%)",
+                          borderRadius: "10px",
+                          padding: "14px",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          minHeight: "120px",
+                        }}
+                      >
+                        <img
+                          src={
+                            related.defaultVariant?.image_url ||
+                            related.image_url ||
+                            "https://via.placeholder.com/300"
+                          }
+                          alt={related.name}
+                          loading="lazy"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "90px",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
+                    </Link>
+
+                    <div>
+                      <Link
+                        to={`/product/${related.slug}`}
+                        style={{
+                          color: "#0f172a",
+                          textDecoration: "none",
+                          fontWeight: "700",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        {related.name}
+                      </Link>
+                      <p
+                        style={{
+                          margin: "6px 0 0 0",
+                          color: "#64748b",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        {related.defaultVariant?.size_label} ·{" "}
+                        {formatPrice(related.defaultVariant?.price || 0)}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleAddSuggestedProduct(related)}
+                      style={{
+                        border: "none",
+                        background: "#4635de",
+                        color: "white",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {loadingRelated && (
+                <p
+                  style={{
+                    marginTop: "12px",
+                    marginBottom: 0,
+                    color: "#64748b",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Loading suggestions...
+                </p>
+              )}
+            </div>
+          )}
+
           {activeLabUrl && !isAccessory && (
             <details className="lab-accordion" open={false}>
               <summary className="lab-summary">
@@ -629,7 +830,6 @@ export default function Product() {
               <span>Same-day Shipping</span>
             </div>
 
-            {/* HIDE PEPTIDE WARNING FOR ACCESSORIES */}
             {!isAccessory && (
               <div
                 className="trust-item warning"

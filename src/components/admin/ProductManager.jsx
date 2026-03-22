@@ -17,7 +17,7 @@ import {
   Eye,
   EyeOff,
   Star,
-  Clock, // NEW: Imported Clock for Preorder toggle
+  Clock, // Imported Clock for Preorder toggle
 } from "lucide-react";
 
 const CATEGORIES = ["Peptides", "Peptide Blends", "Accessories"];
@@ -206,10 +206,15 @@ export default function ProductManager() {
             <div style={{ gridColumn: "span 2" }}>
               <label style={styles.label}>Image</label>
               <div
-                style={{ display: "flex", gap: "10px", alignItems: "center" }}
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
               >
                 <input
-                  style={{ ...styles.input, flex: 1 }}
+                  style={{ ...styles.input, flex: "1 1 250px" }}
                   value={newProductImage}
                   onChange={(e) => setNewProductImage(e.target.value)}
                   placeholder="Paste URL or upload..."
@@ -328,7 +333,7 @@ function ProductRow({
           in_stock: v.in_stock,
           is_hidden: v.is_hidden,
           is_default: v.is_default || false,
-          is_preorder: v.is_preorder || false, // NEW: Save preorder status
+          is_preorder: v.is_preorder || false,
         })
         .eq("id", v.id),
     );
@@ -388,8 +393,15 @@ function ProductRow({
 
   return (
     <div style={styles.productCard}>
-      <div style={styles.productHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+      <div style={styles.productHeader} onClick={onToggle}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "15px",
+            flexWrap: "wrap",
+          }}
+        >
           <div style={styles.imgThumbnail}>
             {image ? (
               <img src={image} alt={name} style={styles.img} />
@@ -402,7 +414,14 @@ function ProductRow({
             <span style={styles.badge}>{product.category}</span>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <button
             onClick={handleToggleStock}
             style={{
@@ -425,11 +444,14 @@ function ProductRow({
               </>
             )}
           </button>
-          <button onClick={onToggle} style={styles.iconBtn}>
+          <button style={styles.iconBtn}>
             {isExpanded ? <ChevronUp size={20} /> : <Edit2 size={20} />}
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
             style={{ ...styles.iconBtn, color: "#ef4444" }}
           >
             <Trash2 size={20} />
@@ -439,6 +461,7 @@ function ProductRow({
 
       {isExpanded && (
         <div style={styles.expandedPanel}>
+          {/* PRODUCT DETAILS */}
           <div style={{ marginBottom: "20px", display: "grid", gap: "15px" }}>
             <div>
               <label style={styles.label}>Product Name</label>
@@ -450,14 +473,14 @@ function ProductRow({
             </div>
             <div>
               <label style={styles.label}>Main Image URL</label>
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 <input
                   value={image}
                   onChange={(e) => setImage(e.target.value)}
-                  style={styles.input}
+                  style={{ ...styles.input, flex: "1 1 200px" }}
                 />
                 <label style={styles.uploadBtnSmall}>
-                  Up
+                  <Upload size={14} style={{ marginRight: 6 }} /> Upload
                   <input
                     type="file"
                     hidden
@@ -496,39 +519,18 @@ function ProductRow({
           <h5
             style={{
               margin: "20px 0 10px 0",
-              color: "#64748b",
+              color: "#0f172a",
               borderTop: "1px solid #e2e8f0",
               paddingTop: "20px",
+              fontSize: "1.1rem",
             }}
           >
-            VARIANTS
+            PRODUCT VARIANTS
           </h5>
+
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
           >
-            <div
-              style={{
-                display: "grid",
-                // FIXED GRID: Added one more 35px column for the Preorder toggle
-                gridTemplateColumns:
-                  "100px 80px 100px 1fr 100px 35px 35px 35px 35px",
-                gap: "10px",
-                paddingLeft: "10px",
-                fontSize: "0.8rem",
-                color: "#64748b",
-                fontWeight: "bold",
-              }}
-            >
-              <span>Stock Status</span>
-              <span>Size</span>
-              <span>Price ($)</span>
-              <span>Image URL</span>
-              <span>Upload</span>
-              <span>Def</span>
-              <span>Pre</span> {/* NEW Header */}
-              <span>Hide</span>
-              <span>Del</span>
-            </div>
             {variants.map((v) => (
               <VariantRow
                 key={v.id}
@@ -539,7 +541,7 @@ function ProductRow({
               />
             ))}
             <button onClick={addVariant} style={styles.addVariantBtn}>
-              <Plus size={16} /> Add Variant
+              <Plus size={16} /> Add New Variant Option
             </button>
           </div>
         </div>
@@ -548,20 +550,44 @@ function ProductRow({
   );
 }
 
+// 📱 FULLY RESPONSIVE & EXPLICIT VARIANT CARD
 function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
   const isInStock = data.in_stock !== false;
   const isHidden = data.is_hidden === true;
   const isDefault = data.is_default === true;
   const isPreorder = data.is_preorder === true;
 
+  // Dynamic style helper for the new toggle pills
+  const getToggleStyle = (
+    isActive,
+    activeText,
+    activeBg,
+    activeBorder,
+    inactiveText,
+    inactiveBg,
+    inactiveBorder,
+  ) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    fontSize: "0.8rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    border: `1px solid ${isActive ? activeBorder : inactiveBorder}`,
+    background: isActive ? activeBg : inactiveBg,
+    color: isActive ? activeText : inactiveText,
+    transition: "all 0.2s ease",
+  });
+
   return (
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "100px 80px 100px 1fr 100px 35px 35px 35px 35px",
-        gap: "10px",
-        alignItems: "center",
-        padding: "10px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        padding: "16px",
         backgroundColor: isHidden
           ? "#f8fafc"
           : isDefault
@@ -569,132 +595,167 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
             : isPreorder
               ? "#fff7ed"
               : "white",
-        opacity: isHidden ? 0.6 : 1,
+        opacity: isHidden ? 0.7 : 1,
         borderRadius: "8px",
         border: isDefault
-          ? "1px solid #fde047"
+          ? "2px solid #fde047"
           : isPreorder
-            ? "1px solid #fdba74"
+            ? "2px solid #fdba74"
             : "1px solid #e2e8f0",
         transition: "all 0.2s ease",
       }}
     >
-      <button
-        onClick={() => updateLocal(data.id, "in_stock", !isInStock)}
+      {/* ROW 1: INPUTS (Wraps on mobile) */}
+      <div
         style={{
           display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
           alignItems: "center",
-          gap: "4px",
-          padding: "4px 8px",
-          borderRadius: "4px",
-          fontSize: "0.75rem",
-          fontWeight: "600",
-          border: "none",
-          cursor: "pointer",
-          backgroundColor: isInStock ? "#dcfce7" : "#fee2e2",
-          color: isInStock ? "#166534" : "#991b1b",
-          width: "fit-content",
         }}
       >
-        {isInStock ? "In Stock" : "Out of Stock"}
-      </button>
-
-      <input
-        value={data.size_label}
-        onChange={(e) => updateLocal(data.id, "size_label", e.target.value)}
-        style={styles.inputSmall}
-        placeholder="Size"
-      />
-      <input
-        type="number"
-        value={data.price}
-        onChange={(e) => updateLocal(data.id, "price", e.target.value)}
-        style={styles.inputSmall}
-        placeholder="$$"
-      />
-      <input
-        value={data.image_url || ""}
-        onChange={(e) => updateLocal(data.id, "image_url", e.target.value)}
-        style={styles.inputSmall}
-        placeholder="Image URL"
-      />
-      <label style={styles.uploadBtnSmall}>
-        <Upload size={14} style={{ marginRight: 4 }} />{" "}
-        <span style={{ fontSize: "0.75rem" }}>Up</span>
         <input
-          type="file"
-          hidden
-          onChange={async (e) => {
-            const url = await handleImageUpload(e.target.files[0]);
-            if (url) updateLocal(data.id, "image_url", url);
-          }}
+          value={data.size_label}
+          onChange={(e) => updateLocal(data.id, "size_label", e.target.value)}
+          style={{ ...styles.inputSmall, flex: "1 1 120px" }}
+          placeholder="Size (e.g. 10mg)"
         />
-      </label>
+        <input
+          type="number"
+          value={data.price}
+          onChange={(e) => updateLocal(data.id, "price", e.target.value)}
+          style={{ ...styles.inputSmall, flex: "1 1 80px" }}
+          placeholder="Price ($)"
+        />
+        <input
+          value={data.image_url || ""}
+          onChange={(e) => updateLocal(data.id, "image_url", e.target.value)}
+          style={{ ...styles.inputSmall, flex: "2 1 200px" }}
+          placeholder="Variant Image URL"
+        />
+        <label style={{ ...styles.uploadBtnSmall, flex: "0 1 auto" }}>
+          <Upload size={14} style={{ marginRight: 6 }} /> <span>Upload</span>
+          <input
+            type="file"
+            hidden
+            onChange={async (e) => {
+              const url = await handleImageUpload(e.target.files[0]);
+              if (url) updateLocal(data.id, "image_url", url);
+            }}
+          />
+        </label>
+      </div>
 
-      <button
-        onClick={() => updateLocal(data.id, "is_default", true)}
-        title={isDefault ? "Current Default Variant" : "Set as Default"}
+      {/* ROW 2: EXPLICIT TOGGLE ACTION BUTTONS (Wraps on mobile) */}
+      <div
         style={{
-          color: isDefault ? "#eab308" : "#cbd5e1",
-          background: "none",
-          border: "none",
-          cursor: isDefault ? "default" : "pointer",
           display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
           alignItems: "center",
-          justifyContent: "center",
         }}
       >
-        <Star size={18} fill={isDefault ? "#eab308" : "none"} />
-      </button>
+        {/* 1. STOCK TOGGLE */}
+        <button
+          onClick={() => updateLocal(data.id, "in_stock", !isInStock)}
+          style={getToggleStyle(
+            isInStock,
+            "#166534",
+            "#dcfce7",
+            "#bbf7d0",
+            "#991b1b",
+            "#fee2e2",
+            "#fecaca",
+          )}
+        >
+          {isInStock ? (
+            <>
+              <CheckCircle size={14} /> In Stock
+            </>
+          ) : (
+            <>
+              <XCircle size={14} /> Out of Stock
+            </>
+          )}
+        </button>
 
-      {/* NEW: PREORDER TOGGLE BUTTON */}
-      <button
-        onClick={() => updateLocal(data.id, "is_preorder", !isPreorder)}
-        title={isPreorder ? "Disable Preorder" : "Enable Preorder"}
-        style={{
-          color: isPreorder ? "#ea580c" : "#cbd5e1",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Clock size={18} />
-      </button>
+        {/* 2. PREORDER TOGGLE */}
+        <button
+          onClick={() => updateLocal(data.id, "is_preorder", !isPreorder)}
+          style={getToggleStyle(
+            isPreorder,
+            "#ea580c",
+            "#ffedd5",
+            "#fed7aa",
+            "#64748b",
+            "#f1f5f9",
+            "#e2e8f0",
+          )}
+        >
+          <Clock size={14} /> {isPreorder ? "Preorder: ON" : "Preorder: OFF"}
+        </button>
 
-      <button
-        onClick={() => updateLocal(data.id, "is_hidden", !isHidden)}
-        title={isHidden ? "Unhide Variant" : "Hide Variant"}
-        style={{
-          color: isHidden ? "#64748b" : "#3b82f6",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-      </button>
+        {/* 3. DEFAULT TOGGLE */}
+        <button
+          onClick={() => updateLocal(data.id, "is_default", true)}
+          style={getToggleStyle(
+            isDefault,
+            "#ca8a04",
+            "#fef9c3",
+            "#fde047",
+            "#64748b",
+            "#f1f5f9",
+            "#e2e8f0",
+          )}
+        >
+          <Star size={14} fill={isDefault ? "#ca8a04" : "none"} />{" "}
+          {isDefault ? "Default Size" : "Set Default"}
+        </button>
 
-      <button
-        onClick={onDelete}
-        title="Permanently Delete"
-        style={{
-          color: "#ef4444",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Trash2 size={16} />
-      </button>
+        {/* 4. VISIBILITY TOGGLE */}
+        <button
+          onClick={() => updateLocal(data.id, "is_hidden", !isHidden)}
+          style={getToggleStyle(
+            !isHidden,
+            "#0369a1",
+            "#e0f2fe",
+            "#bae6fd",
+            "#64748b",
+            "#f1f5f9",
+            "#e2e8f0",
+          )}
+        >
+          {isHidden ? (
+            <>
+              <EyeOff size={14} /> Hidden
+            </>
+          ) : (
+            <>
+              <Eye size={14} /> Visible
+            </>
+          )}
+        </button>
+
+        {/* 5. DELETE BUTTON */}
+        <button
+          onClick={onDelete}
+          title="Permanently Delete"
+          style={{
+            ...getToggleStyle(
+              true,
+              "#ef4444",
+              "#fef2f2",
+              "#fecaca",
+              "#ef4444",
+              "#fef2f2",
+              "#fecaca",
+            ),
+            marginLeft: "auto", // Pushes the delete button to the far right on desktop
+          }}
+        >
+          <Trash2 size={14} /> Delete
+        </button>
+      </div>
     </div>
   );
 }
@@ -705,6 +766,8 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "20px",
+    flexWrap: "wrap",
+    gap: "10px",
   },
   addBtn: {
     background: "var(--primary)",
@@ -718,9 +781,14 @@ const styles = {
     gap: "8px",
     fontWeight: "600",
   },
-  controls: { display: "flex", gap: "15px", marginBottom: "20px" },
+  controls: {
+    display: "flex",
+    gap: "15px",
+    marginBottom: "20px",
+    flexWrap: "wrap",
+  },
   searchBox: {
-    flex: 1,
+    flex: "1 1 250px",
     display: "flex",
     alignItems: "center",
     gap: "10px",
@@ -736,11 +804,13 @@ const styles = {
     fontSize: "0.95rem",
   },
   categorySelect: {
+    flex: "0 1 auto",
     padding: "0 20px",
     borderRadius: "8px",
     border: "1px solid #e2e8f0",
     background: "white",
     cursor: "pointer",
+    height: "40px",
   },
   newForm: {
     background: "white",
@@ -752,7 +822,7 @@ const styles = {
   },
   formGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
     gap: "20px",
     margin: "20px 0",
   },
@@ -768,6 +838,7 @@ const styles = {
     padding: "10px",
     borderRadius: "6px",
     border: "1px solid #cbd5e1",
+    boxSizing: "border-box",
   },
   uploadBtn: {
     background: "#f1f5f9",
@@ -803,6 +874,9 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    cursor: "pointer",
+    flexWrap: "wrap",
+    gap: "15px",
   },
   imgThumbnail: {
     width: "50px",
@@ -813,6 +887,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    flexShrink: 0,
   },
   img: { width: "100%", height: "100%", objectFit: "cover" },
   badge: {
@@ -848,25 +923,26 @@ const styles = {
     padding: "20px",
   },
   inputSmall: {
-    width: "100%",
     padding: "8px",
     borderRadius: "4px",
     border: "1px solid #cbd5e1",
     fontSize: "0.9rem",
+    boxSizing: "border-box",
   },
   addVariantBtn: {
     background: "white",
-    border: "1px dashed #cbd5e1",
+    border: "2px dashed #cbd5e1",
     color: "var(--primary)",
-    padding: "8px",
-    borderRadius: "6px",
+    padding: "12px",
+    borderRadius: "8px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "6px",
-    fontWeight: "600",
+    fontWeight: "bold",
     marginTop: "10px",
+    transition: "all 0.2s",
   },
   uploadBtnSmall: {
     background: "#e2e8f0",
@@ -878,5 +954,6 @@ const styles = {
     alignItems: "center",
     fontWeight: "600",
     height: "35px",
+    whiteSpace: "nowrap",
   },
 };

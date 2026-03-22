@@ -484,64 +484,22 @@ const PRODUCT_RELATIONSHIPS = {
   },
 };
 
+const EMPTY_RELATIONSHIP = {
+  relatedPeptides: [],
+  relatedAccessories: [],
+  futureResearchLinks: [],
+};
+
 function unique(items = []) {
   return [...new Set(items.filter(Boolean))];
 }
 
-export function getRelationshipConfig(slug) {
-  return (
-    PRODUCT_RELATIONSHIPS[slug] || {
-      relatedPeptides: [],
-      relatedAccessories: [],
-      futureResearchLinks: [],
-    }
-  );
-}
-
-export function getRelatedProductSlugsForProduct(slug) {
-  const config = getRelationshipConfig(slug);
-  return unique([
-    ...config.relatedAccessories,
-    ...config.relatedPeptides,
-  ]).slice(0, 6);
-}
-
-export function getSuggestedProductSlugsForCart(cartItems = []) {
-  const cartSlugs = new Set(cartItems.map((item) => item.slug).filter(Boolean));
-  const suggestions = [];
-
-  cartItems.forEach((item) => {
-    const config = getRelationshipConfig(item.slug);
-    const related = [
-      ...(config.relatedAccessories || []),
-      ...(config.relatedPeptides || []),
-    ];
-
-    related.forEach((slug) => {
-      if (!cartSlugs.has(slug)) {
-        suggestions.push(slug);
-      }
-    });
-  });
-
-  return unique(suggestions).slice(0, 6);
-}
-
-export function getRelatedResearchItems(slug) {
-  const config = getRelationshipConfig(slug);
-  return (config.relatedPeptides || []).slice(0, 3).map((relatedSlug) => ({
-    slug: relatedSlug,
-    name: slugToDisplayName(relatedSlug),
-    reason: `Related ${slugToDisplayName(slug)} research pathway.`,
-  }));
-}
-
-export function getFutureResearchLinks(slug) {
-  return getRelationshipConfig(slug).futureResearchLinks || [];
+function normalizeSlug(slug = "") {
+  return String(slug).trim().toLowerCase();
 }
 
 export function slugToDisplayName(slug = "") {
-  return slug
+  return normalizeSlug(slug)
     .split("-")
     .filter(Boolean)
     .map((part) =>
@@ -559,4 +517,78 @@ export function slugToDisplayName(slug = "") {
     .replace(/\bCjc\b/g, "CJC")
     .replace(/\bBpc\b/g, "BPC")
     .replace(/\bNad\b/g, "NAD");
+}
+
+export function getRelationshipConfig(slug) {
+  const normalized = normalizeSlug(slug);
+  return PRODUCT_RELATIONSHIPS[normalized] || EMPTY_RELATIONSHIP;
+}
+
+export function getRelatedProductSlugsForProduct(slug) {
+  const config = getRelationshipConfig(slug);
+
+  return unique([
+    ...(config.relatedAccessories || []),
+    ...(config.relatedPeptides || []),
+  ]).slice(0, 6);
+}
+
+export function getSuggestedProductSlugsForCart(cartItems = []) {
+  const cartSlugs = new Set(
+    cartItems.map((item) => normalizeSlug(item.slug)).filter(Boolean),
+  );
+
+  const suggestions = [];
+
+  cartItems.forEach((item) => {
+    const config = getRelationshipConfig(item.slug);
+    const related = [
+      ...(config.relatedAccessories || []),
+      ...(config.relatedPeptides || []),
+    ];
+
+    related.forEach((slug) => {
+      const normalized = normalizeSlug(slug);
+      if (!cartSlugs.has(normalized)) {
+        suggestions.push(normalized);
+      }
+    });
+  });
+
+  return unique(suggestions).slice(0, 6);
+}
+
+export function getRelatedResearchItems(slug) {
+  const normalized = normalizeSlug(slug);
+  const config = getRelationshipConfig(normalized);
+
+  return (config.relatedPeptides || []).slice(0, 3).map((relatedSlug) => ({
+    slug: relatedSlug,
+    name: slugToDisplayName(relatedSlug),
+    reason: `Related ${slugToDisplayName(normalized)} research pathway.`,
+  }));
+}
+
+export function getFutureResearchLinks(slug) {
+  const config = getRelationshipConfig(slug);
+  return config.futureResearchLinks || [];
+}
+
+export function getRelatedAccessories(slug) {
+  const config = getRelationshipConfig(slug);
+  return unique(config.relatedAccessories || []);
+}
+
+export function getRelatedPeptides(slug) {
+  const config = getRelationshipConfig(slug);
+  return unique(config.relatedPeptides || []);
+}
+
+export function hasRelationships(slug) {
+  const config = getRelationshipConfig(slug);
+  return (
+    (config.relatedPeptides && config.relatedPeptides.length > 0) ||
+    (config.relatedAccessories && config.relatedAccessories.length > 0) ||
+    (config.futureResearchLinks && config.futureResearchLinks.length > 0)
+  );
 }
