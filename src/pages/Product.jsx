@@ -64,8 +64,12 @@ export default function Product() {
           };
           setProduct(productWithVisibleVariants);
 
-          // SEO UPDATE: Look for a manually set default variant first
-          const sorted = visibleVariants.sort((a, b) => a.price - b.price);
+          // FIXED & UPDATED: Safe copy to prevent React crashes, sort Default first, then price
+          const sorted = [...visibleVariants].sort((a, b) => {
+            if (a.is_default && !b.is_default) return -1;
+            if (!a.is_default && b.is_default) return 1;
+            return (a.price || 0) - (b.price || 0);
+          });
           const defaultVariant = sorted.find((v) => v.is_default === true);
 
           // If the admin checked the star, use that. Otherwise, fallback to cheapest.
@@ -134,11 +138,14 @@ export default function Product() {
     product.image_url ||
     "https://via.placeholder.com/600";
 
-  // INDIVIDUAL VARIANT STOCK LOGIC
+  // --- NEW: INDIVIDUAL VARIANT STOCK & PREORDER LOGIC ---
   const isMainProductInStock = product.in_stock !== false;
   const isSelectedVariantInStock = selectedVariant?.in_stock !== false;
+  const isPreorder = selectedVariant?.is_preorder === true;
+
+  // Allow purchasing if product is active AND (it is in stock OR marked as preorder)
   const isCurrentlyPurchasable =
-    isMainProductInStock && isSelectedVariantInStock;
+    isMainProductInStock && (isSelectedVariantInStock || isPreorder);
 
   const activeLabUrl =
     selectedVariant?.lab_result_url || product.lab_result_url;
@@ -363,15 +370,17 @@ export default function Product() {
               className="variant-grid"
               style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}
             >
-              {product.variants
-                ?.sort((a, b) => {
+              {/* FIXED: Copy the array before sorting to prevent React mutation crashes! */}
+              {[...(product.variants || [])]
+                .sort((a, b) => {
                   // Push default to the front, sort remainder by price
                   if (a.is_default && !b.is_default) return -1;
                   if (!a.is_default && b.is_default) return 1;
-                  return a.price - b.price;
+                  return (a.price || 0) - (b.price || 0);
                 })
                 .map((v) => {
                   const isThisVariantInStock = v.in_stock !== false;
+                  const isThisVariantPreorder = v.is_preorder === true;
 
                   return (
                     <button
@@ -391,10 +400,17 @@ export default function Product() {
                         fontWeight: "600",
                         cursor: "pointer",
                         minWidth: "80px",
-                        opacity: isThisVariantInStock ? 1 : 0.5,
+                        // Opacity is full if it's in stock OR a preorder
+                        opacity:
+                          isThisVariantInStock || isThisVariantPreorder
+                            ? 1
+                            : 0.5,
                       }}
                     >
-                      {v.size_label} {!isThisVariantInStock && "(Out of Stock)"}
+                      {v.size_label}
+                      {isThisVariantPreorder
+                        ? " (Preorder)"
+                        : !isThisVariantInStock && " (Out of Stock)"}
                     </button>
                   );
                 })}
@@ -469,11 +485,13 @@ export default function Product() {
                 ? "Product Out of Stock"
                 : !selectedVariant
                   ? "Select a Variant"
-                  : !isSelectedVariantInStock
-                    ? `${selectedVariant.size_label} is Out of Stock`
-                    : `Add to Cart - ${formatPrice(
-                        selectedVariant.price * quantity,
-                      )}`}
+                  : isPreorder
+                    ? `Pre-order - ${formatPrice(selectedVariant.price * quantity)}`
+                    : !isSelectedVariantInStock
+                      ? `${selectedVariant.size_label} is Out of Stock`
+                      : `Add to Cart - ${formatPrice(
+                          selectedVariant.price * quantity,
+                        )}`}
             </button>
           </div>
 

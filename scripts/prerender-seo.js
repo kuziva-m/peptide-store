@@ -623,7 +623,7 @@ function buildProductRoutes(products) {
       indexable: isAccessory,
       type: "product",
       jsonLd,
-      lastmod: product.updated_at,
+      lastmod: product.created_at,
     });
   });
 }
@@ -707,7 +707,7 @@ async function buildSeoContext() {
   try {
     products =
       (await fetchSupabaseCollection(
-        "products?select=id,slug,name,description,category,image_url,updated_at,calc_description,calc_faq,variants(price,image_url,in_stock)&order=name.asc",
+        "products?select=id,slug,name,description,category,image_url,created_at,calc_description,calc_faq,variants(price,image_url,in_stock)&order=name.asc",
       )) || [];
   } catch (error) {
     console.warn(

@@ -136,7 +136,6 @@ export function OrderRow({
     }
   };
 
-  // --- UPDATED: THIS NOW TRIGGERS THE 'PAID' EMAIL ---
   const handleApprovePayment = async () => {
     promptConfirm(
       "Confirm Payment",
@@ -149,7 +148,7 @@ export function OrderRow({
 
         if (!error) {
           showToast("Payment Approved");
-          await sendStatusEmail(quickTracking, "paid"); // Sends the new email!
+          await sendStatusEmail(quickTracking, "paid");
           onUpdate();
         }
       },
@@ -344,7 +343,14 @@ export function OrderRow({
         onClick={() => !isEditing && setIsExpanded(!isExpanded)}
       >
         <div style={styles.colInfo}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             <div style={styles.primaryText}>
               {order.customer_name || "Guest"}
             </div>
@@ -358,10 +364,30 @@ export function OrderRow({
             {order.notes && (
               <MessageCircle size={14} color="#3b82f6" title="Has Notes" />
             )}
+
+            {/* NEW: DISCOUNT CODE PILL */}
+            {order.discount_code && (
+              <span
+                style={{
+                  background: "#fef3c7",
+                  color: "#b45309",
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  fontSize: "0.7rem",
+                  fontWeight: "bold",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  border: "1px solid #fde68a",
+                }}
+                title="Discount Code Used"
+              >
+                <Tag size={10} /> {order.discount_code.toUpperCase()}
+              </span>
+            )}
           </div>
           <div style={styles.metaText}>
             #{order.id.slice(0, 8)} • {formatAUSDate(order.created_at)}
-            {/* NEW SHIPPING BADGE */}
             {isExpress ? (
               <span
                 style={{
@@ -916,6 +942,25 @@ export function OrderRow({
                     </div>
                     <div>{order.customer_email}</div>
                     <div>{order.shipping_address?.phone}</div>
+
+                    {/* NEW: SHOW DISCOUNT CODE DETAILS IN EXPANDED VIEW */}
+                    {order.discount_code && (
+                      <div style={{ marginTop: "4px" }}>
+                        <span style={{ fontWeight: "bold", color: "#64748b" }}>
+                          Promo Code:
+                        </span>
+                        <span
+                          style={{
+                            marginLeft: "6px",
+                            color: "#b45309",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {order.discount_code.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+
                     <hr
                       style={{
                         margin: "10px 0",

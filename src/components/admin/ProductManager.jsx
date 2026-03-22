@@ -16,10 +16,10 @@ import {
   XCircle,
   Eye,
   EyeOff,
-  Star, // NEW: Imported Star for the Default toggle
+  Star,
+  Clock, // NEW: Imported Clock for Preorder toggle
 } from "lucide-react";
 
-// --- CATEGORIES LIST ---
 const CATEGORIES = ["Peptides", "Peptide Blends", "Accessories"];
 const STORAGE_BUCKET = "product-images";
 
@@ -31,7 +31,6 @@ export default function ProductManager() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [isAddingNew, setIsAddingNew] = useState(false);
 
-  // New Product Form State
   const [newProductName, setNewProductName] = useState("");
   const [newProductCategory, setNewProductCategory] = useState("Peptides");
   const [newProductImage, setNewProductImage] = useState("");
@@ -88,13 +87,11 @@ export default function ProductManager() {
 
   const handleImageUpload = async (file) => {
     if (!file) return;
-
     const options = {
       maxSizeMB: 0.5,
       maxWidthOrHeight: 1200,
       useWebWorker: true,
     };
-
     try {
       const compressedFile = await imageCompression(file, options);
       const fileExt = compressedFile.name.split(".").pop();
@@ -110,7 +107,6 @@ export default function ProductManager() {
       const { data } = supabase.storage
         .from(STORAGE_BUCKET)
         .getPublicUrl(filePath);
-
       return data.publicUrl;
     } catch (error) {
       alert("Upload failed: " + error.message);
@@ -139,7 +135,6 @@ export default function ProductManager() {
         </button>
       </div>
 
-      {/* FILTERS */}
       <div style={styles.controls}>
         <div style={styles.searchBox}>
           <Search size={18} color="#94a3b8" />
@@ -164,7 +159,6 @@ export default function ProductManager() {
         </select>
       </div>
 
-      {/* ADD NEW FORM */}
       {isAddingNew && (
         <div style={styles.newForm}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -253,7 +247,6 @@ export default function ProductManager() {
         </div>
       )}
 
-      {/* PRODUCT LIST */}
       {loading ? (
         <div style={{ padding: "40px", textAlign: "center" }}>
           <Loader className="spin-anim" />
@@ -280,7 +273,6 @@ export default function ProductManager() {
   );
 }
 
-// --- SUB-COMPONENT: Product Row ---
 function ProductRow({
   product,
   isExpanded,
@@ -304,14 +296,11 @@ function ProductRow({
     e.stopPropagation();
     const newStatus = !inStock;
     setInStock(newStatus);
-
     const { error } = await supabase
       .from("products")
       .update({ in_stock: newStatus })
       .eq("id", product.id);
-
     if (error) {
-      console.error(error);
       setInStock(!newStatus);
       alert("Failed to update stock status");
     }
@@ -319,12 +308,10 @@ function ProductRow({
 
   const handleSaveDetails = async () => {
     setIsSaving(true);
-
     const { error: productError } = await supabase
       .from("products")
       .update({ name: name, image_url: image })
       .eq("id", product.id);
-
     if (productError) {
       alert("Failed to save product: " + productError.message);
       setIsSaving(false);
@@ -340,14 +327,14 @@ function ProductRow({
           image_url: v.image_url,
           in_stock: v.in_stock,
           is_hidden: v.is_hidden,
-          is_default: v.is_default || false, // NEW: Save default status
+          is_default: v.is_default || false,
+          is_preorder: v.is_preorder || false, // NEW: Save preorder status
         })
         .eq("id", v.id),
     );
 
     const results = await Promise.all(variantPromises);
     const failedVariant = results.find((r) => r.error);
-
     setIsSaving(false);
     if (failedVariant) {
       alert(
@@ -369,6 +356,7 @@ function ProductRow({
         in_stock: true,
         is_hidden: false,
         is_default: false,
+        is_preorder: false,
       })
       .select()
       .single();
@@ -376,7 +364,6 @@ function ProductRow({
   };
 
   const updateVariantLocal = (id, field, value) => {
-    // NEW: If setting a variant as default, we must un-default all others
     if (field === "is_default" && value === true) {
       setVariants(
         variants.map((v) =>
@@ -415,7 +402,6 @@ function ProductRow({
             <span style={styles.badge}>{product.category}</span>
           </div>
         </div>
-
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
           <button
             onClick={handleToggleStock}
@@ -439,7 +425,6 @@ function ProductRow({
               </>
             )}
           </button>
-
           <button onClick={onToggle} style={styles.iconBtn}>
             {isExpanded ? <ChevronUp size={20} /> : <Edit2 size={20} />}
           </button>
@@ -484,7 +469,6 @@ function ProductRow({
                 </label>
               </div>
             </div>
-
             <button
               onClick={handleSaveDetails}
               style={{
@@ -522,12 +506,12 @@ function ProductRow({
           <div
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
-            {/* UPDATED GRID TEMPLATE: Added space for the 'Def' (Default) column */}
             <div
               style={{
                 display: "grid",
+                // FIXED GRID: Added one more 35px column for the Preorder toggle
                 gridTemplateColumns:
-                  "100px 80px 100px 1fr 100px 35px 35px 35px",
+                  "100px 80px 100px 1fr 100px 35px 35px 35px 35px",
                 gap: "10px",
                 paddingLeft: "10px",
                 fontSize: "0.8rem",
@@ -540,7 +524,8 @@ function ProductRow({
               <span>Price ($)</span>
               <span>Image URL</span>
               <span>Upload</span>
-              <span>Def</span> {/* NEW: Default Column */}
+              <span>Def</span>
+              <span>Pre</span> {/* NEW Header */}
               <span>Hide</span>
               <span>Del</span>
             </div>
@@ -567,23 +552,33 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
   const isInStock = data.in_stock !== false;
   const isHidden = data.is_hidden === true;
   const isDefault = data.is_default === true;
+  const isPreorder = data.is_preorder === true;
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "100px 80px 100px 1fr 100px 35px 35px 35px",
+        gridTemplateColumns: "100px 80px 100px 1fr 100px 35px 35px 35px 35px",
         gap: "10px",
         alignItems: "center",
         padding: "10px",
-        backgroundColor: isHidden ? "#f8fafc" : isDefault ? "#fefce8" : "white", // Highlight gold if default
+        backgroundColor: isHidden
+          ? "#f8fafc"
+          : isDefault
+            ? "#fefce8"
+            : isPreorder
+              ? "#fff7ed"
+              : "white",
         opacity: isHidden ? 0.6 : 1,
         borderRadius: "8px",
-        border: isDefault ? "1px solid #fde047" : "1px solid #e2e8f0",
+        border: isDefault
+          ? "1px solid #fde047"
+          : isPreorder
+            ? "1px solid #fdba74"
+            : "1px solid #e2e8f0",
         transition: "all 0.2s ease",
       }}
     >
-      {/* VARIANT STOCK TOGGLE */}
       <button
         onClick={() => updateLocal(data.id, "in_stock", !isInStock)}
         style={{
@@ -624,7 +619,7 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
         placeholder="Image URL"
       />
       <label style={styles.uploadBtnSmall}>
-        <Upload size={14} style={{ marginRight: 4 }} />
+        <Upload size={14} style={{ marginRight: 4 }} />{" "}
         <span style={{ fontSize: "0.75rem" }}>Up</span>
         <input
           type="file"
@@ -636,7 +631,6 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
         />
       </label>
 
-      {/* NEW: DEFAULT TOGGLE BUTTON */}
       <button
         onClick={() => updateLocal(data.id, "is_default", true)}
         title={isDefault ? "Current Default Variant" : "Set as Default"}
@@ -653,7 +647,23 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
         <Star size={18} fill={isDefault ? "#eab308" : "none"} />
       </button>
 
-      {/* HIDE BUTTON */}
+      {/* NEW: PREORDER TOGGLE BUTTON */}
+      <button
+        onClick={() => updateLocal(data.id, "is_preorder", !isPreorder)}
+        title={isPreorder ? "Disable Preorder" : "Enable Preorder"}
+        style={{
+          color: isPreorder ? "#ea580c" : "#cbd5e1",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Clock size={18} />
+      </button>
+
       <button
         onClick={() => updateLocal(data.id, "is_hidden", !isHidden)}
         title={isHidden ? "Unhide Variant" : "Hide Variant"}
@@ -670,7 +680,6 @@ function VariantRow({ data, updateLocal, onDelete, handleImageUpload }) {
         {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>
 
-      {/* DELETE BUTTON */}
       <button
         onClick={onDelete}
         title="Permanently Delete"

@@ -17,7 +17,7 @@ import {
   Microscope,
   Activity,
   Zap,
-  Edit2, // NEW: Added Edit Icon
+  Edit2,
 } from "lucide-react";
 
 export default function CreatorManager() {
@@ -41,12 +41,10 @@ export default function CreatorManager() {
   const [pin, setPin] = useState("");
 
   useEffect(() => {
-    // 1. Start the exit animation at 0.5s
     const exitTimer = setTimeout(() => {
       setIsAnimating(false);
     }, 500);
 
-    // 2. Unmount the overlay completely at 0.9s
     const unmountTimer = setTimeout(() => {
       setMountOverlay(false);
     }, 900);
@@ -65,10 +63,15 @@ export default function CreatorManager() {
           .from("affiliates")
           .select("*")
           .order("created_at", { ascending: false }),
+
+        // FIXED: Changed total_price to total_amount
         supabase
           .from("orders")
-          .select("discount_code, total_price")
+          .select("discount_code, total_amount")
+          .neq("status", "cancelled")
+          .neq("status", "pending")
           .not("discount_code", "is", null),
+
         supabase
           .from("discounts")
           .select("code")
@@ -80,7 +83,6 @@ export default function CreatorManager() {
       if (ordersRes.data) setOrders(ordersRes.data);
       if (codesRes.data) {
         setCreatorCodes(codesRes.data);
-        // Only auto-select if we aren't editing someone
         if (codesRes.data.length > 0 && !code && !editingId) {
           setCode(codesRes.data[0].code);
         }
@@ -100,7 +102,6 @@ export default function CreatorManager() {
     setEditingId(affiliate.id);
     setIsFormOpen(true);
 
-    // Smooth scroll to top when editing
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -119,7 +120,6 @@ export default function CreatorManager() {
 
     let error;
 
-    // Check if we are updating or inserting
     if (editingId) {
       const { error: updateError } = await supabase
         .from("affiliates")
@@ -161,13 +161,16 @@ export default function CreatorManager() {
   };
 
   const getAffiliateStats = (discountCode) => {
+    // Added .trim() protections
     const affiliateOrders = orders.filter(
       (o) =>
         o.discount_code &&
-        o.discount_code.toUpperCase() === discountCode.toUpperCase(),
+        o.discount_code.trim().toUpperCase() ===
+          discountCode.trim().toUpperCase(),
     );
+    // FIXED: Reads total_amount instead of total_price
     const totalSales = affiliateOrders.reduce(
-      (sum, order) => sum + Number(order.total_price || 0),
+      (sum, order) => sum + Number(order.total_amount || 0),
       0,
     );
     return { usageCount: affiliateOrders.length, totalSales };
@@ -175,15 +178,12 @@ export default function CreatorManager() {
 
   return (
     <>
-      {/* --- THE HYPER-KINETIC INTRO ANIMATION OVERLAY --- */}
       {mountOverlay && (
         <div
           className={`gradient-bg-anim ${isAnimating ? "slide-down-enter" : "fade-slide-up-exit"}`}
           style={styles.fullScreenOverlay}
         >
-          {/* Main Content Wrapper (Centered) */}
           <div style={styles.animationCenterBox}>
-            {/* 7 UNIQUE HIGH-VELOCITY ICONS (Strict Blue->White Spectrum, Unique Sizes, Upright Bouncing) */}
             <div className="icon-bounce-1" style={styles.absoluteIconZero}>
               <TestTube size={110} color="#ffffff" strokeWidth={1.5} />
             </div>
@@ -206,7 +206,6 @@ export default function CreatorManager() {
               <Zap size={44} color="#0284c7" strokeWidth={2.5} />
             </div>
 
-            {/* CENTRAL LOGO (White Box) */}
             <div className="pulse-glow-intense" style={styles.mainLogoBox}>
               <img
                 src="/logo.png"
@@ -219,7 +218,6 @@ export default function CreatorManager() {
                 }}
               />
             </div>
-
             <h2 className="fade-in-text" style={styles.animationText}>
               Creator Studio
             </h2>
@@ -230,7 +228,6 @@ export default function CreatorManager() {
         </div>
       )}
 
-      {/* --- THE MAIN DASHBOARD UI --- */}
       <div
         className="fade-in-ui"
         style={{
@@ -242,7 +239,6 @@ export default function CreatorManager() {
           zIndex: 1,
         }}
       >
-        {/* HEADER */}
         <div style={styles.header}>
           <h3 style={styles.title}>
             <div style={styles.titleIconWrapper}>
@@ -265,7 +261,6 @@ export default function CreatorManager() {
           payouts.
         </p>
 
-        {/* FORM CARD */}
         {isFormOpen && (
           <div style={styles.formCard}>
             <div style={styles.formHeader}>
@@ -304,7 +299,6 @@ export default function CreatorManager() {
                       onChange={(e) => setCode(e.target.value)}
                       style={styles.selectWithIcon}
                     >
-                      {/* Ensure the currently edited code is an option even if somehow deactivated */}
                       {editingId &&
                         !creatorCodes.find((c) => c.code === code) && (
                           <option value={code}>{code} (Current)</option>
@@ -386,7 +380,6 @@ export default function CreatorManager() {
           </div>
         )}
 
-        {/* TABLE */}
         {loading ? (
           <div
             style={{ padding: "40px", textAlign: "center", color: "#64748b" }}
@@ -473,7 +466,6 @@ export default function CreatorManager() {
                               justifyContent: "flex-end",
                             }}
                           >
-                            {/* NEW: Edit Button */}
                             <button
                               onClick={() => handleEdit(aff)}
                               style={styles.editBtn}
@@ -742,7 +734,7 @@ const styles = {
     position: "absolute",
     left: "50%",
     top: "50%",
-    marginLeft: "-50px", // Align centers approximately
+    marginLeft: "-50px",
     marginTop: "-50px",
     zIndex: 5,
   },
@@ -776,43 +768,16 @@ const styles = {
   },
 };
 
-// --- CSS INJECTIONS FOR ADVANCED COLLISION/PHYSICS ANIMATIONS ---
 const styleTag = document.createElement("style");
 styleTag.innerHTML = `
-  /* LIQUID GRADIENT BACKGROUND */
-  .gradient-bg-anim {
-    background: linear-gradient(-45deg, #0f172a, #1e1b4b, #4635de, #0284c7, #0f172a);
-    background-size: 400% 400%;
-    animation: gradientShift 3s ease infinite;
-  }
-  @keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  /* Overlay entry/exit animations */
+  .gradient-bg-anim { background: linear-gradient(-45deg, #0f172a, #1e1b4b, #4635de, #0284c7, #0f172a); background-size: 400% 400%; animation: gradientShift 3s ease infinite; }
+  @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
   .slide-down-enter { animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .fade-slide-up-exit { animation: slideUpFadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  
-  @keyframes slideDown {
-    0% { transform: translateY(-100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes slideUpFadeOut {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-20px); opacity: 0; visibility: hidden; }
-  }
-  
-  /* Intense Logo Pulse (Behind the White Box) */
+  @keyframes slideDown { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+  @keyframes slideUpFadeOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-20px); opacity: 0; visibility: hidden; } }
   .pulse-glow-intense { animation: pulseGlowIntense 0.6s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
-  @keyframes pulseGlowIntense { 
-    0% { box-shadow: 0 0 0 0 rgba(70, 53, 222, 0.9), 0 20px 40px rgba(0,0,0,0.5); transform: scale(1); } 
-    100% { box-shadow: 0 0 0 50px rgba(70, 53, 222, 0), 0 20px 40px rgba(0,0,0,0.5); transform: scale(1.05); } 
-  }
-  
-  /* STRICT BOUNDARY COLLISION PHYSICS */
-  
+  @keyframes pulseGlowIntense { 0% { box-shadow: 0 0 0 0 rgba(70, 53, 222, 0.9), 0 20px 40px rgba(0,0,0,0.5); transform: scale(1); } 100% { box-shadow: 0 0 0 50px rgba(70, 53, 222, 0), 0 20px 40px rgba(0,0,0,0.5); transform: scale(1.05); } }
   .icon-bounce-1 { animation: smash1 1.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate; }
   .icon-bounce-2 { animation: smash2 1.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate 0.1s; }
   .icon-bounce-3 { animation: smash3 1.0s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate 0.2s; }
@@ -820,67 +785,17 @@ styleTag.innerHTML = `
   .icon-bounce-5 { animation: smash5 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate 0.25s; }
   .icon-bounce-6 { animation: smash6 1.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate 0.05s; }
   .icon-bounce-7 { animation: smash7 1.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate 0.3s; }
-  
-  /* 1: Top-Left Attacker */
-  @keyframes smash1 {
-    0% { transform: translate(-450px, -350px) scale(0.8) rotate(0deg); }
-    50% { transform: translate(-220px, -200px) scale(1.1) rotate(15deg); }
-    100% { transform: translate(-380px, -100px) scale(0.9) rotate(-5deg); }
-  }
-
-  /* 2: Top-Right Attacker */
-  @keyframes smash2 {
-    0% { transform: translate(400px, -400px) scale(0.9) rotate(0deg); }
-    50% { transform: translate(220px, -180px) scale(1.2) rotate(-15deg); }
-    100% { transform: translate(350px, -50px) scale(1) rotate(10deg); }
-  }
-
-  /* 3: Bottom-Left Attacker */
-  @keyframes smash3 {
-    0% { transform: translate(-500px, 400px) scale(1) rotate(-10deg); }
-    50% { transform: translate(-220px, 220px) scale(1.3) rotate(5deg); }
-    100% { transform: translate(-300px, 450px) scale(0.8) rotate(15deg); }
-  }
-
-  /* 4: Bottom-Right Attacker */
-  @keyframes smash4 {
-    0% { transform: translate(450px, 350px) scale(0.8) rotate(10deg); }
-    50% { transform: translate(240px, 250px) scale(1.1) rotate(-5deg); }
-    100% { transform: translate(400px, 150px) scale(1) rotate(-15deg); }
-  }
-
-  /* 5: Far-Left Wall Bouncer */
-  @keyframes smash5 {
-    0% { transform: translate(-600px, 0px) scale(0.9) rotate(0deg); }
-    50% { transform: translate(-280px, 50px) scale(1.2) rotate(18deg); }
-    100% { transform: translate(-550px, 200px) scale(0.8) rotate(-10deg); }
-  }
-
-  /* 6: Far-Right Wall Bouncer */
-  @keyframes smash6 {
-    0% { transform: translate(600px, 100px) scale(1) rotate(-5deg); }
-    50% { transform: translate(280px, -50px) scale(1.3) rotate(-18deg); }
-    100% { transform: translate(500px, -250px) scale(0.9) rotate(12deg); }
-  }
-
-  /* 7: Top-Center Ceiling Dropper */
-  @keyframes smash7 {
-    0% { transform: translate(0px, -500px) scale(0.8) rotate(0deg); }
-    50% { transform: translate(80px, -240px) scale(1.1) rotate(-12deg); }
-    100% { transform: translate(-100px, -450px) scale(1) rotate(15deg); }
-  }
-  
+  @keyframes smash1 { 0% { transform: translate(-450px, -350px) scale(0.8) rotate(0deg); } 50% { transform: translate(-220px, -200px) scale(1.1) rotate(15deg); } 100% { transform: translate(-380px, -100px) scale(0.9) rotate(-5deg); } }
+  @keyframes smash2 { 0% { transform: translate(400px, -400px) scale(0.9) rotate(0deg); } 50% { transform: translate(220px, -180px) scale(1.2) rotate(-15deg); } 100% { transform: translate(350px, -50px) scale(1) rotate(10deg); } }
+  @keyframes smash3 { 0% { transform: translate(-500px, 400px) scale(1) rotate(-10deg); } 50% { transform: translate(-220px, 220px) scale(1.3) rotate(5deg); } 100% { transform: translate(-300px, 450px) scale(0.8) rotate(15deg); } }
+  @keyframes smash4 { 0% { transform: translate(450px, 350px) scale(0.8) rotate(10deg); } 50% { transform: translate(240px, 250px) scale(1.1) rotate(-5deg); } 100% { transform: translate(400px, 150px) scale(1) rotate(-15deg); } }
+  @keyframes smash5 { 0% { transform: translate(-600px, 0px) scale(0.9) rotate(0deg); } 50% { transform: translate(-280px, 50px) scale(1.2) rotate(18deg); } 100% { transform: translate(-550px, 200px) scale(0.8) rotate(-10deg); } }
+  @keyframes smash6 { 0% { transform: translate(600px, 100px) scale(1) rotate(-5deg); } 50% { transform: translate(280px, -50px) scale(1.3) rotate(-18deg); } 100% { transform: translate(500px, -250px) scale(0.9) rotate(12deg); } }
+  @keyframes smash7 { 0% { transform: translate(0px, -500px) scale(0.8) rotate(0deg); } 50% { transform: translate(80px, -240px) scale(1.1) rotate(-12deg); } 100% { transform: translate(-100px, -450px) scale(1) rotate(15deg); } }
   .fade-in-text { opacity: 0; animation: fadeInText 0.3s ease-out forwards 0.1s; }
   .fade-in-text-delay { opacity: 0; animation: fadeInText 0.3s ease-out forwards 0.3s; }
   @keyframes fadeInText { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-  
-  /* FIXED: Reduced to 0.3s so it pops in underneath precisely as the curtain begins to slide away */
   .fade-in-ui { opacity: 0; animation: popInUI 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.3s; }
-  @keyframes popInUI { 
-    0% { opacity: 0; transform: scale(0.98) translateY(10px); } 
-    100% { opacity: 1; transform: scale(1) translateY(0); } 
-  }
-  
-  input:focus, select:focus { border-color: #4635de !important; box-shadow: 0 0 0 3px rgba(70, 53, 222, 0.1) !important; }
+  @keyframes popInUI { 0% { opacity: 0; transform: scale(0.98) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
 `;
 document.head.appendChild(styleTag);

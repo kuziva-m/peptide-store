@@ -24,11 +24,11 @@ export default function DiscountManager() {
   const [loading, setLoading] = useState(true);
 
   // UI State
-  const [activeTab, setActiveTab] = useState("standard"); // "standard" or "creator"
+  const [activeTab, setActiveTab] = useState("standard");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  // NEW: Stats Modal State
+  // Stats Modal State
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [selectedStats, setSelectedStats] = useState(null);
 
@@ -59,33 +59,34 @@ export default function DiscountManager() {
     if (discountError)
       console.error("Error fetching discounts:", discountError);
 
-    // NEW: Fetching much more data from orders to build our stats
+    // FIXED: Changed total_price to total_amount based on your database schema
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
-      .select("discount_code, total_price, created_at, customer_name")
+      .select("discount_code, total_amount, created_at, customer_name")
       .neq("status", "cancelled")
       .neq("status", "pending");
 
     if (orderError) console.error("Error fetching orders:", orderError);
 
-    // NEW: Build a rich usage map containing revenue and order history
     const usageMap = {};
     if (orderData) {
       orderData.forEach((order) => {
         if (order.discount_code) {
-          const code = order.discount_code.toUpperCase();
+          // Added .trim() to ensure spaces don't break the match
+          const code = order.discount_code.trim().toUpperCase();
           if (!usageMap[code]) {
             usageMap[code] = { count: 0, revenue: 0, orders: [] };
           }
           usageMap[code].count += 1;
-          usageMap[code].revenue += Number(order.total_price || 0);
+          // FIXED: Now accurately reads total_amount
+          usageMap[code].revenue += Number(order.total_amount || 0);
           usageMap[code].orders.push(order);
         }
       });
     }
 
     const mergedData = (discountData || []).map((d) => {
-      const codeUpper = d.code.toUpperCase();
+      const codeUpper = d.code.trim().toUpperCase();
       const codeStats = usageMap[codeUpper] || {
         count: 0,
         revenue: 0,
@@ -143,7 +144,7 @@ export default function DiscountManager() {
     if (!formData.code) return alert("Code is required");
 
     const payload = {
-      code: formData.code.toUpperCase(),
+      code: formData.code.trim().toUpperCase(),
       type: formData.type,
       value: formData.value,
       free_shipping: formData.free_shipping,
@@ -375,7 +376,7 @@ export default function DiscountManager() {
                             color: "#059669",
                           }}
                         >
-                          ${Number(order.total_price || 0).toFixed(2)}
+                          ${Number(order.total_amount || 0).toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -706,7 +707,7 @@ export default function DiscountManager() {
                         justifyContent: "flex-end",
                       }}
                     >
-                      {/* NEW: View Stats Button */}
+                      {/* View Stats Button */}
                       <button
                         onClick={() => openStatsModal(d)}
                         style={styles.statsBtn}

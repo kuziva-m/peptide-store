@@ -202,6 +202,46 @@ export default function Checkout() {
     setError(null);
 
     try {
+      // =========================================================================
+      // 🛑 LIVE SERVER-SIDE INVENTORY CHECK (CLOSES THE OPEN-TAB LOOPHOLE) 🛑
+      // =========================================================================
+      const variantIds = cart.map((item) => item.variantId || item.id);
+
+      const { data: liveStock, error: stockError } = await supabase
+        .from("variants")
+        .select("id, in_stock")
+        .in("id", variantIds);
+
+      if (stockError)
+        throw new Error("Could not verify live inventory. Please try again.");
+
+      const outOfStockItems = [];
+      for (const cartItem of cart) {
+        const vId = cartItem.variantId || cartItem.id;
+        const liveVariant = liveStock?.find(
+          (v) => String(v.id) === String(vId),
+        );
+
+        // If the item was deleted from DB or explicitly marked out of stock
+        if (
+          !liveVariant ||
+          liveVariant.in_stock === false ||
+          liveVariant.in_stock === "false"
+        ) {
+          const variantLabel = getVariantLabel(cartItem.variant);
+          outOfStockItems.push(
+            `${cartItem.name}${variantLabel ? ` (${variantLabel})` : ""}`,
+          );
+        }
+      }
+
+      if (outOfStockItems.length > 0) {
+        throw new Error(
+          `Checkout blocked! The following items just sold out: ${outOfStockItems.join(", ")}. Please return to the shop and remove them from your cart.`,
+        );
+      }
+      // =========================================================================
+
       // 1. Upload the Receipt Image
       const fileExt = receiptFile.name.split(".").pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
