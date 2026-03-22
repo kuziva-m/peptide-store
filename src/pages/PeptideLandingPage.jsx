@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import SEO from "../components/SEO"; // <-- IMPORT ADDED
+import SEO from "../components/SEO";
+import {
+  Dna,
+  FlaskConical,
+  BookOpen,
+  HelpCircle,
+  Snowflake,
+  Link as LinkIcon,
+} from "lucide-react";
 
 export default function PeptideLandingPage() {
   const { peptideSlug } = useParams();
@@ -26,9 +34,6 @@ export default function PeptideLandingPage() {
 
       setPageData(seo);
 
-      // Removed manual document.title and meta description hacking here.
-      // The <SEO> component below handles it properly for Googlebot!
-
       if (seo.product_id) {
         const { data: prodData } = await supabase
           .from("products")
@@ -45,29 +50,50 @@ export default function PeptideLandingPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center text-xl font-bold text-gray-400">
+      <div
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "1.2rem",
+          fontWeight: "bold",
+          color: "#64748b",
+        }}
+      >
         Loading research database...
       </div>
     );
+
   if (!pageData)
     return (
-      <div className="min-h-screen flex items-center justify-center text-xl font-bold text-red-500">
+      <div
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "1.2rem",
+          fontWeight: "bold",
+          color: "#ef4444",
+        }}
+      >
         Research page not found.
       </div>
     );
 
   const productImage =
-    product?.image_url || product?.image || "/placeholder.png";
+    product?.image_url || product?.image || "https://via.placeholder.com/400";
 
   const formatText = (text) => {
     if (!text) return null;
     return text.split("\n").map((line, i) => {
       const parts = line.split(/\*\*(.*?)\*\*/g);
       return (
-        <p key={i} className="mb-4 last:mb-0">
+        <p key={i} className="seo-p">
           {parts.map((part, j) =>
             j % 2 === 1 ? (
-              <strong key={j} className="font-bold text-gray-900">
+              <strong key={j} style={{ color: "#0f172a", fontWeight: "800" }}>
                 {part}
               </strong>
             ) : (
@@ -80,242 +106,333 @@ export default function PeptideLandingPage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-20 font-sans">
-      {/* PROPER SEO COMPONENT ADDED HERE */}
-      <SEO
-        title={`${pageData.h1_title}`}
-        description={pageData.meta_description}
-        url={`https://melbournepeptides.com.au/${peptideSlug}`}
-      />
-      {/* Hero Header */}
-      <div className="bg-white border-b border-gray-200 py-12 px-4 sm:px-6 lg:px-8 mb-10 text-center shadow-sm">
-        <div className="max-w-4xl mx-auto">
-          <span className="text-blue-600 font-bold tracking-widest uppercase text-xs sm:text-sm mb-3 block">
-            Comprehensive Research Guide
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-6 leading-tight">
-            {pageData.h1_title}
-          </h1>
-          <p className="text-lg sm:text-xl text-gray-600 font-light leading-relaxed max-w-3xl mx-auto">
-            {pageData.meta_description}
-          </p>
+    <>
+      <style>{`
+        .seo-landing-bg { background-color: #f8fafc; min-height: 100vh; padding-bottom: 80px; font-family: system-ui, -apple-system, sans-serif; }
+        .seo-hero { background: white; border-bottom: 1px solid #e2e8f0; padding: 60px 20px; text-align: center; margin-bottom: 40px; }
+        .seo-hero-tag { color: #4635de; font-weight: 800; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; display: block; margin-bottom: 12px; }
+        .seo-hero-title { font-size: 3rem; font-weight: 900; color: #0f172a; margin: 0 0 20px 0; letter-spacing: -1px; line-height: 1.2; }
+        .seo-hero-desc { font-size: 1.15rem; color: #475569; max-width: 800px; margin: 0 auto; line-height: 1.6; }
+        
+        .seo-container { max-width: 1100px; margin: 0 auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 380px; gap: 40px; align-items: start; }
+        
+        .seo-main { display: flex; flex-direction: column; gap: 30px; }
+        .seo-card { background: white; border-radius: 16px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .seo-h2 { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0 0 24px 0; padding-bottom: 16px; border-bottom: 2px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
+        .seo-p { font-size: 1.05rem; color: #334155; line-height: 1.8; margin-bottom: 16px; }
+        
+        .seo-img-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; justify-content: center; margin-bottom: 24px; }
+        .seo-img { max-width: 100%; max-height: 300px; object-fit: contain; mix-blend-mode: multiply; border-radius: 8px; }
+        
+        .seo-study { background: #f0f4ff; border-left: 4px solid #4635de; padding: 20px; border-radius: 0 12px 12px 0; margin-bottom: 16px; }
+        .seo-study h3 { margin: 0 0 8px 0; color: #0f172a; font-size: 1.1rem; }
+        .seo-study p { margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.6; }
+        
+        .seo-faq { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 16px; }
+        .seo-faq h3 { margin: 0 0 8px 0; color: #0f172a; font-size: 1.1rem; }
+        .seo-faq p { margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6; }
+        
+        .seo-sidebar { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 24px; }
+        .sidebar-card { background: white; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .sidebar-img-box { background: radial-gradient(circle at center, #ffffff 50%, #f1f5f9 100%); border-radius: 12px; padding: 20px; display: flex; justify-content: center; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .sidebar-img { max-width: 100%; height: 200px; object-fit: contain; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
+        .sidebar-btn { display: block; width: 100%; text-align: center; background: #4635de; color: white; padding: 16px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 1.05rem; transition: background 0.2s; }
+        .sidebar-btn:hover { background: #3729ad; }
+        
+        .dark-card { background: #0f172a; color: white; }
+        .dark-btn { background: white; color: #0f172a; }
+        .dark-btn:hover { background: #f8fafc; }
+        .code-block { background: #1e293b; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; color: #e2e8f0; line-height: 1.5; margin-bottom: 20px; border: 1px solid #334155; }
+        
+        .ref-list { list-style: decimal inside; padding: 0; margin: 0; color: #475569; font-size: 0.9rem; }
+        .ref-list li { margin-bottom: 10px; line-height: 1.6; }
+
+        @media (max-width: 1024px) {
+          .seo-container { grid-template-columns: 1fr; }
+          .seo-sidebar { position: relative; top: 0; }
+          .seo-hero-title { font-size: 2.2rem; }
+          .seo-card { padding: 24px; }
+        }
+      `}</style>
+
+      <div className="seo-landing-bg">
+        <SEO
+          title={`${pageData.h1_title}`}
+          description={pageData.meta_description}
+          url={`https://melbournepeptides.com.au/${peptideSlug}`}
+        />
+
+        {/* Hero Header */}
+        <div className="seo-hero">
+          <span className="seo-hero-tag">Comprehensive Research Guide</span>
+          <h1 className="seo-hero-title">{pageData.h1_title}</h1>
+          <p className="seo-hero-desc">{pageData.meta_description}</p>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-        {/* Main Content Column */}
-        <div className="lg:col-span-8 space-y-12">
-          {/* Introduction */}
-          {pageData.introduction && (
-            <section className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-100">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100">
-                What is {pageData.h1_title.split(" ")[0]}?
-              </h2>
-
-              {/* Image 1: Amino Acid Sequence */}
-              {pageData.image_amino_sequence && (
-                <div className="mb-8">
-                  <img
-                    src={pageData.image_amino_sequence}
-                    alt={`${pageData.h1_title.split(" ")[0]} amino acid sequence`}
-                    className="w-full h-auto rounded-xl shadow-sm border border-gray-100 object-cover"
-                  />
-                </div>
-              )}
-
-              <div className="text-gray-700 text-base sm:text-lg leading-relaxed space-y-4">
-                {formatText(pageData.introduction)}
-              </div>
-            </section>
-          )}
-
-          {/* Mechanism of Action */}
-          {pageData.mechanism_text && (
-            <section className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-100">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100">
-                Mechanism of Action
-              </h2>
-
-              {/* Image 2: Molecular Structure */}
-              {pageData.image_molecular_structure && (
-                <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100 flex justify-center">
-                  <img
-                    src={pageData.image_molecular_structure}
-                    alt={`${pageData.h1_title.split(" ")[0]} peptide molecular structure`}
-                    className="max-w-full h-auto rounded-lg mix-blend-multiply"
-                  />
-                </div>
-              )}
-
-              <div className="text-gray-700 text-base sm:text-lg leading-relaxed">
-                {formatText(pageData.mechanism_text)}
-              </div>
-            </section>
-          )}
-
-          {/* Key Studies */}
-          {pageData.research_studies &&
-            pageData.research_studies.length > 0 && (
-              <section className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-100">
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100">
-                  Key Research Studies
+        <div className="seo-container">
+          {/* LEFT: Main Content Column */}
+          <div className="seo-main">
+            {/* Introduction */}
+            {pageData.introduction && (
+              <section className="seo-card">
+                <h2 className="seo-h2">
+                  <Dna size={28} color="#4635de" />
+                  What is {pageData.h1_title.split(" ")[0]}?
                 </h2>
-                <div className="space-y-6">
-                  {pageData.research_studies.map((study, index) => (
-                    <div
-                      key={index}
-                      className="bg-blue-50/50 border border-blue-100 p-5 sm:p-6 rounded-xl border-l-4 border-l-blue-600"
-                    >
-                      <h3 className="font-bold text-lg sm:text-xl text-gray-900 mb-2">
-                        {study.title}
-                      </h3>
-                      <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
-                        {study.summary}
-                      </p>
+                {pageData.image_amino_sequence && (
+                  <div className="seo-img-wrapper">
+                    <img
+                      src={pageData.image_amino_sequence}
+                      alt={`${pageData.h1_title.split(" ")[0]} amino sequence`}
+                      className="seo-img"
+                    />
+                  </div>
+                )}
+                {formatText(pageData.introduction)}
+              </section>
+            )}
+
+            {/* Mechanism of Action */}
+            {pageData.mechanism_text && (
+              <section className="seo-card">
+                <h2 className="seo-h2">
+                  <FlaskConical size={28} color="#4635de" />
+                  Mechanism of Action
+                </h2>
+                {pageData.image_molecular_structure && (
+                  <div className="seo-img-wrapper">
+                    <img
+                      src={pageData.image_molecular_structure}
+                      alt="Molecular structure"
+                      className="seo-img"
+                    />
+                  </div>
+                )}
+                {formatText(pageData.mechanism_text)}
+              </section>
+            )}
+
+            {/* Key Studies */}
+            {pageData.research_studies &&
+              pageData.research_studies.length > 0 && (
+                <section className="seo-card">
+                  <h2 className="seo-h2">
+                    <BookOpen size={28} color="#4635de" />
+                    Key Research Studies
+                  </h2>
+                  <div>
+                    {pageData.research_studies.map((study, index) => (
+                      <div key={index} className="seo-study">
+                        <h3>{study.title}</h3>
+                        <p>{study.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+            {/* FAQs */}
+            {pageData.faqs && pageData.faqs.length > 0 && (
+              <section className="seo-card">
+                <h2 className="seo-h2">
+                  <HelpCircle size={28} color="#4635de" />
+                  Frequently Asked Questions
+                </h2>
+                <div>
+                  {pageData.faqs.map((faq, index) => (
+                    <div key={index} className="seo-faq">
+                      <h3>{faq.q}</h3>
+                      <p>{faq.a}</p>
                     </div>
                   ))}
                 </div>
               </section>
             )}
 
-          {/* FAQs */}
-          {pageData.faqs && pageData.faqs.length > 0 && (
-            <section className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-100">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100">
-                Frequently Asked Questions
-              </h2>
-              <div className="space-y-4">
-                {pageData.faqs.map((faq, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-50 p-5 rounded-xl border border-gray-200"
-                  >
-                    <h3 className="font-bold text-gray-900 text-base sm:text-lg mb-2">
-                      {faq.q}
-                    </h3>
-                    <p className="text-gray-700 text-sm sm:text-base">
-                      {faq.a}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* References */}
-          {pageData.references && (
-            <section className="bg-gray-100 p-6 sm:p-10 rounded-2xl border border-gray-200">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-                Research References
-              </h2>
-              <ul className="list-decimal list-inside space-y-2 text-xs sm:text-sm text-gray-600">
-                {pageData.references.map((ref, index) => (
-                  <li key={index} className="leading-relaxed">
-                    {ref}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
-
-        {/* Sticky Sidebar Column */}
-        <div className="lg:col-span-4 space-y-6 lg:space-y-8">
-          {/* Product Box */}
-          {product && (
-            <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 lg:sticky lg:top-6">
-              <div className="bg-gray-50 rounded-xl mb-6 p-4 border border-gray-100 flex justify-center">
-                <img
-                  src={productImage}
-                  alt={`${product.name} lyophilized research vial`}
-                  className="w-48 h-48 sm:w-56 sm:h-56 object-contain drop-shadow-md"
-                />
-              </div>
-              <div className="text-center mb-6">
-                <span className="text-xs font-bold tracking-widest text-blue-600 uppercase mb-1 block">
-                  Available For Research
-                </span>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {product.name}
+            {/* References */}
+            {pageData.references && pageData.references.length > 0 && (
+              <section className="seo-card" style={{ background: "#f8fafc" }}>
+                <h2
+                  className="seo-h2"
+                  style={{ border: "none", paddingBottom: 0 }}
+                >
+                  <LinkIcon size={24} color="#64748b" />
+                  References
                 </h2>
-                <p className="text-gray-500 text-xs sm:text-sm">
-                  Strictly for scientific research and laboratory use.
-                </p>
-              </div>
-              <Link
-                to={`/product/${product.slug}`}
-                className="flex items-center justify-center w-full bg-blue-600 text-white py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base hover:bg-blue-700 transition shadow-sm hover:shadow-md"
-              >
-                View Pricing & Availability →
-              </Link>
-            </div>
-          )}
+                <ul className="ref-list">
+                  {pageData.references.map((ref, index) => (
+                    <li key={index}>{ref}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
 
-          {/* Reconstitution Funnel */}
-          {pageData.reconstitution_example && (
-            <div className="bg-gray-900 text-white rounded-2xl shadow-md p-6">
-              <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                🧪 Reconstitution Example
-              </h3>
-              <p className="text-gray-300 text-xs sm:text-sm leading-relaxed mb-6 font-mono bg-gray-800 p-3 rounded-md">
-                {pageData.reconstitution_example}
-              </p>
-              <Link
-                to="/peptide-calculator"
-                className="block w-full text-center bg-white text-gray-900 py-3 rounded-xl font-bold text-sm hover:bg-gray-100 transition"
-              >
-                Open Peptide Calculator →
-              </Link>
-            </div>
-          )}
-
-          {/* Storage Box with Vial Image */}
-          {pageData.storage_guidelines && (
-            <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
-              <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                ❄️ Storage Guidelines
-              </h3>
-              {pageData.image_vial && (
-                <div className="mb-4 bg-gray-50 rounded-lg p-2 flex justify-center">
+          {/* RIGHT: Sticky Sidebar Column */}
+          <div className="seo-sidebar">
+            {/* Product Box */}
+            {product && (
+              <div className="sidebar-card">
+                <div className="sidebar-img-box">
                   <img
-                    src={pageData.image_vial}
-                    alt={`${pageData.h1_title.split(" ")[0]} lyophilized peptide vial`}
-                    className="w-32 h-32 object-cover rounded-md"
+                    src={productImage}
+                    alt={`${product.name} vial`}
+                    className="sidebar-img"
                   />
                 </div>
-              )}
-              <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-                {pageData.storage_guidelines}
-              </p>
-            </div>
-          )}
-
-          {/* Related Peptides */}
-          {pageData.related_peptides && (
-            <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
-              <h3 className="text-base font-bold text-gray-900 mb-4">
-                Related Research
-              </h3>
-              <ul className="space-y-4">
-                {pageData.related_peptides.map((pep, index) => (
-                  <li
-                    key={index}
-                    className="border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "800",
+                      color: "#4635de",
+                      textTransform: "uppercase",
+                      letterSpacing: "1px",
+                    }}
                   >
-                    <Link
-                      to={`/${pep.slug}`}
-                      className="text-blue-600 font-bold hover:underline text-sm flex items-center gap-1"
-                    >
-                      {pep.name} <span className="text-xs">→</span>
-                    </Link>
-                    <p className="text-xs text-gray-500 mt-1">{pep.reason}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                    Available For Research
+                  </span>
+                  <h2
+                    style={{
+                      fontSize: "1.8rem",
+                      fontWeight: "800",
+                      color: "#0f172a",
+                      margin: "4px 0",
+                    }}
+                  >
+                    {product.name}
+                  </h2>
+                  <p
+                    style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}
+                  >
+                    Strictly for scientific research and laboratory use.
+                  </p>
+                </div>
+                <Link to={`/product/${product.slug}`} className="sidebar-btn">
+                  View Pricing & Availability →
+                </Link>
+              </div>
+            )}
+
+            {/* Reconstitution Funnel */}
+            {pageData.reconstitution_example && (
+              <div className="sidebar-card dark-card">
+                <h3
+                  style={{
+                    fontSize: "1.2rem",
+                    margin: "0 0 16px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  🧪 Reconstitution
+                </h3>
+                <div className="code-block">
+                  {pageData.reconstitution_example}
+                </div>
+                <Link to="/peptide-calculator" className="sidebar-btn dark-btn">
+                  Open Peptide Calculator →
+                </Link>
+              </div>
+            )}
+
+            {/* Storage Box */}
+            {pageData.storage_guidelines && (
+              <div className="sidebar-card">
+                <h3
+                  style={{
+                    fontSize: "1.2rem",
+                    color: "#0f172a",
+                    margin: "0 0 16px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <Snowflake size={20} color="#0ea5e9" /> Storage Guidelines
+                </h3>
+                {pageData.image_vial && (
+                  <div className="seo-img-wrapper" style={{ padding: "10px" }}>
+                    <img
+                      src={pageData.image_vial}
+                      alt="Vial"
+                      style={{
+                        height: "120px",
+                        objectFit: "contain",
+                        mixBlendMode: "multiply",
+                      }}
+                    />
+                  </div>
+                )}
+                <p
+                  style={{
+                    fontSize: "0.95rem",
+                    color: "#475569",
+                    lineHeight: "1.6",
+                    margin: 0,
+                  }}
+                >
+                  {pageData.storage_guidelines}
+                </p>
+              </div>
+            )}
+
+            {/* Related Peptides */}
+            {pageData.related_peptides &&
+              pageData.related_peptides.length > 0 && (
+                <div className="sidebar-card">
+                  <h3
+                    style={{
+                      fontSize: "1.1rem",
+                      color: "#0f172a",
+                      margin: "0 0 16px 0",
+                      paddingBottom: "10px",
+                      borderBottom: "1px solid #e2e8f0",
+                    }}
+                  >
+                    Related Research
+                  </h3>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {pageData.related_peptides.map((pep, index) => (
+                      <li
+                        key={index}
+                        style={{
+                          marginBottom: "12px",
+                          borderBottom: "1px solid #f1f5f9",
+                          paddingBottom: "12px",
+                        }}
+                      >
+                        <Link
+                          to={`/${pep.slug}`}
+                          style={{
+                            color: "#4635de",
+                            fontWeight: "700",
+                            textDecoration: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          {pep.name} <span style={{ fontSize: "12px" }}>→</span>
+                        </Link>
+                        <p
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "#64748b",
+                            margin: "4px 0 0 0",
+                          }}
+                        >
+                          {pep.reason}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
