@@ -156,12 +156,16 @@ export const styles = {
   },
   rowHeader: {
     display: "grid",
-    // Responsive Grid: Info | Status | Total | Actions
-    gridTemplateColumns: "1.5fr 1fr 0.8fr auto auto",
+    // FIXED: Adjusted to 4 explicit columns to prevent mobile overlap
+    gridTemplateColumns: "2fr 1fr 1fr auto",
     alignItems: "center",
     padding: "16px 20px",
     cursor: "pointer",
     gap: "10px",
+    // FIXED: Added iOS mobile tap fixes
+    WebkitTapHighlightColor: "transparent",
+    touchAction: "manipulation",
+    userSelect: "none",
   },
   colInfo: { display: "flex", flexDirection: "column", gap: "2px" },
   primaryText: { fontSize: "0.95rem", fontWeight: "700", color: "#0f172a" },
@@ -202,6 +206,7 @@ export const styles = {
     alignItems: "center",
     justifyContent: "center",
     color: "#475569",
+    pointerEvents: "none", // FIXED: Forces tap to register on the row header itself
   },
 
   // --- EXPANDED PANEL ---
@@ -209,7 +214,7 @@ export const styles = {
     background: "#f8fafc",
     padding: "20px",
     borderTop: "1px solid #f1f5f9",
-    animation: "fadeIn 0.2s ease-out",
+    animation: "fadeIn 0.25s ease-out forwards", // FIXED: ensures animation holds its state
   },
   sectionTitle: {
     fontSize: "0.85rem",
@@ -475,6 +480,12 @@ const styleTag = document.createElement("style");
 styleTag.innerHTML = `
   @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   
+  /* FIXED: Defined the missing keyframe for iOS Safari */
+  @keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(-10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+  
   @media (max-width: 768px) {
     /* Stack stats vertically on mobile */
     div[style*="grid-template-columns: 1fr 1px 1fr"] {
@@ -483,12 +494,12 @@ styleTag.innerHTML = `
     }
     div[style*="width: 1px"] { display: none; } /* Hide vertical dividers on mobile */
     
-    /* Stack row header on mobile */
-    div[style*="grid-template-columns: 1.5fr 1fr"] {
+    /* FIXED: Stack row header safely on mobile */
+    div[style*="grid-template-columns: 2fr 1fr 1fr auto"] {
       grid-template-columns: 1fr auto !important;
-      gap: 12px !important;
+      gap: 16px !important;
+      align-items: start !important;
     }
-    /* Hide some columns on mobile if needed, or adjust */
     
     /* Panel Grid Stacking */
     div[style*="grid-template-columns: 2fr 1fr"] {
