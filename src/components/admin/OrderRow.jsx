@@ -338,8 +338,15 @@ export function OrderRow({
 
   return (
     <div style={styles.orderRow}>
+      {/* FIXED: Added role, tabIndex, cursor pointer, and WebkitTapHighlightColor to fix mobile Safari tap bug */}
       <div
-        style={styles.rowHeader}
+        style={{
+          ...styles.rowHeader,
+          cursor: "pointer",
+          WebkitTapHighlightColor: "transparent",
+        }}
+        role="button"
+        tabIndex={0}
         onClick={() => !isEditing && setIsExpanded(!isExpanded)}
       >
         <div style={styles.colInfo}>
@@ -438,7 +445,15 @@ export function OrderRow({
           </span>
         </div>
         <div style={styles.colTotal}>${order.total_amount}</div>
-        <button style={styles.iconBtn}>
+
+        {/* FIXED: Failsafe onClick on the button itself just in case the parent div tap fails */}
+        <button
+          style={{ ...styles.iconBtn, cursor: "pointer" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isEditing) setIsExpanded(!isExpanded);
+          }}
+        >
           {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
       </div>
