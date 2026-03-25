@@ -46,10 +46,17 @@ export default function CreatorStudio() {
     bank_bsb: "",
     bank_account_number: "",
     new_pin: "",
+    confirm_pin: "",
   });
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const [isSavingImage, setIsSavingImage] = useState(false);
+  const [isSavingPin, setIsSavingPin] = useState(false);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+
   const [profileMessage, setProfileMessage] = useState({ type: "", text: "" });
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Payout State
   const [showPayoutModal, setShowPayoutModal] = useState(false);
@@ -112,6 +119,7 @@ export default function CreatorStudio() {
         bank_bsb: affiliateData.bank_bsb || "",
         bank_account_number: affiliateData.bank_account_number || "",
         new_pin: "",
+        confirm_pin: "",
       });
 
       localStorage.setItem("creator_code", loginCode.trim());
@@ -171,13 +179,25 @@ export default function CreatorStudio() {
   };
 
   // ==========================================
-  // PROFILE & IMAGE UPLOAD LOGIC
+  // PROFILE LOGIC (ISOLATED ACTIONS)
   // ==========================================
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const showMessage = (type, text) => {
+    setProfileMessage({ type, text });
+    setTimeout(() => setProfileMessage({ type: "", text: "" }), 5000);
+  };
 
-    setIsUploadingImage(true);
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!selectedImageFile) return;
+
+    setIsSavingImage(true);
     setProfileMessage({ type: "", text: "" });
 
     try {
@@ -186,11 +206,10 @@ export default function CreatorStudio() {
         maxWidthOrHeight: 800,
         useWebWorker: true,
       };
-      const compressedFile = await imageCompression(file, options);
+      const compressedFile = await imageCompression(selectedImageFile, options);
       const fileExt = compressedFile.name.split(".").pop();
       const fileName = `avatar_${affiliate.id}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      // We'll reuse the public product-images bucket for creator avatars
       const { error: uploadError } = await supabase.storage
         .from("product-images")
         .upload(fileName, compressedFile);
@@ -201,7 +220,6 @@ export default function CreatorStudio() {
         .from("product-images")
         .getPublicUrl(fileName);
 
-      // Update Database Immediately
       const { error: dbError } = await supabase
         .from("affiliates")
         .update({ profile_image_url: data.publicUrl })
@@ -210,20 +228,50 @@ export default function CreatorStudio() {
       if (dbError) throw dbError;
 
       setAffiliate({ ...affiliate, profile_image_url: data.publicUrl });
-      setProfileMessage({
-        type: "success",
-        text: "Profile photo updated successfully!",
-      });
+      setSelectedImageFile(null);
+      showMessage("success", "Profile picture saved successfully!");
     } catch (err) {
       console.error(err);
-      setProfileMessage({ type: "error", text: "Failed to upload image." });
+      showMessage("error", "Failed to upload image. Please try again.");
     } finally {
-      setIsUploadingImage(false);
+      setIsSavingImage(false);
     }
   };
 
-  const handleSaveProfile = async () => {
-    setIsSavingProfile(true);
+  const handleSavePin = async () => {
+    setProfileMessage({ type: "", text: "" });
+
+    if (profileData.new_pin !== profileData.confirm_pin) {
+      showMessage("error", "PINs do not match. Please try again.");
+      return;
+    }
+
+    if (profileData.new_pin.length < 4) {
+      showMessage("error", "PIN must be at least 4 characters long.");
+      return;
+    }
+
+    setIsSavingPin(true);
+
+    const { error } = await supabase
+      .from("affiliates")
+      .update({ pin: profileData.new_pin.trim() })
+      .eq("id", affiliate.id);
+
+    setIsSavingPin(false);
+
+    if (error) {
+      showMessage("error", "Failed to save new PIN.");
+    } else {
+      setAffiliate({ ...affiliate, pin: profileData.new_pin.trim() });
+      localStorage.setItem("creator_pin", profileData.new_pin.trim());
+      setProfileData((prev) => ({ ...prev, new_pin: "", confirm_pin: "" }));
+      showMessage("success", "Access PIN changed successfully!");
+    }
+  };
+
+  const handleSavePayment = async () => {
+    setIsSavingPayment(true);
     setProfileMessage({ type: "", text: "" });
 
     const updates = {
@@ -232,34 +280,18 @@ export default function CreatorStudio() {
       bank_account_number: profileData.bank_account_number,
     };
 
-    if (profileData.new_pin && profileData.new_pin.trim() !== "") {
-      updates.pin = profileData.new_pin.trim();
-    }
-
     const { error } = await supabase
       .from("affiliates")
       .update(updates)
       .eq("id", affiliate.id);
 
-    setIsSavingProfile(false);
+    setIsSavingPayment(false);
 
     if (error) {
-      setProfileMessage({ type: "error", text: "Failed to save profile." });
+      showMessage("error", "Failed to save payment details.");
     } else {
       setAffiliate({ ...affiliate, ...updates });
-      setProfileMessage({
-        type: "success",
-        text: "Profile & Bank Details updated successfully!",
-      });
-
-      // If they changed their PIN, update local storage so they don't get logged out on refresh
-      if (updates.pin) {
-        localStorage.setItem("creator_pin", updates.pin);
-        setProfileData((prev) => ({ ...prev, new_pin: "" }));
-      }
-
-      // Clear success message after 4 seconds
-      setTimeout(() => setProfileMessage({ type: "", text: "" }), 4000);
+      showMessage("success", "Payment details saved successfully!");
     }
   };
 
@@ -1082,7 +1114,11 @@ export default function CreatorStudio() {
                   gap: "8px",
                 }}
               >
-                {profileMessage.type === "success" && <CheckCircle size={18} />}
+                {profileMessage.type === "success" ? (
+                  <CheckCircle size={18} />
+                ) : (
+                  <AlertCircle size={18} />
+                )}
                 {profileMessage.text}
               </div>
             )}
@@ -1126,11 +1162,12 @@ export default function CreatorStudio() {
                       display: "flex",
                       alignItems: "center",
                       gap: "20px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    {affiliate.profile_image_url ? (
+                    {imagePreview || affiliate.profile_image_url ? (
                       <img
-                        src={affiliate.profile_image_url}
+                        src={imagePreview || affiliate.profile_image_url}
                         alt="Profile"
                         style={{
                           width: "80px",
@@ -1156,7 +1193,14 @@ export default function CreatorStudio() {
                         <Camera size={32} />
                       </div>
                     )}
-                    <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                        alignItems: "flex-start",
+                      }}
+                    >
                       <label
                         style={{
                           background: "#f1f5f9",
@@ -1172,24 +1216,42 @@ export default function CreatorStudio() {
                           border: "1px solid #e2e8f0",
                         }}
                       >
-                        {isUploadingImage ? "Uploading..." : "Upload New Photo"}
+                        Select New Photo
                         <input
                           type="file"
                           hidden
                           accept="image/*"
-                          disabled={isUploadingImage}
-                          onChange={handleImageUpload}
+                          onChange={handleImageSelect}
                         />
                       </label>
-                      <p
-                        style={{
-                          fontSize: "0.8rem",
-                          color: "#94a3b8",
-                          margin: "8px 0 0 0",
-                        }}
-                      >
-                        Max size 5MB. JPG or PNG.
-                      </p>
+                      {selectedImageFile && (
+                        <button
+                          onClick={handleSaveImage}
+                          disabled={isSavingImage}
+                          style={{
+                            background: "#16a34a",
+                            color: "white",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            border: "none",
+                            fontWeight: "bold",
+                            fontSize: "0.9rem",
+                            cursor: isSavingImage ? "not-allowed" : "pointer",
+                            opacity: isSavingImage ? 0.7 : 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          {isSavingImage ? (
+                            "Saving..."
+                          ) : (
+                            <>
+                              <Save size={16} /> Save Profile Picture
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1225,7 +1287,7 @@ export default function CreatorStudio() {
                         marginBottom: "8px",
                       }}
                     >
-                      Change Access PIN
+                      New 4-Digit PIN
                     </label>
                     <input
                       type="password"
@@ -1244,17 +1306,82 @@ export default function CreatorStudio() {
                         border: "1px solid #cbd5e1",
                         boxSizing: "border-box",
                         fontSize: "1rem",
+                        marginBottom: "12px",
                       }}
                     />
-                    <p
+                    <label
                       style={{
-                        fontSize: "0.8rem",
-                        color: "#94a3b8",
-                        margin: "8px 0 0 0",
+                        display: "block",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        color: "#334155",
+                        marginBottom: "8px",
                       }}
                     >
-                      Leave blank to keep your current PIN.
-                    </p>
+                      Confirm New PIN
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Confirm new 4-digit PIN"
+                      value={profileData.confirm_pin}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          confirm_pin: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        fontSize: "1rem",
+                      }}
+                    />
+                    <button
+                      onClick={handleSavePin}
+                      disabled={
+                        isSavingPin ||
+                        !profileData.new_pin ||
+                        !profileData.confirm_pin
+                      }
+                      style={{
+                        marginTop: "16px",
+                        width: "100%",
+                        background: "#0f172a",
+                        color: "white",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "bold",
+                        fontSize: "0.95rem",
+                        cursor:
+                          isSavingPin ||
+                          !profileData.new_pin ||
+                          !profileData.confirm_pin
+                            ? "not-allowed"
+                            : "pointer",
+                        opacity:
+                          isSavingPin ||
+                          !profileData.new_pin ||
+                          !profileData.confirm_pin
+                            ? 0.7
+                            : 1,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      {isSavingPin ? (
+                        "Saving..."
+                      ) : (
+                        <>
+                          <Save size={16} /> Save PIN
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1398,8 +1525,8 @@ export default function CreatorStudio() {
                 </div>
 
                 <button
-                  onClick={handleSaveProfile}
-                  disabled={isSavingProfile}
+                  onClick={handleSavePayment}
+                  disabled={isSavingPayment}
                   style={{
                     marginTop: "24px",
                     width: "100%",
@@ -1410,19 +1537,19 @@ export default function CreatorStudio() {
                     border: "none",
                     fontWeight: "bold",
                     fontSize: "1rem",
-                    cursor: isSavingProfile ? "not-allowed" : "pointer",
-                    opacity: isSavingProfile ? 0.7 : 1,
+                    cursor: isSavingPayment ? "not-allowed" : "pointer",
+                    opacity: isSavingPayment ? 0.7 : 1,
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
                     gap: "8px",
                   }}
                 >
-                  {isSavingProfile ? (
+                  {isSavingPayment ? (
                     "Saving Details..."
                   ) : (
                     <>
-                      <Save size={18} /> Save Profile Details
+                      <Save size={18} /> Save Payment Details
                     </>
                   )}
                 </button>
