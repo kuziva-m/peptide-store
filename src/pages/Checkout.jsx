@@ -31,6 +31,9 @@ export default function Checkout() {
   const [receiptFile, setReceiptFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  // Live Variants State (To check pre-orders for old carts)
+  const [liveVariants, setLiveVariants] = useState({});
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -57,6 +60,26 @@ export default function Checkout() {
       navigate("/shop");
     }
   }, [cart, navigate]);
+
+  // Fetch Live Preorder Status for Cart Items
+  useEffect(() => {
+    async function fetchLiveVariants() {
+      if (!cart || cart.length === 0) return;
+      const variantIds = cart.map((item) => item.variantId || item.id);
+      const { data } = await supabase
+        .from("variants")
+        .select("id, is_preorder")
+        .in("id", variantIds);
+      if (data) {
+        const map = {};
+        data.forEach((v) => {
+          map[v.id] = v.is_preorder === true || v.is_preorder === "true";
+        });
+        setLiveVariants(map);
+      }
+    }
+    fetchLiveVariants();
+  }, [cart]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -98,14 +121,12 @@ export default function Checkout() {
     setIsVerifyingDiscount(true);
 
     try {
-      // 1. Fetch the exact code from Supabase (using maybeSingle to prevent standard errors if code doesn't exist)
       const { data: discount, error } = await supabase
         .from("discounts")
         .select("*")
         .ilike("code", code)
         .maybeSingle();
 
-      // Check if it exists and is active
       if (
         error ||
         !discount ||
@@ -118,7 +139,6 @@ export default function Checkout() {
         return;
       }
 
-      // 2. Check Usage Limits (max_uses)
       if (
         discount.max_uses !== null &&
         (discount.used_count || 0) >= parseInt(discount.max_uses)
@@ -129,17 +149,14 @@ export default function Checkout() {
         return;
       }
 
-      // 3. Calculate the Effects based on exact database columns
       let calculatedAmount = 0;
       let successMessages = [];
 
-      // If it gives a percentage off
       if (discount.type === "percentage" && discount.value > 0) {
         calculatedAmount = cartTotal * (parseFloat(discount.value) / 100);
         successMessages.push(`${discount.value}% Off`);
       }
 
-      // If it gives free shipping
       if (
         discount.free_shipping === true ||
         discount.free_shipping === "true"
@@ -169,7 +186,6 @@ export default function Checkout() {
   // --- SHIPPING & TOTAL CALCULATIONS ---
   const discountedSubtotal = Math.max(0, cartTotal - discountAmount);
 
-  // Calculate if shipping is free (either via order total OR via discount code)
   const isStandardFree = cartTotal >= 150 || promoFreeShipping;
   const isExpressFree = cartTotal >= 250 || promoFreeShipping;
 
@@ -203,13 +219,13 @@ export default function Checkout() {
 
     try {
       // =========================================================================
-      // 🛑 LIVE SERVER-SIDE INVENTORY CHECK (CLOSES THE OPEN-TAB LOOPHOLE) 🛑
+      // 🛑 LIVE SERVER-SIDE INVENTORY & PREORDER CHECK
       // =========================================================================
       const variantIds = cart.map((item) => item.variantId || item.id);
 
       const { data: liveStock, error: stockError } = await supabase
         .from("variants")
-        .select("id, in_stock")
+        .select("id, in_stock, is_preorder")
         .in("id", variantIds);
 
       if (stockError)
@@ -222,12 +238,14 @@ export default function Checkout() {
           (v) => String(v.id) === String(vId),
         );
 
-        // If the item was deleted from DB or explicitly marked out of stock
-        if (
-          !liveVariant ||
-          liveVariant.in_stock === false ||
-          liveVariant.in_stock === "false"
-        ) {
+        const isStockFalse =
+          liveVariant?.in_stock === false || liveVariant?.in_stock === "false";
+        const isPreorderTrue =
+          liveVariant?.is_preorder === true ||
+          liveVariant?.is_preorder === "true";
+
+        // If the item was deleted, OR it's out of stock AND NOT a preorder
+        if (!liveVariant || (isStockFalse && !isPreorderTrue)) {
           const variantLabel = getVariantLabel(cartItem.variant);
           outOfStockItems.push(
             `${cartItem.name}${variantLabel ? ` (${variantLabel})` : ""}`,
@@ -240,6 +258,14 @@ export default function Checkout() {
           `Checkout blocked! The following items just sold out: ${outOfStockItems.join(", ")}. Please return to the shop and remove them from your cart.`,
         );
       }
+
+      // Inject the live preorder status into the items array so the database remembers it!
+      const itemsToSave = cart.map((item) => ({
+        ...item,
+        is_preorder:
+          item.is_preorder || liveVariants[item.variantId || item.id] || false,
+      }));
+
       // =========================================================================
 
       // 1. Upload the Receipt Image
@@ -268,7 +294,7 @@ export default function Checkout() {
         shipping_cost: shippingCost,
         shipping_method: shippingMethod === "express" ? "Express" : "Standard",
         shipping_address: formData,
-        items: cart,
+        items: itemsToSave, // Saved with preorder flag!
         receipt_url: receiptUrl,
         status: "pending",
         discount_code:
@@ -284,10 +310,9 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
-      // 3. Increment the Discount Usage Count in Database (if a code was used)
+      // 3. Increment the Discount Usage Count
       if (discountCode && (discountAmount > 0 || promoFreeShipping)) {
         try {
-          // Get current count, then add 1
           const { data: dData } = await supabase
             .from("discounts")
             .select("used_count")
@@ -306,7 +331,7 @@ export default function Checkout() {
 
       // 4. SEND EMAIL NOTIFICATIONS
       try {
-        const emailItems = cart.map((item) => ({
+        const emailItems = itemsToSave.map((item) => ({
           name: item.name,
           quantity: item.quantity,
           size: getVariantLabel(item.variant),
@@ -326,12 +351,19 @@ export default function Checkout() {
           },
         });
 
-        // --- B. EMAIL TO ADMIN (NOW INCLUDES CART ITEMS) ---
-        const adminItemsHtml = cart
+        // B. Email to Admin (WITH DYNAMIC PREORDER LABELS)
+        const adminItemsHtml = itemsToSave
           .map((item) => {
             const safeVariant = getVariantLabel(item.variant);
+            const isPre = item.is_preorder;
+            const variantText = safeVariant
+              ? `(${safeVariant}${isPre ? " - Preorder" : ""})`
+              : isPre
+                ? "(Preorder)"
+                : "";
+
             return `<li style="margin-bottom: 6px; font-size: 14px; color: #334155;">
-            <strong>${item.quantity}x</strong> ${item.name} ${safeVariant ? `<span style="color: #64748b;">(${safeVariant})</span>` : ""}
+            <strong>${item.quantity}x</strong> ${item.name} ${variantText ? `<span style="color: ${isPre ? "#ea580c" : "#64748b"}; font-weight: ${isPre ? "bold" : "normal"};">${variantText}</span>` : ""}
           </li>`;
           })
           .join("");
@@ -367,7 +399,7 @@ export default function Checkout() {
         await supabase.functions.invoke("send-email", {
           body: {
             to: "info@melbournepeptides.com.au",
-            subject: `🚨 New Order #${shortRef} - $${estimatedTotal.toFixed(2)}`, // Improved subject line
+            subject: `🚨 New Order #${shortRef} - $${estimatedTotal.toFixed(2)}`,
             html: adminHtml,
           },
         });
@@ -998,6 +1030,10 @@ export default function Checkout() {
             >
               {cart.map((item, i) => {
                 const safeVariant = getVariantLabel(item.variant);
+                // NEW: Determine if this item is a preorder
+                const isItemPreorder =
+                  item.is_preorder || liveVariants[item.variantId || item.id];
+
                 return (
                   <div
                     key={i}
@@ -1039,12 +1075,23 @@ export default function Checkout() {
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {item.name}{" "}
+                          {item.name} {/* NEW: Preorder Label Injection */}
                           {safeVariant && (
                             <span
-                              style={{ fontWeight: "normal", color: "#64748b" }}
+                              style={{
+                                fontWeight: isItemPreorder ? "700" : "normal",
+                                color: isItemPreorder ? "#ea580c" : "#64748b",
+                              }}
                             >
-                              ({safeVariant})
+                              ({safeVariant}
+                              {isItemPreorder ? " - Preorder" : ""})
+                            </span>
+                          )}
+                          {!safeVariant && isItemPreorder && (
+                            <span
+                              style={{ fontWeight: "700", color: "#ea580c" }}
+                            >
+                              (Preorder)
                             </span>
                           )}
                         </p>

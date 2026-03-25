@@ -88,6 +88,7 @@
 
 .cart-item:last-child {
   margin-bottom: 0;
+  border-bottom: none; /* Removed the last border to blend cleanly into the blue box */
 }
 
 .cart-item-img {
@@ -182,19 +183,27 @@
   margin-left: auto;
 }
 
-/* Suggestions section */
+/* ========================================= */
+/* 🌟 NEW STYLED BLUE SUGGESTIONS SECTION 🌟 */
+/* ========================================= */
 .cart-suggestions-section {
-  margin: 28px 24px 0;
-  padding: 22px 0 0;
-  border-top: 1px solid #e2e8f0;
+  margin: 20px 24px 24px;
+  padding: 24px;
+  background: #eff6ff; /* Soft light blue */
+  border: 1px solid #bfdbfe; /* Clean blue border */
+  border-radius: 16px;
+}
+
+.cart-suggestions-divider {
+  display: none; /* Hidden since we have a clean box now */
 }
 
 .cart-suggestions-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
-  color: #0f172a;
+  margin-bottom: 18px;
+  color: #1e3a8a; /* Deep blue to match the background */
 }
 
 .cart-suggestions-header h4 {
@@ -202,11 +211,12 @@
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.2px;
+  color: #1e3a8a;
 }
 
 .cart-suggestions-loading {
   margin: 0;
-  color: #64748b;
+  color: #3b82f6;
   font-size: 13px;
 }
 
@@ -221,10 +231,11 @@
   grid-template-columns: 56px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #dbeafe; /* Soft blue inner border */
   border-radius: 14px;
   padding: 12px;
-  background: #fff;
+  background: #fff; /* White card inside the blue box to pop */
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.05); /* Slight blue tint shadow */
 }
 
 .cart-suggestion-image-link {
@@ -292,6 +303,11 @@
   cursor: pointer;
   flex-shrink: 0;
   min-width: 64px;
+  transition: background 0.2s;
+}
+
+.cart-suggestion-add-btn:hover {
+  background: #3729ad;
 }
 
 .cart-suggestion-add-btn:disabled {
@@ -392,8 +408,8 @@
   }
 
   .cart-suggestions-section {
-    margin-left: 20px;
-    margin-right: 20px;
+    margin: 20px;
+    padding: 20px 16px; /* slightly smaller padding on mobile */
   }
 
   .cart-suggestion-card {

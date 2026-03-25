@@ -272,6 +272,11 @@ export default function CartDrawer() {
 
               {(loadingSuggestions || suggestedProducts.length > 0) && (
                 <section className="cart-suggestions-section">
+                  <div className="cart-suggestions-divider" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                  </div>
+
                   <div className="cart-suggestions-header">
                     <ShoppingBag size={15} />
                     <h4>Suggested for your order</h4>

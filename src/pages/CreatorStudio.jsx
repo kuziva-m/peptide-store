@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import imageCompression from "browser-image-compression";
 import {
   TrendingUp,
   DollarSign,
@@ -18,6 +19,11 @@ import {
   Banknote,
   X,
   CheckCircle,
+  Settings,
+  Camera,
+  Save,
+  AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 import SEO from "../components/SEO";
 
@@ -32,10 +38,21 @@ export default function CreatorStudio() {
   const [affiliate, setAffiliate] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [activeView, setActiveView] = useState("dashboard"); // "dashboard" | "profile"
+
+  // Profile Form State
+  const [profileData, setProfileData] = useState({
+    bank_account_name: "",
+    bank_bsb: "",
+    bank_account_number: "",
+    new_pin: "",
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState({ type: "", text: "" });
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Payout State
   const [showPayoutModal, setShowPayoutModal] = useState(false);
-  const [bankDetails, setBankDetails] = useState("");
   const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
 
@@ -88,14 +105,22 @@ export default function CreatorStudio() {
       }
 
       setAffiliate(affiliateData);
-      setBankDetails(affiliateData.bank_details || "");
+
+      // Pre-fill profile data
+      setProfileData({
+        bank_account_name: affiliateData.bank_account_name || "",
+        bank_bsb: affiliateData.bank_bsb || "",
+        bank_account_number: affiliateData.bank_account_number || "",
+        new_pin: "",
+      });
+
       localStorage.setItem("creator_code", loginCode.trim());
       localStorage.setItem("creator_pin", loginPin.trim());
 
       setIsLoadingData(true);
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
-        .select("created_at, customer_name, total_amount") // Removed 'items' as it's no longer needed
+        .select("created_at, customer_name, total_amount")
         .ilike("discount_code", loginCode.trim())
         .order("created_at", { ascending: false });
 
@@ -121,6 +146,7 @@ export default function CreatorStudio() {
     setOrders([]);
     setCode("");
     setPin("");
+    setActiveView("dashboard");
     setPlayIntro(false);
     setIsAnimating(true);
     setMountOverlay(true);
@@ -144,30 +170,130 @@ export default function CreatorStudio() {
     return parts[0];
   };
 
+  // ==========================================
+  // PROFILE & IMAGE UPLOAD LOGIC
+  // ==========================================
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    setProfileMessage({ type: "", text: "" });
+
+    try {
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+      };
+      const compressedFile = await imageCompression(file, options);
+      const fileExt = compressedFile.name.split(".").pop();
+      const fileName = `avatar_${affiliate.id}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      // We'll reuse the public product-images bucket for creator avatars
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(fileName, compressedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(fileName);
+
+      // Update Database Immediately
+      const { error: dbError } = await supabase
+        .from("affiliates")
+        .update({ profile_image_url: data.publicUrl })
+        .eq("id", affiliate.id);
+
+      if (dbError) throw dbError;
+
+      setAffiliate({ ...affiliate, profile_image_url: data.publicUrl });
+      setProfileMessage({
+        type: "success",
+        text: "Profile photo updated successfully!",
+      });
+    } catch (err) {
+      console.error(err);
+      setProfileMessage({ type: "error", text: "Failed to upload image." });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    setProfileMessage({ type: "", text: "" });
+
+    const updates = {
+      bank_account_name: profileData.bank_account_name,
+      bank_bsb: profileData.bank_bsb,
+      bank_account_number: profileData.bank_account_number,
+    };
+
+    if (profileData.new_pin && profileData.new_pin.trim() !== "") {
+      updates.pin = profileData.new_pin.trim();
+    }
+
+    const { error } = await supabase
+      .from("affiliates")
+      .update(updates)
+      .eq("id", affiliate.id);
+
+    setIsSavingProfile(false);
+
+    if (error) {
+      setProfileMessage({ type: "error", text: "Failed to save profile." });
+    } else {
+      setAffiliate({ ...affiliate, ...updates });
+      setProfileMessage({
+        type: "success",
+        text: "Profile & Bank Details updated successfully!",
+      });
+
+      // If they changed their PIN, update local storage so they don't get logged out on refresh
+      if (updates.pin) {
+        localStorage.setItem("creator_pin", updates.pin);
+        setProfileData((prev) => ({ ...prev, new_pin: "" }));
+      }
+
+      // Clear success message after 4 seconds
+      setTimeout(() => setProfileMessage({ type: "", text: "" }), 4000);
+    }
+  };
+
+  // ==========================================
+  // PAYOUT LOGIC
+  // ==========================================
+  const isProfileComplete =
+    affiliate?.bank_account_name &&
+    affiliate?.bank_bsb &&
+    affiliate?.bank_account_number;
+
   const handleRequestPayout = async () => {
     setIsSubmittingPayout(true);
-
-    await supabase
-      .from("affiliates")
-      .update({ bank_details: bankDetails })
-      .eq("id", affiliate.id);
 
     const { error } = await supabase.functions.invoke("send-email", {
       body: {
         to: "info@melbournepeptides.com.au",
         subject: `Payout Request: ${affiliate.name} (${affiliate.discount_code})`,
         html: `
-          <h2 style="color: #0f172a; margin-bottom: 20px;">New Creator Payout Request</h2>
-          <p><strong>Creator Name:</strong> ${affiliate.name}</p>
-          <p><strong>Discount Code:</strong> ${affiliate.discount_code}</p>
-          <p><strong>Requested Amount:</strong> <span style="color: #10b981; font-weight: bold; font-size: 18px;">$${totalEarnings.toFixed(2)}</span></p>
-          <br/>
-          <h3 style="color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">Banking Details</h3>
-          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 14px; white-space: pre-wrap;">
-            ${bankDetails.replace(/\n/g, "<br/>")}
+          <div style="font-family: sans-serif; color: #0f172a;">
+            <h2 style="margin-bottom: 20px;">New Creator Payout Request</h2>
+            <p><strong>Creator Name:</strong> ${affiliate.name}</p>
+            <p><strong>Discount Code:</strong> ${affiliate.discount_code}</p>
+            <p><strong>Requested Amount:</strong> <span style="color: #10b981; font-weight: bold; font-size: 18px;">$${totalEarnings.toFixed(2)}</span></p>
+            <br/>
+            <h3 style="color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">Verified Banking Details</h3>
+            <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 14px;">
+              <p style="margin:0 0 5px 0;"><strong>Account Name:</strong> ${affiliate.bank_account_name}</p>
+              <p style="margin:0 0 5px 0;"><strong>BSB:</strong> ${affiliate.bank_bsb}</p>
+              <p style="margin:0;"><strong>Account Number:</strong> ${affiliate.bank_account_number}</p>
+            </div>
+            <br/>
+            <p style="color: #64748b; font-size: 14px;">Please process this payment via your banking portal within 48 hours.</p>
           </div>
-          <br/>
-          <p style="color: #64748b; font-size: 14px;">Please process this payment via your banking portal within 48 hours.</p>
         `,
       },
     });
@@ -300,6 +426,7 @@ export default function CreatorStudio() {
                       outline: "none",
                       textTransform: "uppercase",
                       transition: "border 0.2s",
+                      boxSizing: "border-box",
                     }}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
@@ -341,6 +468,7 @@ export default function CreatorStudio() {
                       fontSize: "1rem",
                       outline: "none",
                       transition: "border 0.2s",
+                      boxSizing: "border-box",
                     }}
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
@@ -436,7 +564,7 @@ export default function CreatorStudio() {
   }
 
   // ==========================================
-  // RENDER DASHBOARD VIEW
+  // RENDER MAIN DASHBOARD
   // ==========================================
   return (
     <div
@@ -572,8 +700,8 @@ export default function CreatorStudio() {
                       fontSize: "1.05rem",
                     }}
                   >
-                    Your payment will be sent, you should receive it within 48
-                    hours.
+                    Your payment will be processed via your saved bank details
+                    within 48 hours.
                   </p>
                 </div>
               ) : (
@@ -605,83 +733,158 @@ export default function CreatorStudio() {
                     </span>
                   </div>
 
-                  <div style={{ marginBottom: "24px" }}>
-                    <label
+                  {!isProfileComplete ? (
+                    <div
                       style={{
-                        display: "block",
-                        fontSize: "0.9rem",
-                        fontWeight: 700,
-                        color: "#334155",
-                        marginBottom: "10px",
-                      }}
-                    >
-                      Banking Details
-                    </label>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#94a3b8",
-                        marginTop: "-6px",
-                        marginBottom: "12px",
-                      }}
-                    >
-                      Please include your BSB, Account Number, and Account Name.
-                    </p>
-                    <textarea
-                      value={bankDetails}
-                      onChange={(e) => setBankDetails(e.target.value)}
-                      placeholder="Account Name: Sarah Fitness&#10;BSB: 123-456&#10;Account: 12345678"
-                      style={{
-                        width: "100%",
-                        padding: "16px",
+                        background: "#fff7ed",
+                        border: "1px solid #fdba74",
+                        padding: "20px",
                         borderRadius: "12px",
-                        border: "1px solid #cbd5e1",
-                        fontSize: "0.95rem",
-                        outline: "none",
-                        minHeight: "120px",
-                        resize: "vertical",
-                        boxSizing: "border-box",
+                        textAlign: "center",
+                        marginBottom: "24px",
                       }}
-                    />
-                  </div>
+                    >
+                      <AlertCircle
+                        size={32}
+                        color="#ea580c"
+                        style={{ marginBottom: "10px" }}
+                      />
+                      <h4 style={{ margin: "0 0 8px 0", color: "#9a3412" }}>
+                        Banking Details Required
+                      </h4>
+                      <p
+                        style={{
+                          fontSize: "0.9rem",
+                          color: "#c2410c",
+                          margin: "0 0 16px 0",
+                        }}
+                      >
+                        You must complete your payment profile before requesting
+                        a payout.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowPayoutModal(false);
+                          setActiveView("profile");
+                        }}
+                        style={{
+                          background: "#ea580c",
+                          color: "white",
+                          border: "none",
+                          padding: "10px 20px",
+                          borderRadius: "8px",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Update Profile Now
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ marginBottom: "24px" }}>
+                        <label
+                          style={{
+                            display: "block",
+                            fontSize: "0.9rem",
+                            fontWeight: 700,
+                            color: "#334155",
+                            marginBottom: "10px",
+                          }}
+                        >
+                          Sending Payment To:
+                        </label>
+                        <div
+                          style={{
+                            background: "#f1f5f9",
+                            padding: "16px",
+                            borderRadius: "8px",
+                            border: "1px solid #cbd5e1",
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              color: "#0f172a",
+                              fontWeight: "600",
+                            }}
+                          >
+                            {affiliate.bank_account_name}
+                          </p>
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              color: "#475569",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            BSB: {affiliate.bank_bsb}
+                          </p>
+                          <p
+                            style={{
+                              margin: 0,
+                              color: "#475569",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            ACC: {affiliate.bank_account_number}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowPayoutModal(false);
+                            setActiveView("profile");
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#4635de",
+                            fontSize: "0.8rem",
+                            fontWeight: "bold",
+                            marginTop: "8px",
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
+                        >
+                          Need to change these details?
+                        </button>
+                      </div>
 
-                  <button
-                    onClick={handleRequestPayout}
-                    disabled={
-                      isSubmittingPayout || !bankDetails || totalEarnings <= 0
-                    }
-                    style={{
-                      width: "100%",
-                      background: "#4635de",
-                      color: "white",
-                      fontWeight: 800,
-                      padding: "16px",
-                      borderRadius: "12px",
-                      border: "none",
-                      cursor:
-                        isSubmittingPayout || !bankDetails || totalEarnings <= 0
-                          ? "not-allowed"
-                          : "pointer",
-                      opacity:
-                        isSubmittingPayout || !bankDetails || totalEarnings <= 0
-                          ? 0.7
-                          : 1,
-                      transition: "all 0.2s",
-                      fontSize: "1.05rem",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    {isSubmittingPayout ? (
-                      "Sending Request..."
-                    ) : (
-                      <>
-                        <Banknote size={20} /> Confirm & Cash Out
-                      </>
-                    )}
-                  </button>
+                      <button
+                        onClick={handleRequestPayout}
+                        disabled={isSubmittingPayout || totalEarnings <= 0}
+                        style={{
+                          width: "100%",
+                          background: "#4635de",
+                          color: "white",
+                          fontWeight: 800,
+                          padding: "16px",
+                          borderRadius: "12px",
+                          border: "none",
+                          cursor:
+                            isSubmittingPayout || totalEarnings <= 0
+                              ? "not-allowed"
+                              : "pointer",
+                          opacity:
+                            isSubmittingPayout || totalEarnings <= 0 ? 0.7 : 1,
+                          transition: "all 0.2s",
+                          fontSize: "1.05rem",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        {isSubmittingPayout ? (
+                          "Sending Request..."
+                        ) : (
+                          <>
+                            <Banknote size={20} /> Confirm & Cash Out
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -689,36 +892,47 @@ export default function CreatorStudio() {
         </div>
       )}
 
-      {/* --- DASHBOARD UI --- */}
-      <div className="fade-in-ui" style={{ position: "relative", zIndex: 1 }}>
-        {/* FIXED HEADER */}
+      {/* FIXED HEADER */}
+      <div
+        style={{
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid #e2e8f0",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          padding: "16px 24px",
+          boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+        }}
+      >
         <div
+          className="dashboard-header-inner"
           style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(12px)",
-            borderBottom: "1px solid #e2e8f0",
-            position: "sticky",
-            top: 0,
-            zIndex: 50,
-            padding: "16px 24px",
-            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+            maxWidth: "1100px",
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          <div
-            className="dashboard-header-inner"
-            style={{
-              maxWidth: "1100px",
-              margin: "0 auto",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            {affiliate.profile_image_url ? (
+              <img
+                src={affiliate.profile_image_url}
+                alt={affiliate.name}
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "2px solid #e2e8f0",
+                }}
+              />
+            ) : (
               <div
                 style={{
-                  width: "44px",
-                  height: "44px",
+                  width: "48px",
+                  height: "48px",
                   background: "#4635de",
                   borderRadius: "50%",
                   display: "flex",
@@ -732,39 +946,75 @@ export default function CreatorStudio() {
               >
                 {affiliate.name.charAt(0)}
               </div>
-              <div>
-                <h1
-                  className="dashboard-title"
-                  style={{
-                    margin: 0,
-                    fontSize: "1.2rem",
-                    fontWeight: 800,
-                    color: "#0f172a",
-                    lineHeight: "1.2",
-                  }}
-                >
-                  Welcome, {affiliate.name}
-                </h1>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: "#f0f4ff",
-                    color: "#4635de",
-                    padding: "2px 8px",
-                    borderRadius: "6px",
-                    fontSize: "0.8rem",
-                    fontWeight: 700,
-                    marginTop: "4px",
-                  }}
-                >
-                  <Tag size={12} /> Code:{" "}
-                  {affiliate.discount_code.toUpperCase()} (
-                  {commissionPercentage}%)
-                </div>
+            )}
+            <div>
+              <h1
+                className="dashboard-title"
+                style={{
+                  margin: 0,
+                  fontSize: "1.2rem",
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  lineHeight: "1.2",
+                }}
+              >
+                Welcome, {affiliate.name}
+              </h1>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#f0f4ff",
+                  color: "#4635de",
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  marginTop: "4px",
+                }}
+              >
+                <Tag size={12} /> Code: {affiliate.discount_code.toUpperCase()}{" "}
+                ({commissionPercentage}%)
               </div>
             </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              onClick={() =>
+                setActiveView(
+                  activeView === "dashboard" ? "profile" : "dashboard",
+                )
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background:
+                  activeView === "profile" ? "#e2e8f0" : "transparent",
+                color: "#475569",
+                border: "1px solid #cbd5e1",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              {activeView === "dashboard" ? (
+                <>
+                  <Settings size={16} />{" "}
+                  <span className="hide-on-mobile">Settings</span>
+                </>
+              ) : (
+                <>
+                  <ArrowLeft size={16} /> Dashboard
+                </>
+              )}
+            </button>
+
             <button
               onClick={handleLogout}
               className="logout-btn"
@@ -788,422 +1038,810 @@ export default function CreatorStudio() {
             </button>
           </div>
         </div>
+      </div>
 
-        <div
-          className="dashboard-content-wrapper"
-          style={{
-            maxWidth: "1100px",
-            margin: "40px auto 0",
-            padding: "0 24px",
-          }}
-        >
-          {/* Metric Cards */}
-          <div
-            className="metrics-grid"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "24px",
-              marginBottom: "32px",
-            }}
-          >
-            <div style={styles.metricCard}>
-              <div
-                style={{
-                  position: "absolute",
-                  right: "-20px",
-                  top: "-20px",
-                  width: "100px",
-                  height: "100px",
-                  background: "#ecfdf5",
-                  borderRadius: "50%",
-                  opacity: 0.5,
-                }}
-              ></div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  position: "relative",
-                  zIndex: 10,
-                }}
-              >
-                <div>
-                  <p style={styles.metricLabel}>Total Earnings</p>
-                  <h2 style={styles.metricValue}>
-                    ${totalEarnings.toFixed(2)}
-                  </h2>
-                </div>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    background: "#d1fae5",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <DollarSign size={24} color="#059669" />
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  position: "relative",
-                  zIndex: 10,
-                  marginTop: "16px",
-                  borderTop: "1px solid #e2e8f0",
-                  paddingTop: "16px",
-                }}
-              >
-                <p style={styles.metricDesc}>Your lifetime commission</p>
-                <button
-                  onClick={() => setShowPayoutModal(true)}
-                  style={{
-                    background: "#0f172a",
-                    color: "white",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    border: "none",
-                    fontSize: "0.85rem",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  <Banknote size={16} /> Cash Out
-                </button>
-              </div>
-            </div>
-
-            <div style={styles.metricCard}>
-              <div
-                style={{
-                  position: "absolute",
-                  right: "-20px",
-                  top: "-20px",
-                  width: "100px",
-                  height: "100px",
-                  background: "#eff6ff",
-                  borderRadius: "50%",
-                  opacity: 0.5,
-                }}
-              ></div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "16px",
-                  position: "relative",
-                  zIndex: 10,
-                }}
-              >
-                <div>
-                  <p style={styles.metricLabel}>Code Usage</p>
-                  <h2 style={styles.metricValue}>{orders.length}</h2>
-                </div>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    background: "#dbeafe",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Package size={24} color="#2563eb" />
-                </div>
-              </div>
-              <p style={{ ...styles.metricDesc, marginTop: "24px" }}>
-                Total orders using your code
-              </p>
-            </div>
-
-            <div style={styles.metricCard}>
-              <div
-                style={{
-                  position: "absolute",
-                  right: "-20px",
-                  top: "-20px",
-                  width: "100px",
-                  height: "100px",
-                  background: "#faf5ff",
-                  borderRadius: "50%",
-                  opacity: 0.5,
-                }}
-              ></div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "16px",
-                  position: "relative",
-                  zIndex: 10,
-                }}
-              >
-                <div>
-                  <p style={styles.metricLabel}>Sales Driven</p>
-                  <h2 style={styles.metricValue}>${totalSales.toFixed(2)}</h2>
-                </div>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    background: "#f3e8ff",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <TrendingUp size={24} color="#9333ea" />
-                </div>
-              </div>
-              <p style={{ ...styles.metricDesc, marginTop: "24px" }}>
-                Total revenue generated for store
-              </p>
-            </div>
-          </div>
-
-          {/* Orders Table */}
-          <div
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              border: "1px solid #e2e8f0",
-              overflow: "hidden",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-            }}
-          >
-            <div
+      {/* --- CONTENT AREA (DASHBOARD OR PROFILE) --- */}
+      <div
+        className="dashboard-content-wrapper"
+        style={{
+          maxWidth: "1100px",
+          margin: "40px auto 0",
+          padding: "0 24px",
+        }}
+      >
+        {activeView === "profile" ? (
+          /* ========================================== */
+          /* PROFILE SETTINGS VIEW                      */
+          /* ========================================== */
+          <div className="fade-in-ui">
+            <h2
               style={{
-                padding: "20px 24px",
-                borderBottom: "1px solid #e2e8f0",
-                background: "#f8fafc",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                color: "#0f172a",
+                marginBottom: "24px",
+                fontSize: "1.8rem",
+                fontWeight: "800",
               }}
             >
-              <h3
+              Profile & Settings
+            </h2>
+
+            {profileMessage.text && (
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: "1.1rem",
-                  fontWeight: 800,
-                  color: "#0f172a",
+                  background:
+                    profileMessage.type === "error" ? "#fef2f2" : "#f0fdf4",
+                  color:
+                    profileMessage.type === "error" ? "#ef4444" : "#16a34a",
+                  border: `1px solid ${profileMessage.type === "error" ? "#fecaca" : "#bbf7d0"}`,
+                  padding: "16px",
+                  borderRadius: "12px",
+                  marginBottom: "24px",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                Recent Referrals
-              </h3>
-              <span
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#64748b",
-                  fontWeight: 600,
-                }}
-              >
-                {orders.length} Valid Orders
-              </span>
-            </div>
+                {profileMessage.type === "success" && <CheckCircle size={18} />}
+                {profileMessage.text}
+              </div>
+            )}
 
             <div
-              className="table-responsive-wrapper"
-              style={{ overflowX: "auto", width: "100%" }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: "24px",
+                "@media(min-width: 768px)": { gridTemplateColumns: "1fr 1fr" },
+              }}
             >
-              <table
+              {/* Photo & Security */}
+              <div
                 style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "left",
-                  minWidth: "500px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "24px",
                 }}
               >
-                <thead>
-                  <tr
+                <div
+                  style={{
+                    background: "white",
+                    padding: "24px",
+                    borderRadius: "16px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <h3
                     style={{
-                      borderBottom: "2px solid #f1f5f9",
-                      background: "white",
+                      margin: "0 0 20px 0",
+                      fontSize: "1.2rem",
+                      color: "#0f172a",
                     }}
                   >
-                    <th style={styles.th}>Date</th>
-                    <th style={styles.th}>Customer</th>
-                    {/* REMOVED Items Purchased Column Here */}
-                    <th style={styles.th}>Order Total</th>
-                    <th style={{ ...styles.th, textAlign: "right" }}>
-                      Your Cut ({commissionPercentage}%)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoadingData ? (
-                    <tr>
-                      <td
-                        colSpan="4"
+                    Profile Photo
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "20px",
+                    }}
+                  >
+                    {affiliate.profile_image_url ? (
+                      <img
+                        src={affiliate.profile_image_url}
+                        alt="Profile"
                         style={{
-                          padding: "40px",
-                          textAlign: "center",
+                          width: "80px",
+                          height: "80px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "3px solid #f1f5f9",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "80px",
+                          height: "80px",
+                          background: "#f1f5f9",
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           color: "#94a3b8",
                         }}
                       >
-                        Loading your data...
-                      </td>
-                    </tr>
-                  ) : orders.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan="4"
-                        style={{ padding: "60px 20px", textAlign: "center" }}
+                        <Camera size={32} />
+                      </div>
+                    )}
+                    <div>
+                      <label
+                        style={{
+                          background: "#f1f5f9",
+                          color: "#0f172a",
+                          padding: "8px 16px",
+                          borderRadius: "8px",
+                          fontWeight: "600",
+                          fontSize: "0.9rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          border: "1px solid #e2e8f0",
+                        }}
                       >
-                        <div
+                        {isUploadingImage ? "Uploading..." : "Upload New Photo"}
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          disabled={isUploadingImage}
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                      <p
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "#94a3b8",
+                          margin: "8px 0 0 0",
+                        }}
+                      >
+                        Max size 5MB. JPG or PNG.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "white",
+                    padding: "24px",
+                    borderRadius: "16px",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 20px 0",
+                      fontSize: "1.2rem",
+                      color: "#0f172a",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <Lock size={20} /> Security Settings
+                  </h3>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        color: "#334155",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Change Access PIN
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Enter new 4-digit PIN"
+                      value={profileData.new_pin}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          new_pin: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        fontSize: "1rem",
+                      }}
+                    />
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#94a3b8",
+                        margin: "8px 0 0 0",
+                      }}
+                    >
+                      Leave blank to keep your current PIN.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Details */}
+              <div
+                style={{
+                  background: "white",
+                  padding: "24px",
+                  borderRadius: "16px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+                }}
+              >
+                <h3
+                  style={{
+                    margin: "0 0 20px 0",
+                    fontSize: "1.2rem",
+                    color: "#0f172a",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <Banknote size={20} /> Payment Details
+                </h3>
+                <p
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#64748b",
+                    margin: "0 0 20px 0",
+                  }}
+                >
+                  We need your accurate banking details to process your
+                  commission payouts.
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        color: "#334155",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Account Name (Full Name)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. John Smith"
+                      value={profileData.bank_account_name}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          bank_account_name: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        fontSize: "1rem",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        color: "#334155",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      BSB Number
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 062-123"
+                      value={profileData.bank_bsb}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          bank_bsb: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        fontSize: "1rem",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        color: "#334155",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Account Number
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 12345678"
+                      value={profileData.bank_account_number}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          bank_account_number: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        boxSizing: "border-box",
+                        fontSize: "1rem",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={isSavingProfile}
+                  style={{
+                    marginTop: "24px",
+                    width: "100%",
+                    background: "#4635de",
+                    color: "white",
+                    padding: "14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    cursor: isSavingProfile ? "not-allowed" : "pointer",
+                    opacity: isSavingProfile ? 0.7 : 1,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {isSavingProfile ? (
+                    "Saving Details..."
+                  ) : (
+                    <>
+                      <Save size={18} /> Save Profile Details
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ========================================== */
+          /* MAIN DASHBOARD VIEW                        */
+          /* ========================================== */
+          <>
+            <div
+              className="metrics-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "24px",
+                marginBottom: "32px",
+              }}
+            >
+              {/* Total Earnings Card */}
+              <div style={styles.metricCard}>
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "-20px",
+                    top: "-20px",
+                    width: "100px",
+                    height: "100px",
+                    background: "#ecfdf5",
+                    borderRadius: "50%",
+                    opacity: 0.5,
+                  }}
+                ></div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    position: "relative",
+                    zIndex: 10,
+                  }}
+                >
+                  <div>
+                    <p style={styles.metricLabel}>Total Earnings</p>
+                    <h2 style={styles.metricValue}>
+                      ${totalEarnings.toFixed(2)}
+                    </h2>
+                  </div>
+                  <div
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      background: "#d1fae5",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <DollarSign size={24} color="#059669" />
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    position: "relative",
+                    zIndex: 10,
+                    marginTop: "16px",
+                    borderTop: "1px solid #e2e8f0",
+                    paddingTop: "16px",
+                  }}
+                >
+                  <p style={styles.metricDesc}>Your lifetime commission</p>
+                  <button
+                    onClick={() => setShowPayoutModal(true)}
+                    style={{
+                      background: "#0f172a",
+                      color: "white",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontSize: "0.85rem",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <Banknote size={16} /> Cash Out
+                  </button>
+                </div>
+              </div>
+
+              {/* Code Usage Card */}
+              <div style={styles.metricCard}>
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "-20px",
+                    top: "-20px",
+                    width: "100px",
+                    height: "100px",
+                    background: "#eff6ff",
+                    borderRadius: "50%",
+                    opacity: 0.5,
+                  }}
+                ></div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginBottom: "16px",
+                    position: "relative",
+                    zIndex: 10,
+                  }}
+                >
+                  <div>
+                    <p style={styles.metricLabel}>Code Usage</p>
+                    <h2 style={styles.metricValue}>{orders.length}</h2>
+                  </div>
+                  <div
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      background: "#dbeafe",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Package size={24} color="#2563eb" />
+                  </div>
+                </div>
+                <p style={{ ...styles.metricDesc, marginTop: "24px" }}>
+                  Total orders using your code
+                </p>
+              </div>
+
+              {/* Sales Driven Card */}
+              <div style={styles.metricCard}>
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "-20px",
+                    top: "-20px",
+                    width: "100px",
+                    height: "100px",
+                    background: "#faf5ff",
+                    borderRadius: "50%",
+                    opacity: 0.5,
+                  }}
+                ></div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginBottom: "16px",
+                    position: "relative",
+                    zIndex: 10,
+                  }}
+                >
+                  <div>
+                    <p style={styles.metricLabel}>Sales Driven</p>
+                    <h2 style={styles.metricValue}>${totalSales.toFixed(2)}</h2>
+                  </div>
+                  <div
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      background: "#f3e8ff",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <TrendingUp size={24} color="#9333ea" />
+                  </div>
+                </div>
+                <p style={{ ...styles.metricDesc, marginTop: "24px" }}>
+                  Total revenue generated for store
+                </p>
+              </div>
+            </div>
+
+            {/* Orders Table */}
+            <div
+              style={{
+                background: "white",
+                borderRadius: "16px",
+                border: "1px solid #e2e8f0",
+                overflow: "hidden",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+              }}
+            >
+              <div
+                style={{
+                  padding: "20px 24px",
+                  borderBottom: "1px solid #e2e8f0",
+                  background: "#f8fafc",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.1rem",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                  }}
+                >
+                  Recent Referrals
+                </h3>
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#64748b",
+                    fontWeight: 600,
+                  }}
+                >
+                  {orders.length} Valid Orders
+                </span>
+              </div>
+
+              <div
+                className="table-responsive-wrapper"
+                style={{ overflowX: "auto", width: "100%" }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "left",
+                    minWidth: "500px",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom: "2px solid #f1f5f9",
+                        background: "white",
+                      }}
+                    >
+                      <th style={styles.th}>Date</th>
+                      <th style={styles.th}>Customer</th>
+                      <th style={styles.th}>Order Total</th>
+                      <th style={{ ...styles.th, textAlign: "right" }}>
+                        Your Cut ({commissionPercentage}%)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingData ? (
+                      <tr>
+                        <td
+                          colSpan="4"
                           style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            padding: "40px",
+                            textAlign: "center",
+                            color: "#94a3b8",
                           }}
                         >
-                          <Package
-                            size={48}
-                            color="#cbd5e1"
-                            style={{ marginBottom: "16px" }}
-                          />
-                          <p
+                          Loading your data...
+                        </td>
+                      </tr>
+                    ) : orders.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="4"
+                          style={{ padding: "60px 20px", textAlign: "center" }}
+                        >
+                          <div
                             style={{
-                              fontSize: "1.1rem",
-                              fontWeight: 600,
-                              color: "#475569",
-                              margin: "0 0 8px 0",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
                             }}
                           >
-                            No orders yet.
-                          </p>
-                          <p
-                            style={{
-                              fontSize: "0.9rem",
-                              color: "#94a3b8",
-                              margin: 0,
-                            }}
-                          >
-                            Share your code{" "}
-                            <strong style={{ color: "#4635de" }}>
-                              {affiliate.discount_code}
-                            </strong>{" "}
-                            to start earning!
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    orders.map((order, idx) => {
-                      const orderDate = new Date(
-                        order.created_at,
-                      ).toLocaleDateString("en-AU", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      });
-
-                      const commission =
-                        Number(order.total_amount || 0) *
-                        Number(affiliate.commission_rate);
-
-                      return (
-                        <tr key={idx} style={styles.trBody}>
-                          <td style={styles.td}>
-                            <span
+                            <Package
+                              size={48}
+                              color="#cbd5e1"
+                              style={{ marginBottom: "16px" }}
+                            />
+                            <p
                               style={{
-                                color: "#64748b",
+                                fontSize: "1.1rem",
+                                fontWeight: 600,
+                                color: "#475569",
+                                margin: "0 0 8px 0",
+                              }}
+                            >
+                              No orders yet.
+                            </p>
+                            <p
+                              style={{
                                 fontSize: "0.9rem",
-                                fontWeight: 500,
+                                color: "#94a3b8",
+                                margin: 0,
                               }}
                             >
-                              {orderDate}
-                            </span>
-                          </td>
-                          <td style={styles.td}>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "10px",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: "28px",
-                                  height: "28px",
-                                  background: "#f1f5f9",
-                                  borderRadius: "50%",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "#94a3b8",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <User size={14} />
-                              </div>
+                              Share your code{" "}
+                              <strong style={{ color: "#4635de" }}>
+                                {affiliate.discount_code}
+                              </strong>{" "}
+                              to start earning!
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      orders.map((order, idx) => {
+                        const orderDate = new Date(
+                          order.created_at,
+                        ).toLocaleDateString("en-AU", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        });
+
+                        const commission =
+                          Number(order.total_amount || 0) *
+                          Number(affiliate.commission_rate);
+
+                        return (
+                          <tr key={idx} style={styles.trBody}>
+                            <td style={styles.td}>
                               <span
                                 style={{
-                                  fontSize: "0.95rem",
-                                  fontWeight: 600,
-                                  color: "#0f172a",
+                                  color: "#64748b",
+                                  fontSize: "0.9rem",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {orderDate}
+                              </span>
+                            </td>
+                            <td style={styles.td}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: "28px",
+                                    height: "28px",
+                                    background: "#f1f5f9",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "#94a3b8",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <User size={14} />
+                                </div>
+                                <span
+                                  style={{
+                                    fontSize: "0.95rem",
+                                    fontWeight: 600,
+                                    color: "#0f172a",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {formatName(order.customer_name)}
+                                </span>
+                              </div>
+                            </td>
+                            <td
+                              style={{
+                                ...styles.td,
+                                fontWeight: 700,
+                                color: "#334155",
+                              }}
+                            >
+                              ${Number(order.total_amount || 0).toFixed(2)}
+                            </td>
+                            <td style={{ ...styles.td, textAlign: "right" }}>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "#ecfdf5",
+                                  color: "#059669",
+                                  fontWeight: 800,
+                                  padding: "6px 12px",
+                                  borderRadius: "20px",
+                                  fontSize: "0.9rem",
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {formatName(order.customer_name)}
+                                +${commission.toFixed(2)}
                               </span>
-                            </div>
-                          </td>
-                          {/* REMOVED Items Purchased Data Row Here */}
-                          <td
-                            style={{
-                              ...styles.td,
-                              fontWeight: 700,
-                              color: "#334155",
-                            }}
-                          >
-                            ${Number(order.total_amount || 0).toFixed(2)}
-                          </td>
-                          <td style={{ ...styles.td, textAlign: "right" }}>
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                background: "#ecfdf5",
-                                color: "#059669",
-                                fontWeight: 800,
-                                padding: "6px 12px",
-                                borderRadius: "20px",
-                                fontSize: "0.9rem",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              +${commission.toFixed(2)}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

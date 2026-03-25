@@ -365,7 +365,7 @@ export function OrderRow({
               <MessageCircle size={14} color="#3b82f6" title="Has Notes" />
             )}
 
-            {/* NEW: DISCOUNT CODE PILL */}
+            {/* DISCOUNT CODE PILL */}
             {order.discount_code && (
               <span
                 style={{
@@ -409,8 +409,8 @@ export function OrderRow({
               <span
                 style={{
                   marginLeft: "8px",
-                  background: "#f1f5f9",
-                  color: "#475569",
+                  background: "#fef08a",
+                  color: "#a16207",
                   padding: "2px 6px",
                   borderRadius: "4px",
                   fontSize: "0.65rem",
@@ -904,6 +904,47 @@ export function OrderRow({
                     )}
                   </div>
 
+                  {/* --- NEW: SHIPPING COST DISPLAY --- */}
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 12px",
+                      background: "#f1f5f9",
+                      borderRadius: "6px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: "bold",
+                        color: "#475569",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Truck size={14} /> Shipping Paid
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.95rem",
+                        fontWeight: "bold",
+                        color:
+                          Number(order.shipping_cost) > 0
+                            ? "#0f172a"
+                            : "#16a34a",
+                      }}
+                    >
+                      {Number(order.shipping_cost) > 0
+                        ? `$${Number(order.shipping_cost).toFixed(2)}`
+                        : "Free"}
+                    </span>
+                  </div>
+
                   <div style={{ marginTop: "20px" }}>
                     <div style={styles.sectionTitle}>
                       <MessageCircle size={14} /> Private Notes
@@ -943,7 +984,7 @@ export function OrderRow({
                     <div>{order.customer_email}</div>
                     <div>{order.shipping_address?.phone}</div>
 
-                    {/* NEW: SHOW DISCOUNT CODE DETAILS IN EXPANDED VIEW */}
+                    {/* SHOW DISCOUNT CODE DETAILS IN EXPANDED VIEW */}
                     {order.discount_code && (
                       <div style={{ marginTop: "4px" }}>
                         <span style={{ fontWeight: "bold", color: "#64748b" }}>
@@ -970,11 +1011,12 @@ export function OrderRow({
                     />
                     <div>
                       <span style={{ fontWeight: "bold" }}>Shipping:</span>{" "}
+                      {/* FIX: Standard is now explicitly bold and orange */}
                       <span
                         style={{
                           textTransform: "capitalize",
-                          color: isExpress ? "#b91c1c" : "inherit",
-                          fontWeight: isExpress ? "bold" : "normal",
+                          color: isExpress ? "#b91c1c" : "#ea580c",
+                          fontWeight: "bold",
                         }}
                       >
                         {order.shipping_method || "Standard"}
@@ -1077,7 +1119,7 @@ export function OrderRow({
                       <Edit2 size={14} /> Edit Full Order Details
                     </button>
 
-                    {/* NEW DELETE BUTTON */}
+                    {/* DELETE BUTTON */}
                     <button
                       onClick={handleDeleteOrder}
                       style={{

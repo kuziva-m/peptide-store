@@ -151,8 +151,9 @@ export default function PeptideLandingPage() {
         .seo-h2 { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0 0 24px 0; padding-bottom: 16px; border-bottom: 2px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
         .seo-p { font-size: 1.05rem; color: #334155; line-height: 1.8; margin-bottom: 16px; }
 
-        .seo-img-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; justify-content: center; margin-bottom: 24px; }
-        .seo-img { max-width: 100%; max-height: 300px; object-fit: contain; mix-blend-mode: multiply; border-radius: 8px; }
+        /* FIXED: Image Wrappers to support full-width infographics */
+        .seo-img-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; display: flex; justify-content: center; margin-bottom: 24px; overflow: hidden; }
+        .seo-img { width: 100%; height: auto; object-fit: contain; mix-blend-mode: multiply; border-radius: 8px; display: block; }
 
         .seo-study { background: #f0f4ff; border-left: 4px solid #4635de; padding: 20px; border-radius: 0 12px 12px 0; margin-bottom: 16px; }
         .seo-study h3 { margin: 0 0 8px 0; color: #0f172a; font-size: 1.1rem; }
@@ -165,7 +166,10 @@ export default function PeptideLandingPage() {
         .seo-sidebar { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 24px; }
         .sidebar-card { background: white; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .sidebar-img-box { background: radial-gradient(circle at center, #ffffff 50%, #f1f5f9 100%); border-radius: 12px; padding: 20px; display: flex; justify-content: center; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        
+        /* Keep the sidebar image contained */
         .sidebar-img { max-width: 100%; height: 200px; object-fit: contain; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
+        
         .sidebar-btn { display: block; width: 100%; text-align: center; background: #4635de; color: white; padding: 16px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 1.05rem; transition: background 0.2s; }
         .sidebar-btn:hover { background: #3729ad; }
 
@@ -523,3 +527,4 @@ export default function PeptideLandingPage() {
     </>
   );
 }
+
