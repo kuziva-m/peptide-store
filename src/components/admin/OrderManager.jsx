@@ -75,8 +75,23 @@ export default function OrderManager() {
         matchesStatus =
           order.status === "paid" || order.status === "processing";
       } else if (statusFilter === "has_notes") {
-        // --- NEW: MATCH ORDERS WITH NOTES ---
         matchesStatus = order.notes && order.notes.trim().length > 0;
+      } else if (statusFilter === "has_preorder") {
+        // --- NEW: MATCH ORDERS WITH PRE-ORDERED ITEMS ---
+        try {
+          let items = [];
+          if (order.items) {
+            items =
+              typeof order.items === "string"
+                ? JSON.parse(order.items)
+                : order.items;
+          }
+          matchesStatus = items.some(
+            (item) => item.is_preorder === true || item.is_preorder === "true",
+          );
+        } catch (e) {
+          matchesStatus = false;
+        }
       } else {
         matchesStatus = order.status === statusFilter;
       }
@@ -154,7 +169,12 @@ export default function OrderManager() {
           <FilterTab id="label_created" label="Label Created" />
           <FilterTab id="shipped" label="Shipped" />
 
-          {/* --- NEW: WITH NOTES TAB --- */}
+          {/* --- NEW: PRE-ORDER & NOTES TABS --- */}
+          <FilterTab
+            id="has_preorder"
+            label="Contains Pre-order"
+            color="#ea580c"
+          />
           <FilterTab id="has_notes" label="With Notes" color="#8b5cf6" />
 
           <FilterTab id="all" label="All" />
