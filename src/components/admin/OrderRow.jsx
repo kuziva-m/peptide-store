@@ -879,18 +879,55 @@ export function OrderRow({
                           sizeText = item.variant.size_label;
 
                         const price = item.price_at_purchase || item.price || 0;
+                        const isItemPreorder =
+                          item.is_preorder === true ||
+                          item.is_preorder === "true";
 
                         return (
                           <div key={i} style={styles.itemRow}>
                             <span style={styles.itemQty}>{item.quantity}x</span>
                             <div style={styles.itemInfo}>
-                              <span style={styles.itemName}>
-                                {item.product_name_snapshot ||
-                                  item.name ||
-                                  "Product"}
-                              </span>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <span style={styles.itemName}>
+                                  {item.product_name_snapshot ||
+                                    item.name ||
+                                    "Product"}
+                                </span>
+                                {isItemPreorder && (
+                                  <span
+                                    style={{
+                                      background: "#ffedd5",
+                                      color: "#ea580c",
+                                      padding: "2px 6px",
+                                      borderRadius: "4px",
+                                      fontSize: "0.65rem",
+                                      fontWeight: "bold",
+                                      letterSpacing: "0.5px",
+                                    }}
+                                  >
+                                    PRE-ORDER
+                                  </span>
+                                )}
+                              </div>
                               {sizeText && (
-                                <span style={styles.variantLabel}>
+                                <span
+                                  style={{
+                                    ...styles.variantLabel,
+                                    color: isItemPreorder
+                                      ? "#ea580c"
+                                      : "#64748b",
+                                    fontWeight: isItemPreorder
+                                      ? "600"
+                                      : "normal",
+                                  }}
+                                >
                                   {sizeText}
                                 </span>
                               )}
@@ -904,7 +941,7 @@ export function OrderRow({
                     )}
                   </div>
 
-                  {/* --- NEW: SHIPPING COST DISPLAY --- */}
+                  {/* --- SHIPPING COST DISPLAY --- */}
                   <div
                     style={{
                       marginTop: "12px",
@@ -1011,7 +1048,6 @@ export function OrderRow({
                     />
                     <div>
                       <span style={{ fontWeight: "bold" }}>Shipping:</span>{" "}
-                      {/* FIX: Standard is now explicitly bold and orange */}
                       <span
                         style={{
                           textTransform: "capitalize",
