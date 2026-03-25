@@ -338,7 +338,7 @@ export function OrderRow({
 
   return (
     <div style={styles.orderRow}>
-      {/* FIXED: Added role, tabIndex, cursor pointer, and WebkitTapHighlightColor to fix mobile Safari tap bug */}
+      {/* Added role, tabIndex, cursor pointer, and WebkitTapHighlightColor to fix mobile Safari tap bug */}
       <div
         style={{
           ...styles.rowHeader,
@@ -372,12 +372,12 @@ export function OrderRow({
               <MessageCircle size={14} color="#3b82f6" title="Has Notes" />
             )}
 
-            {/* DISCOUNT CODE PILL */}
+            {/* DISCOUNT CODE PILL - NOW GREEN */}
             {order.discount_code && (
               <span
                 style={{
-                  background: "#fef3c7",
-                  color: "#b45309",
+                  background: "#dcfce7",
+                  color: "#166534",
                   padding: "2px 8px",
                   borderRadius: "6px",
                   fontSize: "0.7rem",
@@ -385,7 +385,7 @@ export function OrderRow({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
-                  border: "1px solid #fde68a",
+                  border: "1px solid #bbf7d0",
                 }}
                 title="Discount Code Used"
               >
@@ -400,7 +400,7 @@ export function OrderRow({
                 style={{
                   marginLeft: "8px",
                   background: "#fee2e2",
-                  color: "#b91c1c",
+                  color: "#b91c1c", // RED FOR EXPRESS
                   padding: "2px 6px",
                   borderRadius: "4px",
                   fontSize: "0.65rem",
@@ -417,7 +417,7 @@ export function OrderRow({
                 style={{
                   marginLeft: "8px",
                   background: "#fef08a",
-                  color: "#a16207",
+                  color: "#a16207", // YELLOW FOR STANDARD
                   padding: "2px 6px",
                   borderRadius: "4px",
                   fontSize: "0.65rem",
@@ -446,7 +446,7 @@ export function OrderRow({
         </div>
         <div style={styles.colTotal}>${order.total_amount}</div>
 
-        {/* FIXED: Failsafe onClick on the button itself just in case the parent div tap fails */}
+        {/* Failsafe onClick on the button itself just in case the parent div tap fails */}
         <button
           style={{ ...styles.iconBtn, cursor: "pointer" }}
           onClick={(e) => {
@@ -915,11 +915,12 @@ export function OrderRow({
                                     item.name ||
                                     "Product"}
                                 </span>
+                                {/* PRE-ORDER PILL - NOW PURPLE */}
                                 {isItemPreorder && (
                                   <span
                                     style={{
-                                      background: "#ffedd5",
-                                      color: "#ea580c",
+                                      background: "#f3e8ff",
+                                      color: "#7e22ce",
                                       padding: "2px 6px",
                                       borderRadius: "4px",
                                       fontSize: "0.65rem",
@@ -931,12 +932,13 @@ export function OrderRow({
                                   </span>
                                 )}
                               </div>
+                              {/* PRE-ORDER VARIANT TEXT - NOW PURPLE */}
                               {sizeText && (
                                 <span
                                   style={{
                                     ...styles.variantLabel,
                                     color: isItemPreorder
-                                      ? "#ea580c"
+                                      ? "#7e22ce"
                                       : "#64748b",
                                     fontWeight: isItemPreorder
                                       ? "600"
@@ -1036,7 +1038,7 @@ export function OrderRow({
                     <div>{order.customer_email}</div>
                     <div>{order.shipping_address?.phone}</div>
 
-                    {/* SHOW DISCOUNT CODE DETAILS IN EXPANDED VIEW */}
+                    {/* SHOW DISCOUNT CODE DETAILS IN EXPANDED VIEW - NOW GREEN */}
                     {order.discount_code && (
                       <div style={{ marginTop: "4px" }}>
                         <span style={{ fontWeight: "bold", color: "#64748b" }}>
@@ -1045,7 +1047,7 @@ export function OrderRow({
                         <span
                           style={{
                             marginLeft: "6px",
-                            color: "#b45309",
+                            color: "#166534",
                             fontWeight: "bold",
                           }}
                         >
@@ -1066,7 +1068,7 @@ export function OrderRow({
                       <span
                         style={{
                           textTransform: "capitalize",
-                          color: isExpress ? "#b91c1c" : "#ea580c",
+                          color: isExpress ? "#b91c1c" : "#a16207", // EXPLICIT RED vs YELLOW
                           fontWeight: "bold",
                         }}
                       >
