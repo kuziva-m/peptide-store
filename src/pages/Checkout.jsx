@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Landmark,
   Tag,
+  AlertTriangle, // NEW: Imported Alert Icon
 } from "lucide-react";
 import "../components/CartDrawer.css";
 
@@ -860,6 +861,34 @@ export default function Checkout() {
                   >
                     {copied === "ref" ? "Copied!" : <Copy size={14} />}
                   </button>
+                </div>
+
+                {/* --- NEW: CRITICAL PAYMENT WARNING --- */}
+                <div
+                  style={{
+                    marginTop: "12px",
+                    padding: "12px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "6px",
+                    color: "#b91c1c",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                  }}
+                >
+                  <AlertTriangle
+                    size={16}
+                    style={{ flexShrink: 0, marginTop: "2px" }}
+                  />
+                  <div>
+                    <strong>CRITICAL:</strong> Please <strong>DO NOT</strong>{" "}
+                    put words like "peptide" or product names in the bank
+                    transfer description/reference. <strong>ONLY</strong> use
+                    the exact Reference Number above.
+                  </div>
                 </div>
               </div>
             </div>
