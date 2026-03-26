@@ -19,8 +19,18 @@ export default function Checkout() {
   const { cart, cartTotal } = useCart();
   const navigate = useNavigate();
 
-  // --- PRE-GENERATE ORDER ID ---
-  const [orderId] = useState(() => crypto.randomUUID());
+  // --- STABILIZED ORDER ID ---
+  const [orderId] = useState(() => {
+    // Check if we already have an ID for this checkout session
+    const existingId = sessionStorage.getItem("active_checkout_id");
+    if (existingId) return existingId;
+
+    // Otherwise generate a new one and lock it in
+    const newId = crypto.randomUUID();
+    sessionStorage.setItem("active_checkout_id", newId);
+    return newId;
+  });
+
   const shortRef = orderId.slice(0, 8).toUpperCase();
 
   // --- STATE ---
