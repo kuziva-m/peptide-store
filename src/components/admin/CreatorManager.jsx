@@ -64,7 +64,6 @@ export default function CreatorManager() {
           .select("*")
           .order("created_at", { ascending: false }),
 
-        // FIXED: Changed total_price to total_amount
         supabase
           .from("orders")
           .select("discount_code, total_amount")
@@ -161,14 +160,12 @@ export default function CreatorManager() {
   };
 
   const getAffiliateStats = (discountCode) => {
-    // Added .trim() protections
     const affiliateOrders = orders.filter(
       (o) =>
         o.discount_code &&
         o.discount_code.trim().toUpperCase() ===
           discountCode.trim().toUpperCase(),
     );
-    // FIXED: Reads total_amount instead of total_price
     const totalSales = affiliateOrders.reduce(
       (sum, order) => sum + Number(order.total_amount || 0),
       0,
@@ -241,10 +238,25 @@ export default function CreatorManager() {
       >
         <div style={styles.header}>
           <h3 style={styles.title}>
-            <div style={styles.titleIconWrapper}>
-              <Star size={20} color="#4635de" />
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={styles.titleIconWrapper}>
+                <Star size={20} color="#4635de" />
+              </div>
+              Creator Management
+              {/* --- NEW DYNAMIC COUNTER BADGE --- */}
+              <span
+                style={{
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  padding: "4px 10px",
+                  borderRadius: "12px",
+                  fontSize: "0.85rem",
+                  fontWeight: "bold",
+                }}
+              >
+                {affiliates.length}
+              </span>
             </div>
-            Creator Management
           </h3>
           {!isFormOpen && (
             <button
@@ -502,12 +514,13 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "8px",
+    flexWrap: "wrap",
+    gap: "10px",
   },
   title: {
     margin: 0,
     display: "flex",
     alignItems: "center",
-    gap: "12px",
     color: "#0f172a",
     fontSize: "1.4rem",
   },

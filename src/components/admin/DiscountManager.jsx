@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import {
   Trash2,
@@ -109,6 +109,17 @@ export default function DiscountManager() {
     setDiscounts(mergedData);
     setLoading(false);
   };
+
+  // --- TAB COUNTER LOGIC ---
+  const tabCounts = useMemo(() => {
+    let standard = 0;
+    let creator = 0;
+    discounts.forEach((d) => {
+      if (d.is_creator_code) creator++;
+      else standard++;
+    });
+    return { standard, creator };
+  }, [discounts]);
 
   const handleOpenForm = () => {
     setFormData({
@@ -400,7 +411,7 @@ export default function DiscountManager() {
         )}
       </div>
 
-      {/* TAB SYSTEM */}
+      {/* TAB SYSTEM WITH DYNAMIC COUNTERS */}
       {!isFormOpen && (
         <div style={styles.tabContainer}>
           <button
@@ -412,7 +423,21 @@ export default function DiscountManager() {
                 : styles.inactiveTabBtn),
             }}
           >
-            <Ticket size={16} /> Standard Promo Codes
+            <Ticket size={16} />
+            <span>Standard Promo Codes</span>
+            <span
+              style={{
+                background: activeTab === "standard" ? "#dbeafe" : "#f1f5f9",
+                color: activeTab === "standard" ? "#1d4ed8" : "#475569",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                flexShrink: 0,
+              }}
+            >
+              {tabCounts.standard}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab("creator")}
@@ -423,7 +448,21 @@ export default function DiscountManager() {
                 : styles.inactiveTabBtn),
             }}
           >
-            <Star size={16} /> Creator / Affiliate Codes
+            <Star size={16} />
+            <span>Creator / Affiliate Codes</span>
+            <span
+              style={{
+                background: activeTab === "creator" ? "#dbeafe" : "#f1f5f9",
+                color: activeTab === "creator" ? "#1d4ed8" : "#475569",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                flexShrink: 0,
+              }}
+            >
+              {tabCounts.creator}
+            </span>
           </button>
         </div>
       )}
@@ -791,6 +830,7 @@ const styles = {
     borderBottom: "2px solid #f1f5f9",
     paddingBottom: "16px",
     marginBottom: "24px",
+    flexWrap: "wrap",
   },
   tabBtn: {
     display: "flex",

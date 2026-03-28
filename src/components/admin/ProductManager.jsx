@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import imageCompression from "browser-image-compression";
 import {
@@ -114,6 +114,15 @@ export default function ProductManager() {
     }
   };
 
+  // --- DYNAMIC COUNTS LOGIC ---
+  const categoryCounts = useMemo(() => {
+    const counts = { All: products.length };
+    CATEGORIES.forEach((cat) => {
+      counts[cat] = products.filter((p) => p.category === cat).length;
+    });
+    return counts;
+  }, [products]);
+
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name
       .toLowerCase()
@@ -122,6 +131,40 @@ export default function ProductManager() {
       activeCategory === "All" || p.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // --- CUSTOM FILTER TAB COMPONENT ---
+  const FilterTab = ({ label, count }) => {
+    const isActive = activeCategory === label;
+    return (
+      <button
+        onClick={() => setActiveCategory(label)}
+        style={{
+          ...styles.filterBtn,
+          background: isActive ? "#0f172a" : "white",
+          color: isActive ? "white" : "#64748b",
+          borderColor: isActive ? "#0f172a" : "#e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <span>{label}</span>
+        <span
+          style={{
+            background: isActive ? "rgba(255, 255, 255, 0.25)" : "#f1f5f9",
+            color: isActive ? "white" : "#475569",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            flexShrink: 0,
+          }}
+        >
+          {count}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div>
@@ -145,18 +188,14 @@ export default function ProductManager() {
             style={styles.searchInput}
           />
         </div>
-        <select
-          value={activeCategory}
-          onChange={(e) => setActiveCategory(e.target.value)}
-          style={styles.categorySelect}
-        >
-          <option value="All">All Categories</option>
+
+        {/* UPGRADED CATEGORY TABS (Replaces the basic select dropdown) */}
+        <div style={styles.filterGroup}>
+          <FilterTab label="All" count={categoryCounts["All"]} />
           {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <FilterTab key={c} label={c} count={categoryCounts[c]} />
           ))}
-        </select>
+        </div>
       </div>
 
       {isAddingNew && (
@@ -803,14 +842,21 @@ const styles = {
     width: "100%",
     fontSize: "0.95rem",
   },
-  categorySelect: {
-    flex: "0 1 auto",
-    padding: "0 20px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    background: "white",
+  // --- NEW: STYLES FOR THE TABS ---
+  filterGroup: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  filterBtn: {
+    padding: "8px 16px",
+    borderRadius: "20px",
+    fontSize: "0.85rem",
+    fontWeight: "600",
     cursor: "pointer",
-    height: "40px",
+    border: "1px solid",
+    transition: "all 0.2s",
   },
   newForm: {
     background: "white",

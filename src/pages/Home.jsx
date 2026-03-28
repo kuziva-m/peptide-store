@@ -23,6 +23,14 @@ export default function Home() {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
+    // --- INJECT TRUSTPILOT SCRIPT ---
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src =
+      "//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js";
+    script.async = true;
+    document.head.appendChild(script);
+
     async function fetchData() {
       const [settingsRes, reviewsRes, productsRes] = await Promise.all([
         supabase
@@ -70,6 +78,13 @@ export default function Home() {
     }
 
     fetchData();
+
+    // Cleanup script on unmount
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
   }, []);
 
   return (
@@ -312,33 +327,65 @@ export default function Home() {
             )}
           </div>
 
+          {/* --- NEW: TRUSTPILOT REVIEW WIDGET BLOCK --- */}
           <div
             style={{
               marginTop: "60px",
               textAlign: "center",
-              background: "#f8fafc",
+              background: "#f0fdf4", // Light Trustpilot Green
               padding: "40px",
               borderRadius: "16px",
-              border: "1px dashed #e2e8f0",
+              border: "2px solid #bbf7d0",
+              boxShadow: "0 4px 6px -1px rgba(0, 182, 122, 0.1)",
             }}
           >
-            <h3 style={{ fontSize: "1.5rem", marginBottom: "10px" }}>
-              Have you used our products?
-            </h3>
-            <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
-              Share your findings and experience with the community.
-            </p>
-            <Link
-              to="/write-review"
-              className="trust-btn"
+            <h3
               style={{
-                display: "inline-flex",
+                fontSize: "1.6rem",
+                marginBottom: "10px",
+                color: "#00b67a", // Official Trustpilot Green
+                display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "10px",
+                fontWeight: "bold",
               }}
             >
-              <MessageSquarePlus size={20} /> Write a Review
-            </Link>
+              <Star size={24} fill="#00b67a" color="#00b67a" />
+              Add a Trustpilot Review
+            </h3>
+            <p
+              style={{
+                color: "#475569",
+                marginBottom: "30px",
+                fontSize: "1.1rem",
+                maxWidth: "500px",
+                margin: "0 auto 30px auto",
+              }}
+            >
+              Have you used our products? Share your experience with the
+              community and help us grow.
+            </p>
+
+            {/* OFFICIAL TRUSTPILOT WIDGET */}
+            <div
+              className="trustpilot-widget"
+              data-locale="en-US"
+              data-template-id="56278e9abfbbba0bdcd568bc"
+              data-businessunit-id="6984fbcb52b30924cef9fe4b"
+              data-style-height="52px"
+              data-style-width="100%"
+              data-token="8c086368-2f64-4291-a5be-26fc80b33e80"
+              style={{ display: "flex", justifyContent: "center" }}
+            >
+              <a
+                href="https://www.trustpilot.com/review/melbournepeptides.com.au"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Trustpilot
+              </a>
+            </div>
           </div>
         </div>
       </section>

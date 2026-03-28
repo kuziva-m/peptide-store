@@ -30,7 +30,7 @@ export default function SubscriberManager() {
     const allEmails = subscribers.map((s) => s.email).join(", ");
     navigator.clipboard.writeText(allEmails);
     alert(
-      "All emails copied to clipboard! You can paste them into the BCC field of your email client."
+      "All emails copied to clipboard! You can paste them into the BCC field of your email client.",
     );
   };
 
@@ -44,6 +44,8 @@ export default function SubscriberManager() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: "20px",
+          flexWrap: "wrap",
+          gap: "10px",
         }}
       >
         <h2
@@ -56,6 +58,19 @@ export default function SubscriberManager() {
           }}
         >
           <Users size={24} /> Newsletter Subscribers
+          {/* --- NEW DYNAMIC COUNTER BADGE --- */}
+          <span
+            style={{
+              background: "#f1f5f9",
+              color: "#475569",
+              padding: "4px 10px",
+              borderRadius: "12px",
+              fontSize: "0.85rem",
+              fontWeight: "bold",
+            }}
+          >
+            {subscribers.length}
+          </span>
         </h2>
         {subscribers.length > 0 && (
           <button
@@ -73,7 +88,7 @@ export default function SubscriberManager() {
           background: "white",
           borderRadius: "12px",
           border: "1px solid #e2e8f0",
-          overflow: "hidden",
+          overflowX: "auto",
           boxShadow: "var(--shadow-sm)",
         }}
       >
@@ -166,5 +181,11 @@ const thStyle = {
   color: "#64748b",
   textTransform: "uppercase",
   letterSpacing: "0.05em",
+  whiteSpace: "nowrap",
 };
-const tdStyle = { padding: "16px 24px", fontSize: "0.95rem", color: "#334155" };
+const tdStyle = {
+  padding: "16px 24px",
+  fontSize: "0.95rem",
+  color: "#334155",
+  whiteSpace: "nowrap",
+};

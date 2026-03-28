@@ -58,6 +58,64 @@ export default function OrderManager() {
     });
   };
 
+  // --- TAB COUNTER LOGIC ---
+  // Pre-calculate how many orders fit into each tab
+  const tabCounts = useMemo(() => {
+    const counts = {
+      pending: 0,
+      paid: 0,
+      label_created: 0,
+      shipped: 0,
+      has_preorder: 0,
+      has_notes: 0,
+      all: orders.length,
+    };
+
+    orders.forEach((order) => {
+      // Basic Statuses
+      if (
+        order.status === "pending" ||
+        order.status === "payment_reported" ||
+        order.status === "pending_contact"
+      ) {
+        counts.pending++;
+      } else if (order.status === "paid" || order.status === "processing") {
+        counts.paid++;
+      } else if (order.status === "label_created") {
+        counts.label_created++;
+      } else if (order.status === "shipped") {
+        counts.shipped++;
+      }
+
+      // Notes
+      if (order.notes && order.notes.trim().length > 0) {
+        counts.has_notes++;
+      }
+
+      // Pre-orders
+      try {
+        let items = [];
+        if (order.items) {
+          items =
+            typeof order.items === "string"
+              ? JSON.parse(order.items)
+              : order.items;
+        }
+        if (
+          items.some(
+            (item) => item.is_preorder === true || item.is_preorder === "true",
+          )
+        ) {
+          counts.has_preorder++;
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    });
+
+    return counts;
+  }, [orders]);
+
   // --- FILTERING LOGIC ---
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
@@ -71,13 +129,17 @@ export default function OrderManager() {
 
       if (statusFilter === "all") {
         matchesStatus = true;
+      } else if (statusFilter === "pending") {
+        matchesStatus =
+          order.status === "pending" ||
+          order.status === "payment_reported" ||
+          order.status === "pending_contact";
       } else if (statusFilter === "paid") {
         matchesStatus =
           order.status === "paid" || order.status === "processing";
       } else if (statusFilter === "has_notes") {
         matchesStatus = order.notes && order.notes.trim().length > 0;
       } else if (statusFilter === "has_preorder") {
-        // --- NEW: MATCH ORDERS WITH PRE-ORDERED ITEMS ---
         try {
           let items = [];
           if (order.items) {
@@ -112,7 +174,6 @@ export default function OrderManager() {
         o.status === "delivered",
     );
 
-    // --- FIX: ENFORCE STRICT NUMBER CONVERSION FOR DECIMALS ---
     const totalRevenue = confirmedPaidOrders.reduce(
       (sum, o) => sum + Number(o.total_amount || 0),
       0,
@@ -130,19 +191,40 @@ export default function OrderManager() {
     showToast(`Exported ${filteredOrders.length} orders`);
   };
 
-  const FilterTab = ({ id, label, color }) => (
-    <button
-      onClick={() => setStatusFilter(id)}
-      style={{
-        ...styles.filterBtn,
-        background: statusFilter === id ? color || "#0f172a" : "white",
-        color: statusFilter === id ? "white" : "#64748b",
-        borderColor: statusFilter === id ? color || "#0f172a" : "#e2e8f0",
-      }}
-    >
-      {label}
-    </button>
-  );
+  // --- UPDATED DYNAMIC FILTER TAB COMPONENT ---
+  const FilterTab = ({ id, label, color, count }) => {
+    const isActive = statusFilter === id;
+
+    return (
+      <button
+        onClick={() => setStatusFilter(id)}
+        style={{
+          ...styles.filterBtn,
+          background: isActive ? color || "#0f172a" : "white",
+          color: isActive ? "white" : "#64748b",
+          borderColor: isActive ? color || "#0f172a" : "#e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <span>{label}</span>
+        <span
+          style={{
+            background: isActive ? "rgba(255, 255, 255, 0.25)" : "#f1f5f9",
+            color: isActive ? "white" : "#475569",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            flexShrink: 0, // Prevents the badge from squishing on small screens
+          }}
+        >
+          {count}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div style={{ position: "relative" }}>
@@ -155,7 +237,6 @@ export default function OrderManager() {
         <div style={styles.statDivider} />
         <div style={styles.statItem}>
           <span style={styles.statLabel}>Total Revenue</span>
-          {/* --- FIX: ROUNDED TO EXACTLY 2 DECIMALS --- */}
           <span style={styles.statValue}>${stats.totalRevenue.toFixed(2)}</span>
         </div>
       </div>
@@ -166,20 +247,36 @@ export default function OrderManager() {
             id="pending"
             label="Action Required (New)"
             color="#d97706"
+            count={tabCounts.pending}
           />
-          <FilterTab id="paid" label="Approved (Paid)" color="#16a34a" />
-          <FilterTab id="label_created" label="Label Created" />
-          <FilterTab id="shipped" label="Shipped" />
+          <FilterTab
+            id="paid"
+            label="Approved (Paid)"
+            color="#16a34a"
+            count={tabCounts.paid}
+          />
+          <FilterTab
+            id="label_created"
+            label="Label Created"
+            count={tabCounts.label_created}
+          />
+          <FilterTab id="shipped" label="Shipped" count={tabCounts.shipped} />
 
-          {/* --- NEW: PRE-ORDER & NOTES TABS --- */}
+          {/* --- PRE-ORDER & NOTES TABS --- */}
           <FilterTab
             id="has_preorder"
             label="Contains Pre-order"
             color="#ea580c"
+            count={tabCounts.has_preorder}
           />
-          <FilterTab id="has_notes" label="With Notes" color="#8b5cf6" />
+          <FilterTab
+            id="has_notes"
+            label="With Notes"
+            color="#8b5cf6"
+            count={tabCounts.has_notes}
+          />
 
-          <FilterTab id="all" label="All" />
+          <FilterTab id="all" label="All" count={tabCounts.all} />
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
