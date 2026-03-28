@@ -112,8 +112,9 @@ export default function OrderManager() {
         o.status === "delivered",
     );
 
+    // --- FIX: ENFORCE STRICT NUMBER CONVERSION FOR DECIMALS ---
     const totalRevenue = confirmedPaidOrders.reduce(
-      (sum, o) => sum + (o.total_amount || 0),
+      (sum, o) => sum + Number(o.total_amount || 0),
       0,
     );
 
@@ -154,7 +155,8 @@ export default function OrderManager() {
         <div style={styles.statDivider} />
         <div style={styles.statItem}>
           <span style={styles.statLabel}>Total Revenue</span>
-          <span style={styles.statValue}>${stats.totalRevenue.toFixed(0)}</span>
+          {/* --- FIX: ROUNDED TO EXACTLY 2 DECIMALS --- */}
+          <span style={styles.statValue}>${stats.totalRevenue.toFixed(2)}</span>
         </div>
       </div>
 

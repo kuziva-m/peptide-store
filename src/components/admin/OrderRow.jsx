@@ -338,7 +338,6 @@ export function OrderRow({
 
   return (
     <div style={styles.orderRow}>
-      {/* Added role, tabIndex, cursor pointer, and WebkitTapHighlightColor to fix mobile Safari tap bug */}
       <div
         style={{
           ...styles.rowHeader,
@@ -444,9 +443,11 @@ export function OrderRow({
             {sStyle.label}
           </span>
         </div>
-        <div style={styles.colTotal}>${order.total_amount}</div>
+        {/* --- FIX: ROUNDED TOTAL EXACTLY TO 2 DECIMALS --- */}
+        <div style={styles.colTotal}>
+          ${Number(order.total_amount || 0).toFixed(2)}
+        </div>
 
-        {/* Failsafe onClick on the button itself just in case the parent div tap fails */}
         <button
           style={{ ...styles.iconBtn, cursor: "pointer" }}
           onClick={(e) => {
@@ -1068,7 +1069,7 @@ export function OrderRow({
                       <span
                         style={{
                           textTransform: "capitalize",
-                          color: isExpress ? "#b91c1c" : "#a16207", // EXPLICIT RED vs YELLOW
+                          color: isExpress ? "#b91c1c" : "#a16207",
                           fontWeight: "bold",
                         }}
                       >
