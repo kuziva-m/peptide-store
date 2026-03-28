@@ -9,7 +9,54 @@ import {
   Layers,
   BriefcaseMedical,
 } from "lucide-react";
-import "./Shop.css"; // Removed Home.css to prevent style bleeding/duplication
+import "./Shop.css";
+
+// --- POPULARITY RANKING (Most to Least) ---
+// Note: HGH is handled separately to guarantee absolute #1 position.
+const POPULARITY_RANKING = [
+  "bpc-157",
+  "semaglutide",
+  "tirzepatide",
+  "retatrutide",
+  "tb-500",
+  "cjc-1295",
+  "melanotan",
+  "pt-141",
+  "aod-9604",
+  "tesofensine",
+  "ghk-cu",
+  "5-amino-1",
+  "mots-c",
+  "ss-31",
+  "glutathione",
+  "dsip",
+  "epitalon",
+  "kisspeptin",
+  "oxytocin",
+  "slu-pp-322",
+  "pinealon",
+  // Accessories ranking
+  "bacteriostatic water",
+  "syringe",
+  "alcohol prep",
+];
+
+const getProductRank = (productName) => {
+  const lowerName = productName.toLowerCase();
+
+  // FORCE HGH TO THE ABSOLUTE TOP (-1 ensures it beats index 0)
+  if (lowerName.includes("hgh 100iu") || lowerName.includes("hgh")) {
+    return -1;
+  }
+
+  // Find where the product sits in the popularity list
+  const index = POPULARITY_RANKING.findIndex((rankedName) =>
+    lowerName.includes(rankedName),
+  );
+
+  // If it's in the list, return its index. If not, give it a high number to push it to the bottom.
+  return index !== -1 ? index : 999;
+};
 
 export default function Shop({ searchQuery }) {
   const [searchParams] = useSearchParams();
@@ -82,16 +129,17 @@ export default function Shop({ searchQuery }) {
       return acc;
     }, {});
 
-    // --- NEW: FORCE HGH 100iu TO THE TOP ---
+    // --- APPLY POPULARITY & HGH SORTING ---
     Object.keys(grouped).forEach((cat) => {
       grouped[cat].sort((a, b) => {
-        const isHGH_A = a.name.toLowerCase().includes("hgh 100iu");
-        const isHGH_B = b.name.toLowerCase().includes("hgh 100iu");
+        const rankA = getProductRank(a.name);
+        const rankB = getProductRank(b.name);
 
-        if (isHGH_A && !isHGH_B) return -1; // Move A to top
-        if (!isHGH_A && isHGH_B) return 1; // Move B to top
+        if (rankA !== rankB) {
+          return rankA - rankB; // Sort by popularity index
+        }
 
-        // Otherwise, keep alphabetical
+        // If they have the exact same rank (or are both unranked/999), sort alphabetically
         return a.name.localeCompare(b.name);
       });
     });
@@ -106,7 +154,6 @@ export default function Shop({ searchQuery }) {
 
   return (
     <div className="page-wrapper">
-      {/* SEO FIX: Unique title and description specific to the Shop page */}
       <SEO
         title="Shop Peptides Australia | HPLC Tested 99% Purity"
         description="Browse our full catalog of research peptides including BPC-157, Semaglutide, and customized blends. All compounds are HPLC verified for identity and purity. Fast Australia-wide dispatch."
@@ -124,7 +171,6 @@ export default function Shop({ searchQuery }) {
           Research Peptide Catalog
         </h1>
 
-        {/* SEO FIX: Unique intro text to avoid "Duplicate Content" with Home page */}
         <div
           style={{
             textAlign: "center",
