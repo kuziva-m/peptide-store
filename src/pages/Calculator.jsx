@@ -555,6 +555,7 @@ export default function Calculator() {
                 <td>
                   <strong>BPC-157</strong>
                 </td>
+                {/* MODIFIED: Forced to 5mg */}
                 <td>5mg</td>
                 <td>2ml</td>
                 <td>250mcg</td>
@@ -564,6 +565,7 @@ export default function Calculator() {
                 <td>
                   <strong>TB-500</strong>
                 </td>
+                {/* MODIFIED: Forced to 5mg */}
                 <td>5mg</td>
                 <td>2ml</td>
                 <td>2.5mg (2500mcg)</td>
@@ -573,7 +575,8 @@ export default function Calculator() {
                 <td>
                   <strong>Melanotan 2</strong>
                 </td>
-                <td>10mg</td>
+                {/* MODIFIED: Forced to 5mg */}
+                <td>5mg</td>
                 <td>2ml</td>
                 <td>250mcg</td>
                 <td className="highlight-cell">5 Units</td>
@@ -582,7 +585,8 @@ export default function Calculator() {
                 <td>
                   <strong>CJC-1295</strong>
                 </td>
-                <td>2mg</td>
+                {/* MODIFIED: Forced to 5mg */}
+                <td>5mg</td>
                 <td>1ml</td>
                 <td>100mcg</td>
                 <td className="highlight-cell">5 Units</td>
@@ -591,6 +595,7 @@ export default function Calculator() {
                 <td>
                   <strong>Semaglutide</strong>
                 </td>
+                {/* MODIFIED: Forced to 5mg */}
                 <td>5mg</td>
                 <td>2ml</td>
                 <td>250mcg</td>
@@ -600,7 +605,8 @@ export default function Calculator() {
                 <td>
                   <strong>GHK-Cu</strong>
                 </td>
-                <td>50mg</td>
+                {/* MODIFIED: Forced to 5mg */}
+                <td>5mg</td>
                 <td>5ml</td>
                 <td>2mg (2000mcg)</td>
                 <td className="highlight-cell">20 Units</td>
