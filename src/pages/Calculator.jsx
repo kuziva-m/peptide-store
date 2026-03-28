@@ -21,44 +21,44 @@ const SYRINGE_SIZES = [
   { size: 1.0, label: "1.0ml (100 Units)", short: "1.0ml" },
 ];
 
-// --- ALL DEFAULTS UPDATED TO 3ML VIAL CAPACITY/WATER ---
+// Fully expanded defaults for instant UX snapping
 const MATH_DEFAULTS = {
-  default: { mg: 5, ml: 3, mcg: 250 },
-  "bpc-157": { mg: 5, ml: 3, mcg: 250 },
-  semaglutide: { mg: 5, ml: 3, mcg: 250 },
-  tirzepatide: { mg: 10, ml: 3, mcg: 2500 },
-  "tb-500": { mg: 5, ml: 3, mcg: 2500 },
-  "tb-500-tb4": { mg: 5, ml: 3, mcg: 2500 },
-  "ghk-cu": { mg: 50, ml: 3, mcg: 2000 },
-  "melanotan-2": { mg: 10, ml: 3, mcg: 250 },
-  "melanotan-ii": { mg: 10, ml: 3, mcg: 250 },
-  "cjc-1295": { mg: 2, ml: 3, mcg: 100 },
-  "cjc-1295-no-dac": { mg: 2, ml: 3, mcg: 100 },
-  ipamorelin: { mg: 5, ml: 3, mcg: 100 },
-  epitalon: { mg: 10, ml: 3, mcg: 1000 },
-  "hgh-191aa": { mg: 3.33, ml: 3, mcg: 333 },
+  default: { mg: 5, ml: 2, mcg: 250 },
+  "bpc-157": { mg: 5, ml: 2, mcg: 250 },
+  semaglutide: { mg: 5, ml: 2, mcg: 250 },
+  tirzepatide: { mg: 10, ml: 2, mcg: 2500 },
+  "tb-500": { mg: 5, ml: 2, mcg: 2500 },
+  "tb-500-tb4": { mg: 5, ml: 2, mcg: 2500 },
+  "ghk-cu": { mg: 50, ml: 5, mcg: 2000 },
+  "melanotan-2": { mg: 10, ml: 2, mcg: 250 },
+  "melanotan-ii": { mg: 10, ml: 2, mcg: 250 },
+  "cjc-1295": { mg: 2, ml: 1, mcg: 100 },
+  "cjc-1295-no-dac": { mg: 2, ml: 1, mcg: 100 },
+  ipamorelin: { mg: 5, ml: 2, mcg: 100 },
+  epitalon: { mg: 10, ml: 2, mcg: 1000 },
+  "hgh-191aa": { mg: 3.33, ml: 1, mcg: 333 },
   "tri-heal-max": { mg: 45, ml: 3, mcg: 250 },
-  "wolverine-stack": { mg: 15, ml: 3, mcg: 250 },
-  retatrutide: { mg: 10, ml: 3, mcg: 2000 },
-  cagrilintide: { mg: 5, ml: 3, mcg: 250 },
-  mazdutide: { mg: 10, ml: 3, mcg: 2500 },
-  survodutide: { mg: 10, ml: 3, mcg: 2500 },
-  "igf-1-lr3": { mg: 1, ml: 3, mcg: 50 },
-  "ghrp-6": { mg: 5, ml: 3, mcg: 100 },
-  "ghrp-2": { mg: 5, ml: 3, mcg: 100 },
-  tesamorelin: { mg: 2, ml: 3, mcg: 1000 },
-  "mots-c": { mg: 10, ml: 3, mcg: 5000 },
-  semax: { mg: 10, ml: 3, mcg: 1000 },
-  selank: { mg: 10, ml: 3, mcg: 1000 },
-  kpv: { mg: 10, ml: 3, mcg: 250 },
-  sermorelin: { mg: 2, ml: 3, mcg: 200 },
+  "wolverine-stack": { mg: 15, ml: 2, mcg: 250 },
+  retatrutide: { mg: 10, ml: 2, mcg: 2000 },
+  cagrilintide: { mg: 5, ml: 2, mcg: 250 },
+  mazdutide: { mg: 10, ml: 2, mcg: 2500 },
+  survodutide: { mg: 10, ml: 2, mcg: 2500 },
+  "igf-1-lr3": { mg: 1, ml: 1, mcg: 50 },
+  "ghrp-6": { mg: 5, ml: 2, mcg: 100 },
+  "ghrp-2": { mg: 5, ml: 2, mcg: 100 },
+  tesamorelin: { mg: 2, ml: 1, mcg: 1000 },
+  "mots-c": { mg: 10, ml: 2, mcg: 5000 },
+  semax: { mg: 10, ml: 2, mcg: 1000 },
+  selank: { mg: 10, ml: 2, mcg: 1000 },
+  kpv: { mg: 10, ml: 2, mcg: 250 },
+  sermorelin: { mg: 2, ml: 1, mcg: 200 },
   "glow-blend": { mg: 70, ml: 3, mcg: 1000 },
   "klow-blend": { mg: 80, ml: 3, mcg: 1000 },
-  "nad-plus": { mg: 500, ml: 3, mcg: 50000 },
-  "ll-37": { mg: 5, ml: 3, mcg: 100 },
-  "thymosin-alpha-1": { mg: 10, ml: 3, mcg: 1500 },
-  "pt-141-bremelanotide": { mg: 10, ml: 3, mcg: 1500 },
-  "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 3, mcg: 200 },
+  "nad-plus": { mg: 500, ml: 5, mcg: 50000 },
+  "ll-37": { mg: 5, ml: 2, mcg: 100 },
+  "thymosin-alpha-1": { mg: 10, ml: 2, mcg: 1500 },
+  "pt-141-bremelanotide": { mg: 10, ml: 2, mcg: 1500 },
+  "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 2, mcg: 200 },
 };
 
 export default function Calculator() {
@@ -165,6 +165,7 @@ export default function Calculator() {
         })}
       </script>
 
+      {/* NEW: THE AUDITOR'S FAQ SCHEMA INJECTION */}
       {dbData?.calc_faq && dbData.calc_faq.length > 0 && (
         <script type="application/ld+json">
           {JSON.stringify({
@@ -226,7 +227,7 @@ export default function Calculator() {
 
           <div className="inputs-vertical">
             <div className="input-group">
-              <label>2. Peptide Quantity (Powder)</label>
+              <label>2. Vial Quantity (Powder)</label>
               <div className="input-wrapper">
                 <input
                   type="number"
@@ -254,7 +255,7 @@ export default function Calculator() {
                 <span className="unit-badge">ml</span>
               </div>
               <div className="helper-text">
-                <Beaker size={14} /> Standard 3ml glass vial capacity
+                <Beaker size={14} /> Standard amounts: 1ml, 2ml, 3ml
               </div>
             </div>
 
@@ -503,7 +504,7 @@ export default function Calculator() {
           </div>
           <div className="step-card">
             <div className="step-number">2</div>
-            <h4>Enter Peptide Quantity</h4>
+            <h4>Enter Vial Size</h4>
             <p>
               Input the total amount of lyophilized powder in your vial in
               milligrams (e.g., 5mg or 10mg).
@@ -514,7 +515,7 @@ export default function Calculator() {
             <h4>Add Bac Water</h4>
             <p>
               Enter the volume of bacteriostatic water (in ml) you intend to
-              inject into the vial for reconstitution. (Standard is 3ml).
+              inject into the vial for reconstitution.
             </p>
           </div>
           <div className="step-card">
@@ -543,7 +544,7 @@ export default function Calculator() {
             <thead>
               <tr>
                 <th>Peptide Type</th>
-                <th>Peptide Mass</th>
+                <th>Vial Size</th>
                 <th>Water Added</th>
                 <th>Target Dose</th>
                 <th>Syringe Draw</th>
@@ -554,55 +555,55 @@ export default function Calculator() {
                 <td>
                   <strong>BPC-157</strong>
                 </td>
-                <td>5mg</td>
                 <td>3ml</td>
+                <td>2ml</td>
                 <td>250mcg</td>
-                <td className="highlight-cell">15 Units</td>
+                <td className="highlight-cell">10 Units</td>
               </tr>
               <tr>
                 <td>
                   <strong>TB-500</strong>
                 </td>
-                <td>5mg</td>
                 <td>3ml</td>
+                <td>2ml</td>
                 <td>2.5mg (2500mcg)</td>
-                <td className="highlight-cell">150 Units (1.5ml)</td>
+                <td className="highlight-cell">100 Units (1ml)</td>
               </tr>
               <tr>
                 <td>
                   <strong>Melanotan 2</strong>
                 </td>
-                <td>10mg</td>
                 <td>3ml</td>
+                <td>2ml</td>
                 <td>250mcg</td>
-                <td className="highlight-cell">7.5 Units</td>
+                <td className="highlight-cell">5 Units</td>
               </tr>
               <tr>
                 <td>
                   <strong>CJC-1295</strong>
                 </td>
-                <td>2mg</td>
                 <td>3ml</td>
+                <td>1ml</td>
                 <td>100mcg</td>
-                <td className="highlight-cell">15 Units</td>
+                <td className="highlight-cell">5 Units</td>
               </tr>
               <tr>
                 <td>
                   <strong>Semaglutide</strong>
                 </td>
-                <td>5mg</td>
                 <td>3ml</td>
+                <td>2ml</td>
                 <td>250mcg</td>
-                <td className="highlight-cell">15 Units</td>
+                <td className="highlight-cell">10 Units</td>
               </tr>
               <tr>
                 <td>
                   <strong>GHK-Cu</strong>
                 </td>
-                <td>50mg</td>
                 <td>3ml</td>
+                <td>5ml</td>
                 <td>2mg (2000mcg)</td>
-                <td className="highlight-cell">12 Units</td>
+                <td className="highlight-cell">20 Units</td>
               </tr>
             </tbody>
           </table>
@@ -610,92 +611,6 @@ export default function Calculator() {
       </div>
 
       <div className="seo-section-wrapper">
-        <h2 className="seo-section-title text-center">
-          Peptide Dosage Calculator Examples
-        </h2>
-
-        <div className="peptide-examples-grid">
-          <div id="bpc157" className="peptide-example-card">
-            <h3 className="peptide-example-title">
-              <TestTube className="icon-blue" size={20} /> BPC-157 Dosage
-              Calculator
-            </h3>
-            <p className="peptide-example-desc">
-              Use this dilution calculator to determine how many units to draw
-              for BPC-157 tissue repair models.
-            </p>
-            <div className="peptide-formula-box">
-              10mg BPC-157 + 3ml Bac Water ={" "}
-              <strong className="formula-highlight">
-                3.33mg/ml concentration
-              </strong>
-            </div>
-            <Link to="/peptide-calculator/bpc-157" className="peptide-link">
-              Open BPC-157 Calculator →
-            </Link>
-          </div>
-
-          <div id="semaglutide" className="peptide-example-card">
-            <h3 className="peptide-example-title">
-              <TestTube className="icon-blue" size={20} /> Semaglutide Dilution
-              Calculator
-            </h3>
-            <p className="peptide-example-desc">
-              Requires precise micro-dosing dilutions for GLP-1 receptor
-              studies. Calculate your exact bac water ratio here.
-            </p>
-            <div className="peptide-formula-box">
-              5mg Semaglutide + 3ml Bac Water ={" "}
-              <strong className="formula-highlight">
-                1.66mg/ml concentration
-              </strong>
-            </div>
-            <Link to="/peptide-calculator/semaglutide" className="peptide-link">
-              Open Semaglutide Calculator →
-            </Link>
-          </div>
-
-          <div id="tirzepatide" className="peptide-example-card">
-            <h3 className="peptide-example-title">
-              <TestTube className="icon-blue" size={20} /> Tirzepatide
-              Reconstitution
-            </h3>
-            <p className="peptide-example-desc">
-              Often reconstituted from larger 10mg or 15mg vials for
-              dual-agonist models requiring specific unit tracking.
-            </p>
-            <div className="peptide-formula-box">
-              10mg Tirzepatide + 3ml Bac Water ={" "}
-              <strong className="formula-highlight">
-                3.33mg/ml concentration
-              </strong>
-            </div>
-            <Link to="/peptide-calculator/tirzepatide" className="peptide-link">
-              Open Tirzepatide Calculator →
-            </Link>
-          </div>
-
-          <div id="tb500" className="peptide-example-card">
-            <h3 className="peptide-example-title">
-              <TestTube className="icon-blue" size={20} /> TB-500 Dosage
-              Calculator
-            </h3>
-            <p className="peptide-example-desc">
-              Thymosin Beta-4 requires careful volumetric calculations for
-              systemic models. Calculate TB-500 dosing accurately.
-            </p>
-            <div className="peptide-formula-box">
-              5mg TB-500 + 3ml Bac Water ={" "}
-              <strong className="formula-highlight">
-                1.66mg/ml concentration
-              </strong>
-            </div>
-            <Link to="/peptide-calculator/tb-500" className="peptide-link">
-              Open TB-500 Calculator →
-            </Link>
-          </div>
-        </div>
-
         <h3 className="seo-section-subtitle">
           <Zap className="icon-blue" size={24} /> Quick Calculator Index
         </h3>
@@ -704,7 +619,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">Melanotan 2</h4>
             <p className="quick-index-formula">
-              10mg + 3ml = <span className="formula-highlight">3.33mg/ml</span>
+              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
             </p>
             <Link
               to="/peptide-calculator/melanotan-2"
@@ -717,7 +632,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">CJC-1295</h4>
             <p className="quick-index-formula">
-              2mg + 3ml = <span className="formula-highlight">0.66mg/ml</span>
+              2mg + 1ml = <span className="formula-highlight">2mg/ml</span>
             </p>
             <Link
               to="/peptide-calculator/cjc-1295"
@@ -730,7 +645,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">Ipamorelin</h4>
             <p className="quick-index-formula">
-              5mg + 3ml = <span className="formula-highlight">1.66mg/ml</span>
+              5mg + 2ml = <span className="formula-highlight">2.5mg/ml</span>
             </p>
             <Link
               to="/peptide-calculator/ipamorelin"
@@ -743,7 +658,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">Epitalon</h4>
             <p className="quick-index-formula">
-              10mg + 3ml = <span className="formula-highlight">3.33mg/ml</span>
+              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
             </p>
             <Link
               to="/peptide-calculator/epitalon"
@@ -756,7 +671,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">GHK-Cu</h4>
             <p className="quick-index-formula">
-              50mg + 3ml = <span className="formula-highlight">16.66mg/ml</span>
+              50mg + 5ml = <span className="formula-highlight">10mg/ml</span>
             </p>
             <Link to="/peptide-calculator/ghk-cu" className="quick-index-link">
               GHK-Cu Calc →
@@ -766,7 +681,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">HGH (191aa)</h4>
             <p className="quick-index-formula">
-              10IU + 3ml = <span className="formula-highlight">3.33IU/ml</span>
+              10IU + 1ml = <span className="formula-highlight">10IU/ml</span>
             </p>
             <Link
               to="/peptide-calculator/hgh-191aa"
@@ -776,10 +691,11 @@ export default function Calculator() {
             </Link>
           </div>
 
+          {/* A few new dynamic links added for internal authority */}
           <div className="quick-index-card">
             <h4 className="quick-index-title">Cagrilintide</h4>
             <p className="quick-index-formula">
-              5mg + 3ml = <span className="formula-highlight">1.66mg/ml</span>
+              5mg + 2ml = <span className="formula-highlight">2.5mg/ml</span>
             </p>
             <Link
               to="/peptide-calculator/cagrilintide"
@@ -792,7 +708,7 @@ export default function Calculator() {
           <div className="quick-index-card">
             <h4 className="quick-index-title">MOTS-c</h4>
             <p className="quick-index-formula">
-              10mg + 3ml = <span className="formula-highlight">3.33mg/ml</span>
+              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
             </p>
             <Link to="/peptide-calculator/mots-c" className="quick-index-link">
               MOTS-c Calc →
