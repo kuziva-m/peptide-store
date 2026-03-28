@@ -82,6 +82,20 @@ export default function Shop({ searchQuery }) {
       return acc;
     }, {});
 
+    // --- NEW: FORCE HGH 100iu TO THE TOP ---
+    Object.keys(grouped).forEach((cat) => {
+      grouped[cat].sort((a, b) => {
+        const isHGH_A = a.name.toLowerCase().includes("hgh 100iu");
+        const isHGH_B = b.name.toLowerCase().includes("hgh 100iu");
+
+        if (isHGH_A && !isHGH_B) return -1; // Move A to top
+        if (!isHGH_A && isHGH_B) return 1; // Move B to top
+
+        // Otherwise, keep alphabetical
+        return a.name.localeCompare(b.name);
+      });
+    });
+
     const sortOrder = ["Peptides", "Peptide Blends", "Accessories"];
     return Object.entries(grouped).sort(([catA], [catB]) => {
       const idxA = sortOrder.indexOf(catA);
