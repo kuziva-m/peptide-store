@@ -9,9 +9,6 @@ import {
   Beaker,
   ArrowRight,
   Star,
-  MessageSquarePlus,
-  User,
-  Heart,
   Video,
   Syringe,
 } from "lucide-react";
@@ -20,7 +17,6 @@ import "./Home.css";
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [content, setContent] = useState(null);
-  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     // --- INJECT TRUSTPILOT SCRIPT ---
@@ -32,23 +28,16 @@ export default function Home() {
     document.head.appendChild(script);
 
     async function fetchData() {
-      const [settingsRes, reviewsRes, productsRes] = await Promise.all([
+      const [settingsRes, productsRes] = await Promise.all([
         supabase
           .from("site_settings")
           .select("value")
           .eq("key", "home_content")
           .single(),
-        supabase
-          .from("reviews")
-          .select("*")
-          .eq("is_active", true)
-          .order("created_at", { ascending: false })
-          .limit(3),
         supabase.from("products").select(`*, variants (*)`),
       ]);
 
       if (settingsRes.data) setContent(settingsRes.data.value);
-      if (reviewsRes.data) setReviews(reviewsRes.data);
 
       const allProducts = productsRes.data;
       if (allProducts) {
@@ -203,134 +192,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section-container" style={{ paddingBottom: "20px" }}>
-        <div className="container">
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "#fdf2f8",
-                color: "#be185d",
-                padding: "8px 16px",
-                borderRadius: "50px",
-                fontWeight: "600",
-                fontSize: "0.9rem",
-                marginBottom: "16px",
-              }}
-            >
-              <Heart size={16} fill="#be185d" /> Community Favorites
-            </div>
-            <h2 className="section-title" style={{ marginBottom: "10px" }}>
-              Loved by Many
-            </h2>
-            <p
-              style={{
-                color: "var(--text-muted)",
-                maxWidth: "500px",
-                margin: "0 auto",
-              }}
-            >
-              Join thousands of customers trusting Melbourne Peptides
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "24px",
-            }}
-          >
-            <div style={imageCardStyle}>
-              <img
-                src="/images/testimonials/user1.jpeg"
-                alt="Happy Customer 1"
-                loading="lazy"
-                decoding="async"
-                style={imageStyle}
-              />
-            </div>
-            <div style={imageCardStyle}>
-              <img
-                src="/images/testimonials/user2.jpeg"
-                alt="Happy Customer 2"
-                loading="lazy"
-                decoding="async"
-                style={imageStyle}
-              />
-            </div>
-            <div style={imageCardStyle}>
-              <img
-                src="/images/testimonials/user3.jpeg"
-                alt="Happy Customer 3"
-                loading="lazy"
-                decoding="async"
-                style={imageStyle}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="section-container">
         <div className="container">
-          <h2 className="section-title text-center mb-50">
-            What Customers Say
-          </h2>
-          <div className="reviews-grid">
-            {reviews.length > 0 ? (
-              reviews.map((review) => (
-                <div key={review.id} className="review-card">
-                  <div className="review-header">
-                    <div className="review-avatar">
-                      {review.avatar_url ? (
-                        <img
-                          src={review.avatar_url}
-                          alt={review.name}
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            borderRadius: "50%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      ) : (
-                        <User size={24} />
-                      )}
-                    </div>
-                    <div className="review-meta">
-                      <span className="reviewer-name">{review.name}</span>
-                      <span className="verified-badge">{review.role}</span>
-                    </div>
-                  </div>
-                  <div
-                    style={{ display: "flex", gap: "2px", margin: "10px 0" }}
-                  >
-                    {[...Array(review.rating || 5)].map((_, i) => (
-                      <Star key={i} size={16} fill="#fbbf24" color="#fbbf24" />
-                    ))}
-                  </div>
-                  <p className="review-text">"{review.text}"</p>
-                </div>
-              ))
-            ) : (
-              <p
-                className="text-center"
-                style={{ color: "var(--text-muted)", width: "100%" }}
-              >
-                No reviews yet.
-              </p>
-            )}
-          </div>
-
-          {/* --- NEW: TRUSTPILOT REVIEW WIDGET BLOCK --- */}
+          {/* --- OFFICIAL TRUSTPILOT REVIEW WIDGET BLOCK --- */}
           <div
             style={{
-              marginTop: "60px",
               textAlign: "center",
               background: "#f0fdf4", // Light Trustpilot Green
               padding: "40px",
@@ -392,22 +258,3 @@ export default function Home() {
     </div>
   );
 }
-
-// STYLES
-const imageCardStyle = {
-  borderRadius: "16px",
-  overflow: "hidden",
-  boxShadow:
-    "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-  border: "1px solid #f1f5f9",
-  aspectRatio: "4/5",
-  position: "relative",
-  backgroundColor: "#f8fafc",
-};
-const imageStyle = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  transition: "transform 0.5s ease",
-  cursor: "pointer",
-};
