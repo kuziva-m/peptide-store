@@ -139,9 +139,11 @@ export default function CartDrawer() {
     if (!product?.purchasableVariants?.length) return;
 
     const selectedVariantId = selectedSuggestedVariants[product.id];
+    // FIX: Cast both to String to safely compare <select> output against DB IDs
     const selectedVariant =
-      product.purchasableVariants.find((v) => v.id === selectedVariantId) ||
-      product.defaultVariant;
+      product.purchasableVariants.find(
+        (v) => String(v.id) === String(selectedVariantId),
+      ) || product.defaultVariant;
 
     if (!selectedVariant) return;
 
@@ -167,9 +169,11 @@ export default function CartDrawer() {
 
   const getSelectedSuggestedVariant = (product) => {
     const selectedVariantId = selectedSuggestedVariants[product.id];
+    // FIX: Cast both to String to safely compare <select> output against DB IDs
     return (
-      product.purchasableVariants.find((v) => v.id === selectedVariantId) ||
-      product.defaultVariant
+      product.purchasableVariants.find(
+        (v) => String(v.id) === String(selectedVariantId),
+      ) || product.defaultVariant
     );
   };
 
