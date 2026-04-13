@@ -11,6 +11,8 @@ import {
   BookOpen,
   ShieldCheck,
   AlertTriangle,
+  Droplet,
+  Clock,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import "./Calculator.css";
@@ -60,6 +62,19 @@ const MATH_DEFAULTS = {
   "pt-141-bremelanotide": { mg: 10, ml: 2, mcg: 1500 },
   "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 2, mcg: 200 },
 };
+
+// --- NEW: DOSAGE PROTOCOL LIBRARY ---
+const DOSAGE_PROTOCOLS = [
+  { name: "BPC-157", vial: "5mg", bac: "2ml", dose: "250mcg", freq: "1-2x Daily", draw: "10 Units" },
+  { name: "TB-500", vial: "5mg", bac: "2ml", dose: "2.5mg", freq: "2x Weekly", draw: "100 Units" },
+  { name: "Semaglutide", vial: "5mg", bac: "2ml", dose: "0.25mg", freq: "1x Weekly", draw: "10 Units" },
+  { name: "Tirzepatide", vial: "10mg", bac: "2ml", dose: "2.5mg", freq: "1x Weekly", draw: "50 Units" },
+  { name: "Melanotan 2", vial: "10mg", bac: "2ml", dose: "250mcg", freq: "Daily (Pre-UV)", draw: "5 Units" },
+  { name: "GHK-Cu", vial: "50mg", bac: "5ml", dose: "2mg", freq: "1x Daily", draw: "20 Units" },
+  { name: "CJC-1295 (No DAC)", vial: "2mg", bac: "1ml", dose: "100mcg", freq: "1-3x Daily", draw: "5 Units" },
+  { name: "Retatrutide", vial: "10mg", bac: "2ml", dose: "2mg", freq: "1x Weekly", draw: "40 Units" },
+  { name: "Ipamorelin", vial: "5mg", bac: "2ml", dose: "200mcg", freq: "1-3x Daily", draw: "8 Units" },
+];
 
 export default function Calculator() {
   const { peptideId } = useParams();
@@ -133,7 +148,7 @@ export default function Calculator() {
   }, [vialSizeMg, waterAmountMl, doseMcg, syringeSize]);
 
   const activeTitle = dbData?.name
-    ? `${dbData.name} Dosage Calculator | Reconstitution Guide & Chart`
+    ? `${dbData.name} Dosage Calculator | Reconstitution Guide & Protocols`
     : "Peptide Dosage Calculator | BPC-157, TB-500 Reconstitution";
 
   const activeDesc = dbData?.calc_description
@@ -359,11 +374,101 @@ export default function Calculator() {
         </div>
       </div>
 
+      {/* --- NEW: STYLISH DOSAGE PROTOCOLS --- */}
+      <div className="seo-section-wrapper" style={{ marginTop: "60px" }}>
+        <h2 className="seo-section-title text-center" style={{ marginBottom: "10px" }}>
+          Standard Dosage Protocols
+        </h2>
+        <p className="calc-subtitle" style={{ margin: "0 auto 40px", textAlign: "center", maxWidth: "600px" }}>
+          Industry-standard starting protocols based on the most common vial sizes and target research goals.
+        </p>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: "24px"
+        }}>
+          {DOSAGE_PROTOCOLS.map((protocol) => (
+            <div key={protocol.name} style={{
+              background: "white",
+              borderRadius: "16px",
+              border: "1px solid #e2e8f0",
+              overflow: "hidden",
+              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)"
+            }}>
+              <div style={{
+                background: "#f8fafc",
+                borderBottom: "1px solid #e2e8f0",
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px"
+              }}>
+                <TestTube size={20} color="#4635de" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#0f172a" }}>{protocol.name}</h3>
+              </div>
+              
+              <div style={{ padding: "20px" }}>
+                {/* Prep Row */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px dashed #e2e8f0" }}>
+                  <div>
+                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Vial Size</p>
+                    <p style={{ margin: 0, fontWeight: "700", color: "#334155" }}>{protocol.vial} (in 3ml vial)</p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Add Bac Water</p>
+                    <p style={{ margin: 0, fontWeight: "700", color: "#334155", display: "flex", alignItems: "center", gap: "4px", justifyContent: "flex-end" }}>
+                      <Droplet size={14} color="#0ea5e9" /> {protocol.bac}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dose Row */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+                  <div>
+                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Starting Dose</p>
+                    <p style={{ margin: 0, fontWeight: "800", color: "#0f172a", fontSize: "1.1rem" }}>{protocol.dose}</p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Frequency</p>
+                    <p style={{ margin: 0, fontWeight: "600", color: "#475569", display: "flex", alignItems: "center", gap: "4px", justifyContent: "flex-end" }}>
+                      <Clock size={14} /> {protocol.freq}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Result Block */}
+                <div style={{
+                  background: "#eff6ff",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}>
+                  <span style={{ fontWeight: "700", color: "#1e40af", fontSize: "0.95rem" }}>Syringe Draw:</span>
+                  <span style={{ 
+                    background: "#2563eb", 
+                    color: "white", 
+                    padding: "6px 12px", 
+                    borderRadius: "8px", 
+                    fontWeight: "800",
+                    fontSize: "1rem"
+                  }}>
+                    {protocol.draw}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* THE DYNAMIC DATABASE CONTENT INJECTION */}
       {dbData && (
         <div
           className="seo-section-wrapper"
-          style={{ marginTop: "40px", paddingTop: "40px" }}
+          style={{ marginTop: "60px", paddingTop: "20px" }}
         >
           <div
             style={{
@@ -530,87 +635,6 @@ export default function Calculator() {
       </div>
 
       <div className="seo-section-wrapper">
-        <h2 className="seo-section-title text-center">
-          Peptide Dosage Chart & Cheat Sheet
-        </h2>
-        <p
-          className="calc-subtitle"
-          style={{ margin: "0 auto 30px", textAlign: "center" }}
-        >
-          Quick reference dilution table for standard research protocols.
-        </p>
-        <div className="premium-table-wrapper">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Peptide Type</th>
-                <th>Vial Size</th>
-                <th>Water Added</th>
-                <th>Target Dose</th>
-                <th>Syringe Draw</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <strong>BPC-157</strong>
-                </td>
-                <td>3ml</td>
-                <td>2ml</td>
-                <td>250mcg</td>
-                <td className="highlight-cell">10 Units</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>TB-500</strong>
-                </td>
-                <td>3ml</td>
-                <td>2ml</td>
-                <td>2.5mg (2500mcg)</td>
-                <td className="highlight-cell">100 Units (1ml)</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Melanotan 2</strong>
-                </td>
-                <td>3ml</td>
-                <td>2ml</td>
-                <td>250mcg</td>
-                <td className="highlight-cell">5 Units</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>CJC-1295</strong>
-                </td>
-                <td>3ml</td>
-                <td>1ml</td>
-                <td>100mcg</td>
-                <td className="highlight-cell">5 Units</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Semaglutide</strong>
-                </td>
-                <td>3ml</td>
-                <td>2ml</td>
-                <td>250mcg</td>
-                <td className="highlight-cell">10 Units</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>GHK-Cu</strong>
-                </td>
-                <td>3ml</td>
-                <td>5ml</td>
-                <td>2mg (2000mcg)</td>
-                <td className="highlight-cell">20 Units</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="seo-section-wrapper">
         <h3 className="seo-section-subtitle">
           <Zap className="icon-blue" size={24} /> Quick Calculator Index
         </h3>
@@ -691,7 +715,6 @@ export default function Calculator() {
             </Link>
           </div>
 
-          {/* A few new dynamic links added for internal authority */}
           <div className="quick-index-card">
             <h4 className="quick-index-title">Cagrilintide</h4>
             <p className="quick-index-formula">

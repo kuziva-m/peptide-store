@@ -18,7 +18,6 @@ import ReconstitutionGuide from "./pages/ReconstitutionGuide";
 import HalfLifeChart from "./pages/HalfLifeChart";
 
 const Shop = lazy(() => import("./pages/Shop"));
-const Admin = lazy(() => import("./pages/Admin"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Shipping = lazy(() => import("./pages/Shipping"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -83,7 +82,6 @@ function App() {
 
   // Hide layout on specific pages
   const isHiddenPage =
-    location.pathname.startsWith("/admin") ||
     location.pathname === "/landing" ||
     location.pathname === "/checkout" ||
     location.pathname === "/creator-studio";
@@ -124,7 +122,6 @@ function App() {
 
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/write-review" element={<WriteReview />} />
-            <Route path="/admin" element={<Admin />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/privacy" element={<Privacy />} />
