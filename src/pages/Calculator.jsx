@@ -59,7 +59,7 @@ const MATH_DEFAULTS = {
   "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 2, mcg: 200 },
 };
 
-// --- NEW: COMPREHENSIVE DOSAGE PROTOCOL LIBRARY ---
+// --- COMPREHENSIVE DOSAGE PROTOCOL LIBRARY ---
 const ALL_PROTOCOLS = [
   {
     name: "BPC-157",
@@ -348,7 +348,7 @@ export default function Calculator() {
         })}
       </script>
 
-      {/* NEW: THE AUDITOR'S FAQ SCHEMA INJECTION */}
+      {/* THE AUDITOR'S FAQ SCHEMA INJECTION */}
       {dbData?.calc_faq && dbData.calc_faq.length > 0 && (
         <script type="application/ld+json">
           {JSON.stringify({
@@ -542,7 +542,7 @@ export default function Calculator() {
         </div>
       </div>
 
-      {/* --- NEW: COMPREHENSIVE DOSAGE PROTOCOL TABLE --- */}
+      {/* --- COMPREHENSIVE DOSAGE PROTOCOL TABLE --- */}
       <div className="seo-section-wrapper" style={{ marginTop: "60px" }}>
         <h2
           className="seo-section-title text-center"
@@ -681,6 +681,7 @@ export default function Calculator() {
                   >
                     <TestTube size={16} color="#4635de" /> {protocol.name}
                   </td>
+                  {/* Hardcoded 3ml as requested */}
                   <td
                     style={{
                       padding: "16px 20px",
@@ -688,7 +689,7 @@ export default function Calculator() {
                       fontWeight: "600",
                     }}
                   >
-                    {protocol.vial}
+                    3ml
                   </td>
                   <td
                     style={{
