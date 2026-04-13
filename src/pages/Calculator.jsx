@@ -7,12 +7,9 @@ import {
   Calculator as CalcIcon,
   Syringe,
   TestTube,
-  Zap,
   BookOpen,
   ShieldCheck,
   AlertTriangle,
-  Droplet,
-  Clock,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import "./Calculator.css";
@@ -23,7 +20,6 @@ const SYRINGE_SIZES = [
   { size: 1.0, label: "1.0ml (100 Units)", short: "1.0ml" },
 ];
 
-// Fully expanded defaults for instant UX snapping
 const MATH_DEFAULTS = {
   default: { mg: 5, ml: 2, mcg: 250 },
   "bpc-157": { mg: 5, ml: 2, mcg: 250 },
@@ -63,17 +59,189 @@ const MATH_DEFAULTS = {
   "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 2, mcg: 200 },
 };
 
-// --- NEW: DOSAGE PROTOCOL LIBRARY ---
-const DOSAGE_PROTOCOLS = [
-  { name: "BPC-157", vial: "5mg", bac: "2ml", dose: "250mcg", freq: "1-2x Daily", draw: "10 Units" },
-  { name: "TB-500", vial: "5mg", bac: "2ml", dose: "2.5mg", freq: "2x Weekly", draw: "100 Units" },
-  { name: "Semaglutide", vial: "5mg", bac: "2ml", dose: "0.25mg", freq: "1x Weekly", draw: "10 Units" },
-  { name: "Tirzepatide", vial: "10mg", bac: "2ml", dose: "2.5mg", freq: "1x Weekly", draw: "50 Units" },
-  { name: "Melanotan 2", vial: "10mg", bac: "2ml", dose: "250mcg", freq: "Daily (Pre-UV)", draw: "5 Units" },
-  { name: "GHK-Cu", vial: "50mg", bac: "5ml", dose: "2mg", freq: "1x Daily", draw: "20 Units" },
-  { name: "CJC-1295 (No DAC)", vial: "2mg", bac: "1ml", dose: "100mcg", freq: "1-3x Daily", draw: "5 Units" },
-  { name: "Retatrutide", vial: "10mg", bac: "2ml", dose: "2mg", freq: "1x Weekly", draw: "40 Units" },
-  { name: "Ipamorelin", vial: "5mg", bac: "2ml", dose: "200mcg", freq: "1-3x Daily", draw: "8 Units" },
+// --- NEW: COMPREHENSIVE DOSAGE PROTOCOL LIBRARY ---
+const ALL_PROTOCOLS = [
+  {
+    name: "BPC-157",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "250mcg",
+    draw: "10 Units",
+  },
+  {
+    name: "TB-500",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "2.5mg",
+    draw: "100 Units",
+  },
+  {
+    name: "Semaglutide",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "0.25mg",
+    draw: "10 Units",
+  },
+  {
+    name: "Tirzepatide",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "2.5mg",
+    draw: "50 Units",
+  },
+  {
+    name: "Retatrutide",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "2mg",
+    draw: "40 Units",
+  },
+  {
+    name: "Cagrilintide",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "0.25mg",
+    draw: "10 Units",
+  },
+  {
+    name: "Mazdutide",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "2.5mg",
+    draw: "50 Units",
+  },
+  {
+    name: "Survodutide",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "2.5mg",
+    draw: "50 Units",
+  },
+  {
+    name: "Melanotan 2",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "250mcg",
+    draw: "5 Units",
+  },
+  { name: "GHK-Cu", powder: "50mg", bac: "3ml", dose: "2mg", draw: "12 Units" },
+  {
+    name: "CJC-1295 (No DAC)",
+    powder: "2mg",
+    bac: "1ml",
+    dose: "100mcg",
+    draw: "5 Units",
+  },
+  {
+    name: "Ipamorelin",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "100mcg",
+    draw: "4 Units",
+  },
+  {
+    name: "CJC/Ipamorelin Blend",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "200mcg",
+    draw: "4 Units",
+  },
+  {
+    name: "Epitalon",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "1mg",
+    draw: "20 Units",
+  },
+  {
+    name: "HGH (191aa)",
+    powder: "10IU",
+    bac: "1ml",
+    dose: "1IU",
+    draw: "10 Units",
+  },
+  {
+    name: "IGF-1 LR3",
+    powder: "1mg",
+    bac: "1ml",
+    dose: "50mcg",
+    draw: "5 Units",
+  },
+  {
+    name: "GHRP-6",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "100mcg",
+    draw: "4 Units",
+  },
+  {
+    name: "GHRP-2",
+    powder: "5mg",
+    bac: "2ml",
+    dose: "100mcg",
+    draw: "4 Units",
+  },
+  {
+    name: "Tesamorelin",
+    powder: "2mg",
+    bac: "1ml",
+    dose: "1mg",
+    draw: "50 Units",
+  },
+  {
+    name: "Sermorelin",
+    powder: "2mg",
+    bac: "1ml",
+    dose: "200mcg",
+    draw: "10 Units",
+  },
+  {
+    name: "MOTS-c",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "5mg",
+    draw: "100 Units",
+  },
+  { name: "Semax", powder: "10mg", bac: "2ml", dose: "1mg", draw: "20 Units" },
+  { name: "Selank", powder: "10mg", bac: "2ml", dose: "1mg", draw: "20 Units" },
+  { name: "KPV", powder: "10mg", bac: "2ml", dose: "250mcg", draw: "5 Units" },
+  { name: "LL-37", powder: "5mg", bac: "2ml", dose: "100mcg", draw: "4 Units" },
+  {
+    name: "Thymosin Alpha-1",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "1.5mg",
+    draw: "30 Units",
+  },
+  {
+    name: "PT-141",
+    powder: "10mg",
+    bac: "2ml",
+    dose: "1.5mg",
+    draw: "30 Units",
+  },
+  { name: "NAD+", powder: "500mg", bac: "3ml", dose: "50mg", draw: "30 Units" },
+  {
+    name: "Tri-Heal Max",
+    powder: "45mg",
+    bac: "3ml",
+    dose: "250mcg",
+    draw: "1.7 Units",
+  },
+  {
+    name: "Wolverine Stack",
+    powder: "15mg",
+    bac: "2ml",
+    dose: "250mcg",
+    draw: "3.3 Units",
+  },
+  {
+    name: "Glow Blend",
+    powder: "70mg",
+    bac: "3ml",
+    dose: "1mg",
+    draw: "4.3 Units",
+  },
 ];
 
 export default function Calculator() {
@@ -374,93 +542,200 @@ export default function Calculator() {
         </div>
       </div>
 
-      {/* --- NEW: STYLISH DOSAGE PROTOCOLS --- */}
+      {/* --- NEW: COMPREHENSIVE DOSAGE PROTOCOL TABLE --- */}
       <div className="seo-section-wrapper" style={{ marginTop: "60px" }}>
-        <h2 className="seo-section-title text-center" style={{ marginBottom: "10px" }}>
+        <h2
+          className="seo-section-title text-center"
+          style={{ marginBottom: "10px" }}
+        >
           Standard Dosage Protocols
         </h2>
-        <p className="calc-subtitle" style={{ margin: "0 auto 40px", textAlign: "center", maxWidth: "600px" }}>
-          Industry-standard starting protocols based on the most common vial sizes and target research goals.
+        <p
+          className="calc-subtitle"
+          style={{
+            margin: "0 auto 40px",
+            textAlign: "center",
+            maxWidth: "600px",
+          }}
+        >
+          Industry-standard starting protocols based on common research goals.
+          <br />
+          <em>
+            Note: All calculations assume the standard 3ml physical glass vial.
+          </em>
         </p>
 
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          gap: "24px"
-        }}>
-          {DOSAGE_PROTOCOLS.map((protocol) => (
-            <div key={protocol.name} style={{
-              background: "white",
-              borderRadius: "16px",
-              border: "1px solid #e2e8f0",
-              overflow: "hidden",
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)"
-            }}>
-              <div style={{
-                background: "#f8fafc",
-                borderBottom: "1px solid #e2e8f0",
-                padding: "16px 20px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px"
-              }}>
-                <TestTube size={20} color="#4635de" />
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#0f172a" }}>{protocol.name}</h3>
-              </div>
-              
-              <div style={{ padding: "20px" }}>
-                {/* Prep Row */}
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px dashed #e2e8f0" }}>
-                  <div>
-                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Vial Size</p>
-                    <p style={{ margin: 0, fontWeight: "700", color: "#334155" }}>{protocol.vial} (in 3ml vial)</p>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Add Bac Water</p>
-                    <p style={{ margin: 0, fontWeight: "700", color: "#334155", display: "flex", alignItems: "center", gap: "4px", justifyContent: "flex-end" }}>
-                      <Droplet size={14} color="#0ea5e9" /> {protocol.bac}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Dose Row */}
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-                  <div>
-                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Starting Dose</p>
-                    <p style={{ margin: 0, fontWeight: "800", color: "#0f172a", fontSize: "1.1rem" }}>{protocol.dose}</p>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ margin: "0 0 4px 0", fontSize: "0.8rem", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Frequency</p>
-                    <p style={{ margin: 0, fontWeight: "600", color: "#475569", display: "flex", alignItems: "center", gap: "4px", justifyContent: "flex-end" }}>
-                      <Clock size={14} /> {protocol.freq}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Result Block */}
-                <div style={{
-                  background: "#eff6ff",
-                  padding: "16px",
-                  borderRadius: "12px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
-                  <span style={{ fontWeight: "700", color: "#1e40af", fontSize: "0.95rem" }}>Syringe Draw:</span>
-                  <span style={{ 
-                    background: "#2563eb", 
-                    color: "white", 
-                    padding: "6px 12px", 
-                    borderRadius: "8px", 
+        <div
+          className="premium-table-wrapper"
+          style={{
+            overflowX: "auto",
+            background: "white",
+            borderRadius: "16px",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+          }}
+        >
+          <table
+            className="premium-table"
+            style={{
+              width: "100%",
+              minWidth: "800px",
+              borderCollapse: "collapse",
+              textAlign: "left",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: "#f8fafc",
+                  borderBottom: "2px solid #e2e8f0",
+                }}
+              >
+                <th
+                  style={{
+                    padding: "16px 20px",
+                    color: "#64748b",
+                    fontSize: "0.85rem",
                     fontWeight: "800",
-                    fontSize: "1rem"
-                  }}>
-                    {protocol.draw}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Peptide Name
+                </th>
+                <th
+                  style={{
+                    padding: "16px 20px",
+                    color: "#64748b",
+                    fontSize: "0.85rem",
+                    fontWeight: "800",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Vial Size
+                </th>
+                <th
+                  style={{
+                    padding: "16px 20px",
+                    color: "#64748b",
+                    fontSize: "0.85rem",
+                    fontWeight: "800",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Powder
+                </th>
+                <th
+                  style={{
+                    padding: "16px 20px",
+                    color: "#64748b",
+                    fontSize: "0.85rem",
+                    fontWeight: "800",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Bac Water
+                </th>
+                <th
+                  style={{
+                    padding: "16px 20px",
+                    color: "#64748b",
+                    fontSize: "0.85rem",
+                    fontWeight: "800",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Starting Dose
+                </th>
+                <th
+                  style={{
+                    padding: "16px 20px",
+                    color: "#4635de",
+                    fontSize: "0.85rem",
+                    fontWeight: "800",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Syringe Draw (U-100)
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALL_PROTOCOLS.map((protocol, index) => (
+                <tr
+                  key={index}
+                  style={{
+                    borderBottom: "1px solid #f1f5f9",
+                    transition: "background 0.2s",
+                    "&:hover": { background: "#f8fafc" },
+                  }}
+                >
+                  <td
+                    style={{
+                      padding: "16px 20px",
+                      fontWeight: "700",
+                      color: "#0f172a",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <TestTube size={16} color="#4635de" /> {protocol.name}
+                  </td>
+                  <td
+                    style={{
+                      padding: "16px 20px",
+                      color: "#475569",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {protocol.vial}
+                  </td>
+                  <td
+                    style={{
+                      padding: "16px 20px",
+                      color: "#0f172a",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {protocol.powder}
+                  </td>
+                  <td
+                    style={{
+                      padding: "16px 20px",
+                      color: "#0ea5e9",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {protocol.bac}
+                  </td>
+                  <td
+                    style={{
+                      padding: "16px 20px",
+                      color: "#0f172a",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {protocol.dose}
+                  </td>
+                  <td style={{ padding: "16px 20px" }}>
+                    <span
+                      style={{
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        border: "1px solid #bfdbfe",
+                        padding: "6px 12px",
+                        borderRadius: "8px",
+                        fontWeight: "800",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      {protocol.draw}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -630,112 +905,6 @@ export default function Calculator() {
               Input the exact microgram (mcg) dosage required for your subject
               to instantly view the required unit draw.
             </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="seo-section-wrapper">
-        <h3 className="seo-section-subtitle">
-          <Zap className="icon-blue" size={24} /> Quick Calculator Index
-        </h3>
-
-        <div className="quick-index-grid">
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">Melanotan 2</h4>
-            <p className="quick-index-formula">
-              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
-            </p>
-            <Link
-              to="/peptide-calculator/melanotan-2"
-              className="quick-index-link"
-            >
-              MT2 Calculator →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">CJC-1295</h4>
-            <p className="quick-index-formula">
-              2mg + 1ml = <span className="formula-highlight">2mg/ml</span>
-            </p>
-            <Link
-              to="/peptide-calculator/cjc-1295"
-              className="quick-index-link"
-            >
-              CJC Calculator →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">Ipamorelin</h4>
-            <p className="quick-index-formula">
-              5mg + 2ml = <span className="formula-highlight">2.5mg/ml</span>
-            </p>
-            <Link
-              to="/peptide-calculator/ipamorelin"
-              className="quick-index-link"
-            >
-              Ipamorelin Calc →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">Epitalon</h4>
-            <p className="quick-index-formula">
-              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
-            </p>
-            <Link
-              to="/peptide-calculator/epitalon"
-              className="quick-index-link"
-            >
-              Epitalon Calc →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">GHK-Cu</h4>
-            <p className="quick-index-formula">
-              50mg + 5ml = <span className="formula-highlight">10mg/ml</span>
-            </p>
-            <Link to="/peptide-calculator/ghk-cu" className="quick-index-link">
-              GHK-Cu Calc →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">HGH (191aa)</h4>
-            <p className="quick-index-formula">
-              10IU + 1ml = <span className="formula-highlight">10IU/ml</span>
-            </p>
-            <Link
-              to="/peptide-calculator/hgh-191aa"
-              className="quick-index-link"
-            >
-              HGH Calc →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">Cagrilintide</h4>
-            <p className="quick-index-formula">
-              5mg + 2ml = <span className="formula-highlight">2.5mg/ml</span>
-            </p>
-            <Link
-              to="/peptide-calculator/cagrilintide"
-              className="quick-index-link"
-            >
-              Cagrilintide Calc →
-            </Link>
-          </div>
-
-          <div className="quick-index-card">
-            <h4 className="quick-index-title">MOTS-c</h4>
-            <p className="quick-index-formula">
-              10mg + 2ml = <span className="formula-highlight">5mg/ml</span>
-            </p>
-            <Link to="/peptide-calculator/mots-c" className="quick-index-link">
-              MOTS-c Calc →
-            </Link>
           </div>
         </div>
       </div>
