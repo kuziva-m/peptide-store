@@ -16,7 +16,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
     }
   };
 
-  // UPDATED: Clears search AND navigates to Home
+  // Clears search AND navigates to Home
   const handleClearSearch = () => {
     setSearchQuery("");
     navigate("/");
@@ -67,7 +67,7 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
         </div>
       </div>
 
-      {/* NEW LOCATION: MOBILE SEARCH BAR (Always visible on mobile) */}
+      {/* MOBILE SEARCH BAR (Always visible on mobile) */}
       <div className="mobile-search-wrapper">
         <div className="mobile-search-inner">
           <Search size={18} className="mobile-search-icon" />
@@ -119,13 +119,16 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
           >
             Peptide Calculator
           </Link>
+
+          {/* --- NEW RECONSTITUTION GUIDE LINK --- */}
           <Link
-            to="/contact"
+            to="/peptide-reconstitution-guide"
             className="nav-link"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            Contact
+            Reconstitution Guide
           </Link>
+
           <Link
             to="/faq"
             className="nav-link"
@@ -139,6 +142,13 @@ export default function Navbar({ searchQuery, setSearchQuery }) {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Track Order
+          </Link>
+          <Link
+            to="/contact"
+            className="nav-link"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Contact
           </Link>
         </div>
       </div>

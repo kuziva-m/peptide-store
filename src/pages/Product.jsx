@@ -23,6 +23,7 @@ import { getRelatedProductSlugsForProduct } from "../lib/productRelationships";
 import "./Product.css";
 
 // --- PRE-DEFINED PEPTIDE RESEARCH PROFILES ---
+// --- PRE-DEFINED PEPTIDE RESEARCH PROFILES ---
 const PEPTIDE_PROFILES = {
   retatrutide: {
     overview:
@@ -67,7 +68,7 @@ const PEPTIDE_PROFILES = {
         "Maintain current dose if gastrointestinal distress occurs",
       ],
     },
-    combos: ["Cagrilintide", "Tesofensine", "MOTS-c"],
+    combos: ["Cagrilintide", "MOTS-c", "AOD-9604"],
   },
   semaglutide: {
     overview:
@@ -105,9 +106,9 @@ const PEPTIDE_PROFILES = {
         "Local administration near study site is common but not required",
       ],
     },
-    combos: ["TB-500", "GHK-Cu", "CJC-1295"],
+    combos: ["TB-500", "GHK-Cu", "CJC-1295 No DAC"],
   },
-  "tb-500": {
+  "tb-500-tb4": {
     overview:
       "TB-500 is a synthetic version of Thymosin Beta-4. It is widely researched for its role in upregulating actin, promoting cell migration, and accelerating muscle recovery, wound healing, and reducing systemic inflammation.",
     dosage: {
@@ -126,39 +127,6 @@ const PEPTIDE_PROFILES = {
     },
     combos: ["BPC-157", "Ipamorelin", "GHK-Cu"],
   },
-  "melanotan-2": {
-    overview:
-      "Melanotan 2 (MT2) is a synthetic analog of alpha-melanocyte-stimulating hormone (α-MSH). It is heavily researched for its ability to stimulate melanogenesis (skin pigmentation) and its secondary effects on libido and appetite suppression.",
-    dosage: {
-      phases: [
-        { phase: "Loading Phase", dose: "250mcg daily (prior to UV exposure)" },
-        { phase: "Maintenance Phase", dose: "250mcg to 500mcg 1-2x per week" },
-      ],
-      rules: [
-        "Start extremely low (100mcg) to assess nausea tolerance",
-        "Requires UV exposure to trigger pigmentation process",
-        "Do not exceed 500mcg per administration",
-        "Dose at night to mitigate transient flushing/nausea",
-      ],
-    },
-    combos: ["PT-141", "BPC-157"],
-  },
-  "ghk-cu": {
-    overview:
-      "GHK-Cu (Copper Peptide) is a naturally occurring copper complex. It is actively researched for its profound anti-aging properties, ability to improve skin elasticity, stimulate blood vessel growth, and accelerate wound healing.",
-    dosage: {
-      phases: [
-        { phase: "Standard Protocol", dose: "1.5mg to 2mg once daily" },
-        { phase: "Alternative Protocol", dose: "5mg twice per week" },
-      ],
-      rules: [
-        "Cycle for 30 days, followed by 30 days off",
-        "Can cause injection site pip (stinging) - dilute with extra Bac water",
-        "Monitor zinc levels during extended research periods",
-      ],
-    },
-    combos: ["BPC-157", "Epitalon", "CJC-1295"],
-  },
   cagrilintide: {
     overview:
       "Cagrilintide is an amylin analog primarily researched as a combination therapy alongside GLP-1 agonists. It targets amylin receptors to significantly delay gastric emptying and enhance feelings of satiety.",
@@ -176,6 +144,516 @@ const PEPTIDE_PROFILES = {
       ],
     },
     combos: ["Retatrutide", "Tirzepatide", "Semaglutide"],
+  },
+  "aod-9604": {
+    overview:
+      "AOD-9604 is a modified fragment of Human Growth Hormone (HGH) isolated for its lipolytic (fat-burning) properties. Research indicates it stimulates lipolysis and inhibits lipogenesis without affecting blood sugar or tissue growth.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "300mcg once daily" },
+        {
+          phase: "Advanced Protocol",
+          dose: "250mcg twice daily (morning & pre-workout)",
+        },
+      ],
+      rules: [
+        "Administer fasted for optimal lipid mobilization",
+        "Do not consume calories for 30-60 minutes post-administration",
+        "Standard cycle length is 8 to 12 weeks",
+      ],
+    },
+    combos: ["Semaglutide", "Tirzepatide", "MOTS-c"],
+  },
+  "pt-141": {
+    overview:
+      "PT-141 (Bremelanotide) is a melanocortin receptor agonist developed from Melanotan II. It is primarily researched for its profound effects on sexual arousal and dysfunction in both male and female subjects.",
+    dosage: {
+      phases: [
+        { phase: "Starting Protocol", dose: "1mg to 1.5mg as needed" },
+        { phase: "Maximum Protocol", dose: "2mg as needed" },
+      ],
+      rules: [
+        "Administer 2 to 4 hours prior to desired effect",
+        "Do not exceed 2mg in a 24-hour period",
+        "Do not exceed 8 doses per month",
+        "May cause transient nausea upon administration",
+      ],
+    },
+    combos: ["Melanotan II", "Oxytocin Acetate"],
+  },
+  "mots-c": {
+    overview:
+      "MOTS-c is a mitochondrial-derived peptide that regulates metabolic homeostasis. It is highly researched for its ability to promote AMP-activated protein kinase (AMPK), improving exercise capacity, insulin sensitivity, and cellular energy.",
+    dosage: {
+      phases: [
+        { phase: "Loading Phase", dose: "5mg to 10mg once per week" },
+        { phase: "Maintenance Phase", dose: "5mg every two weeks" },
+      ],
+      rules: [
+        "Administer 30-45 minutes pre-exercise for best systemic uptake",
+        "Requires large volumes of bacteriostatic water due to high milligram dosing",
+        "Use reconstituted solution immediately or within 14 days",
+      ],
+    },
+    combos: ["SS-31", "Retatrutide", "AOD-9604"],
+  },
+  "ghk-cu": {
+    overview:
+      "GHK-Cu (Copper Peptide) is a naturally occurring copper complex. It is actively researched for its profound anti-aging properties, ability to improve skin elasticity, stimulate blood vessel growth, and accelerate systemic wound healing.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "1.5mg to 2mg once daily" },
+        { phase: "Alternative Protocol", dose: "5mg twice per week" },
+      ],
+      rules: [
+        "Cycle for 30 days, followed by 30 days off",
+        "Can cause injection site pip (stinging) - dilute with extra Bac water",
+        "Monitor systemic zinc levels during extended research periods",
+      ],
+    },
+    combos: ["BPC-157", "Epitalon", "CJC-1295 No DAC"],
+  },
+  "hgh-191aa": {
+    overview:
+      "HGH (Somatropin 191aa) is a bio-identical synthetic human growth hormone. It is researched globally for its extensive role in cell regeneration, lean tissue accretion, lipid mobilization, and systemic recovery.",
+    dosage: {
+      phases: [
+        { phase: "Anti-Aging/Recovery", dose: "2 to 3 IU once daily" },
+        { phase: "Anabolic/Tissue Accretion", dose: "4 to 6 IU once daily" },
+      ],
+      rules: [
+        "Administer fasted in the morning or immediately before sleep",
+        "Cycles typically range from 3 to 6 months minimum",
+        "Store lyophilized powder and reconstituted solution in the refrigerator",
+      ],
+    },
+    combos: ["IGF-1 LR3", "Tesamorelin", "BPC-157"],
+  },
+  "melanotan-ii": {
+    overview:
+      "Melanotan II (MT2) is a synthetic analog of alpha-melanocyte-stimulating hormone (α-MSH). It is heavily researched for its ability to stimulate melanogenesis (skin pigmentation) and its secondary effects on libido and appetite suppression.",
+    dosage: {
+      phases: [
+        { phase: "Loading Phase", dose: "250mcg daily (prior to UV exposure)" },
+        { phase: "Maintenance Phase", dose: "250mcg to 500mcg 1-2x per week" },
+      ],
+      rules: [
+        "Start extremely low (100mcg) to assess nausea tolerance",
+        "Requires UV exposure to trigger the pigmentation process",
+        "Do not exceed 500mcg per administration",
+        "Dose at night to mitigate transient flushing/nausea",
+      ],
+    },
+    combos: ["PT-141", "BPC-157"],
+  },
+  "cjc-1295-no-dac": {
+    overview:
+      "CJC-1295 No DAC (Mod GRF 1-29) is a short-acting Growth Hormone Releasing Hormone (GHRH) analog. It is researched for its ability to mimic natural, physiological growth hormone pulses without elevating baseline serum levels long-term.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "100mcg 1-3 times daily" }],
+      rules: [
+        "Administer strictly on an empty stomach (fasted)",
+        "Do not consume carbohydrates or fats for 30 minutes post-dose",
+        "Highly synergistic when administered concurrently with a GHRP",
+      ],
+    },
+    combos: ["Ipamorelin", "GHRP-6", "GHRP-2"],
+  },
+  ipamorelin: {
+    overview:
+      "Ipamorelin is a selective pentapeptide ghrelin mimetic (GHRP). It stimulates a significant release of growth hormone without severely elevating cortisol or prolactin levels, making it a highly favorable research secretagogue.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "100mcg to 200mcg 1-3 times daily",
+        },
+      ],
+      rules: [
+        "Administer strictly on an empty stomach (fasted)",
+        "Do not consume carbohydrates or fats for 30 minutes post-dose",
+        "Typically stacked in the same syringe as CJC-1295",
+      ],
+    },
+    combos: ["CJC-1295 No DAC", "CJC-1295 with DAC"],
+  },
+  "cjc-1295-no-dac-plus-ipamorelin": {
+    overview:
+      "The CJC-1295 No DAC + Ipamorelin blend combines a GHRH and a GHRP. This synergistic formulation creates a robust, natural growth hormone pulse, amplifying the restorative properties of both compounds simultaneously.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "200mcg total blend (100mcg of each) 1-3 times daily",
+        },
+      ],
+      rules: [
+        "Administer strictly on an empty stomach (fasted)",
+        "Wait 30 minutes before consuming food",
+        "Dosing before bed maximizes the natural nocturnal GH pulse",
+      ],
+    },
+    combos: ["BPC-157", "TB-500", "GHK-Cu"],
+  },
+  epitalon: {
+    overview:
+      "Epitalon is a synthetic tetrapeptide heavily researched for its potential to activate telomerase, elongate telomeres, and regulate the circadian rhythm through pineal gland interaction.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "10mg daily for 10-20 days" },
+        { phase: "Micro-Dose Protocol", dose: "1mg to 3mg daily for 30 days" },
+      ],
+      rules: [
+        "Cycles are typically conducted 1 to 2 times per year",
+        "Administer in the morning or early afternoon",
+        "May improve deep sleep architecture",
+      ],
+    },
+    combos: ["GHK-Cu", "Pinealon", "Thymosin Alpha-1"],
+  },
+  "igf-1-lr3": {
+    overview:
+      "IGF-1 LR3 is a highly potent, lengthened analogue of human insulin-like growth factor 1. It has an extended half-life and is researched for profound cellular hyperplasia and metabolic nutrient partitioning.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "20mcg to 50mcg daily" }],
+      rules: [
+        "Administer daily for a maximum of 4 weeks",
+        "Requires 4 to 6 weeks off between cycles to restore receptor sensitivity",
+        "Monitor blood glucose levels due to nutrient partitioning effects",
+      ],
+    },
+    combos: ["HGH 191aa", "BPC-157"],
+  },
+  "wolverine-stack": {
+    overview:
+      "The Wolverine Stack is the ultimate tissue repair blend, combining TB-500 (systemic healing) and BPC-157 (localized repair). This combination is highly sought after for accelerated recovery from muscular, tendon, and ligament damage.",
+    dosage: {
+      phases: [
+        {
+          phase: "Acute Healing Phase",
+          dose: "Draw equivalent of 500mcg BPC / 1mg TB-500 daily",
+        },
+        {
+          phase: "Maintenance Phase",
+          dose: "Draw equivalent of 250mcg BPC / 500mcg TB-500 daily",
+        },
+      ],
+      rules: [
+        "Administer daily during the acute injury phase",
+        "Cycle lengths typically range from 4 to 6 weeks",
+        "Calculate unit draws carefully based on the specific mg blend ratio in the vial",
+      ],
+    },
+    combos: ["GHK-Cu", "CJC-1295 No DAC", "Ipamorelin"],
+  },
+  "ll-37": {
+    overview:
+      "LL-37 is an antimicrobial peptide (cathelicidin) known for its broad-spectrum defense against bacteria, enveloped viruses, and fungi. It is researched for its role in innate immune system regulation and biofilm degradation.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "100mcg once daily" }],
+      rules: [
+        "Typically cycled for 4 to 6 weeks",
+        "Can cause transient injection site irritation",
+        "Monitor for systemic inflammatory responses",
+      ],
+    },
+    combos: ["Thymosin Alpha-1", "BPC-157"],
+  },
+  "thymosin-alpha-1": {
+    overview:
+      "Thymosin Alpha-1 (TA1) is a naturally occurring peptide produced by the thymus gland. It is widely researched for its ability to modulate the immune system, enhance T-cell function, and combat chronic viral/fungal loads.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "1.5mg twice per week" },
+        { phase: "Acute Protocol", dose: "1mg daily" },
+      ],
+      rules: [
+        "Standard cycle lengths are 4 weeks",
+        "Highly stable once reconstituted",
+        "Excellent synergistic effects with other antimicrobial peptides",
+      ],
+    },
+    combos: ["LL-37", "BPC-157", "Epitalon"],
+  },
+  dsip: {
+    overview:
+      "Delta Sleep-Inducing Peptide (DSIP) is a neuromodulator researched for its ability to normalize sleep architecture, reduce stress, and influence circadian rhythms without the grogginess of traditional sedatives.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "100mcg to 250mcg as needed" },
+      ],
+      rules: [
+        "Administer 1 to 3 hours prior to sleep",
+        "Effects are cumulative; may take 3-4 days of use to observe deep sleep alterations",
+        "Do not exceed 500mcg per day",
+      ],
+    },
+    combos: ["Epitalon", "Selank", "Pinealon"],
+  },
+  "ss-31": {
+    overview:
+      "SS-31 (Elamipretide) is a novel mitochondrial-targeted peptide. It is uniquely capable of penetrating the inner mitochondrial membrane to restore cardiolipin, reducing oxidative stress and restoring cellular energy production.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "4mg once daily" }],
+      rules: [
+        "Standard cycles run from 4 to 8 weeks",
+        "Often utilized as a precursor cycle before running MOTS-c",
+        "Requires large volumes of bacteriostatic water for dilution",
+      ],
+    },
+    combos: ["MOTS-c", "NAD+", "Epitalon"],
+  },
+  "nad-plus": {
+    overview:
+      "Nicotinamide Adenine Dinucleotide (NAD+) is an essential coenzyme found in all living cells. Research focuses on its ability to repair DNA, upregulate sirtuins, and restore systemic cellular energy levels.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "50mg to 100mg once or twice weekly",
+        },
+      ],
+      rules: [
+        "Highly notorious for causing injection site pain and flushing",
+        "Must be diluted with significant amounts of bacteriostatic water",
+        "Administer very slowly to mitigate discomfort",
+      ],
+    },
+    combos: ["SS-31", "MOTS-c", "Glutathione"],
+  },
+  glutathione: {
+    overview:
+      "Glutathione is the body's master antioxidant. It is crucial for neutralizing free radicals, detoxifying hepatic (liver) pathways, and maintaining cellular redox balance during high-stress research protocols.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "200mg 1-3 times per week" },
+      ],
+      rules: [
+        "Requires large volumes of solvent due to high milligram requirements",
+        "Best utilized concurrently with other oxidative-stress inducing compounds",
+        "Keep refrigerated immediately upon mixing",
+      ],
+    },
+    combos: ["NAD+", "GHK-Cu", "SS-31"],
+  },
+  "5-amino-1-mq": {
+    overview:
+      "5-Amino-1MQ is a small molecule NNMT inhibitor. While technically not a peptide, it is highly researched for its ability to prevent fat cell growth, increase basal metabolic rate, and reverse diet-induced obesity.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "50mg to 150mg daily (Oral/Capsule typically)",
+        },
+      ],
+      rules: [
+        "Often utilized in oral capsule form rather than subcutaneous injection",
+        "Does not require PCT or cycling",
+        "Highly synergistic with GLP-1 agonists",
+      ],
+    },
+    combos: ["Retatrutide", "Tirzepatide", "AOD-9604"],
+  },
+  tesamorelin: {
+    overview:
+      "Tesamorelin is an extremely potent, stabilized form of Growth Hormone-Releasing Hormone (GHRH). It is FDA-approved under the brand name Egrifta for reducing visceral adipose tissue (visceral belly fat).",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "1mg to 2mg once daily" }],
+      rules: [
+        "Administer strictly on an empty stomach (fasted) before bed",
+        "Most studies track visceral fat reduction over 12 to 24 weeks",
+        "Do not consume food for at least 60 minutes after administration",
+      ],
+    },
+    combos: ["Ipamorelin", "AOD-9604", "Semaglutide"],
+  },
+  sermorelin: {
+    overview:
+      "Sermorelin is a 29-amino acid polypeptide representing the shortest functional fragment of GHRH. It is widely used to gently stimulate the pituitary gland to produce natural pulses of growth hormone.",
+    dosage: {
+      phases: [
+        { phase: "Standard Protocol", dose: "200mcg to 300mcg once daily" },
+      ],
+      rules: [
+        "Administer right before bed on an empty stomach",
+        "Usually run in 3 to 6 month cycles for anti-aging observation",
+        "Pairs exceptionally well with GHRPs",
+      ],
+    },
+    combos: ["GHRP-2", "GHRP-6", "Ipamorelin"],
+  },
+  "ghrp-2": {
+    overview:
+      "GHRP-2 (Pralmorelin) is a synthetic hexapeptide growth hormone secretagogue. It triggers a massive release of growth hormone but also causes slight elevations in prolactin, cortisol, and appetite.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "100mcg to 150mcg 1-3 times daily",
+        },
+      ],
+      rules: [
+        "Administer fasted for optimal release",
+        "Slightly stronger GH pulse than Ipamorelin, but with minor side-effect profiles",
+        "Always stack with a GHRH",
+      ],
+    },
+    combos: ["CJC-1295 No DAC", "Sermorelin"],
+  },
+  "ghrp-6": {
+    overview:
+      "GHRP-6 is a first-generation growth hormone secretagogue notorious for inducing intense hunger shortly after administration, making it highly valuable for research involving cachexia or mass-accretion.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "100mcg to 150mcg 1-3 times daily",
+        },
+      ],
+      rules: [
+        "Expect profound hunger 20-30 minutes post-administration",
+        "Administer fasted for maximum GH release",
+        "Elevates cortisol and prolactin slightly more than GHRP-2",
+      ],
+    },
+    combos: ["CJC-1295 No DAC", "Sermorelin"],
+  },
+  selank: {
+    overview:
+      "Selank is a synthetic heptapeptide developed by the Russian Institute of Molecular Genetics. It is heavily researched for its profound anxiolytic (anti-anxiety), neuroprotective, and cognitive-enhancing effects.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "250mcg to 500mcg daily" }],
+      rules: [
+        "Often researched via intranasal administration due to rapid blood-brain barrier crossing",
+        "Can be used systemically (sub-q) with similar efficacy",
+        "Cycle for 14-30 days as needed for stress regulation",
+      ],
+    },
+    combos: ["Semax", "DSIP", "Pinealon"],
+  },
+  semax: {
+    overview:
+      "Semax is a neuroactive peptide derived from ACTH. It is highly valued in cognitive research for significantly improving memory, focus, neurogenesis, and mitigating the effects of ischemic stroke.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "250mcg to 500mcg daily" }],
+      rules: [
+        "Often researched via intranasal administration",
+        "Can be stimulating; avoid taking immediately before sleep",
+        "Cycles generally last 14-30 days",
+      ],
+    },
+    combos: ["Selank", "Pinealon"],
+  },
+  kpv: {
+    overview:
+      "KPV is a naturally occurring tripeptide (Lys-Pro-Val) that forms the C-terminal of alpha-MSH. It possesses incredibly potent anti-inflammatory properties, particularly in gastrointestinal and dermatological research.",
+    dosage: {
+      phases: [{ phase: "Systemic Protocol", dose: "200mcg to 500mcg daily" }],
+      rules: [
+        "Can be administered sub-q, orally, or topically depending on the research site",
+        "Excellent synergistic effects when combined with BPC-157 for gut repair",
+        "No known cycle duration limits",
+      ],
+    },
+    combos: ["BPC-157", "TB-500", "GHK-Cu"],
+  },
+  pinealon: {
+    overview:
+      "Pinealon is a short, synthetic peptide composed of three amino acids. It interacts directly with DNA to protect brain cells from hypoxia, aging, and oxidative stress, improving cognitive function and memory.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "1mg to 2mg daily" }],
+      rules: [
+        "Typically administered in short 10 to 20-day cycles",
+        "Administer in the morning",
+        "Highly effective for central nervous system restoration",
+      ],
+    },
+    combos: ["Semax", "Selank", "Epitalon"],
+  },
+  "oxytocin-acetate": {
+    overview:
+      "Oxytocin is a naturally occurring neuro-peptide commonly known as the 'bonding hormone'. In research, it is studied for its role in social bonding, anxiety reduction, and libido enhancement.",
+    dosage: {
+      phases: [{ phase: "Standard Protocol", dose: "10IU to 20IU as needed" }],
+      rules: [
+        "Often administered intranasally for rapid psychological effects",
+        "Can be administered sub-q for systemic research",
+        "Short half-life; effects are transient",
+      ],
+    },
+    combos: ["PT-141", "Selank"],
+  },
+  "kisspeptin-10": {
+    overview:
+      "Kisspeptin-10 is a vital neuropeptide responsible for triggering the release of Gonadotropin-Releasing Hormone (GnRH). It is heavily researched for restoring natural testosterone production and fertility pathways.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "100mcg to 200mcg 1-3 times per week",
+        },
+      ],
+      rules: [
+        "Highly potent stimulator of the HPTA axis",
+        "Requires careful cycling to prevent receptor desensitization",
+        "Do not over-dilute; small injection volumes are preferred",
+      ],
+    },
+    combos: ["HGH 191aa", "PT-141"],
+  },
+  "slu-pp-322": {
+    overview:
+      "SLU-PP-332 is a novel ERR (Estrogen Related Receptor) agonist. Research indicates it mimics the metabolic and cardiovascular effects of rigorous exercise, driving muscle adaptation and fat loss without physical activity.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "Dosages vary widely in current literature (novel compound)",
+        },
+      ],
+      rules: [
+        "As a highly novel research chemical, observe all subjects closely",
+        "Monitor cardiovascular metrics",
+        "Synergistic with other mitochondrial up-regulators",
+      ],
+    },
+    combos: ["MOTS-c", "SS-31", "Retatrutide"],
+  },
+  "glow-blend": {
+    overview:
+      "The Glow Blend is a targeted regenerative stack combining BPC-157, TB-500, and GHK-Cu. It is formulated to simultaneously upregulate systemic wound healing, reduce inflammation, and drastically improve collagen synthesis.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "Varies based on vial concentration",
+        },
+      ],
+      rules: [
+        "Due to the high copper content, dilution with extra bacteriostatic water is recommended",
+        "Can cause transient site irritation (pip)",
+        "Cycle for 4 to 6 weeks",
+      ],
+    },
+    combos: ["Epitalon", "HGH 191aa"],
+  },
+  "klow-blend": {
+    overview:
+      "The Klow Blend is the ultimate systemic recovery and anti-inflammatory formulation. It integrates BPC-157, TB-500, GHK-Cu, and KPV, creating a profound multi-pathway response for gut repair, joint recovery, and skin elasticity.",
+    dosage: {
+      phases: [
+        {
+          phase: "Standard Protocol",
+          dose: "Varies based on vial concentration",
+        },
+      ],
+      rules: [
+        "Due to the GHK-Cu content, dilution with extra bacteriostatic water is recommended to prevent stinging",
+        "Administer sub-q daily during acute healing phases",
+        "Excellent for subjects with auto-immune or systemic inflammation models",
+      ],
+    },
+    combos: ["HGH 191aa", "LL-37"],
   },
 };
 

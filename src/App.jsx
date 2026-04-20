@@ -8,6 +8,7 @@ import WhatsAppButton from "./components/WhatsAppButton";
 import Toast from "./components/Toast";
 import AnnouncementBar from "./components/AnnouncementBar";
 import DiscountPopup from "./components/DiscountPopup";
+import Admin from "./pages/Admin";
 
 // Keep the homepage and SEO-critical public routes eager
 import Home from "./pages/Home";
@@ -80,8 +81,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
 
-  // Hide layout on specific pages
+  // FIX: Added .startsWith("/admin") to ensure the admin panel is completely independent
   const isHiddenPage =
+    location.pathname.startsWith("/admin") ||
     location.pathname === "/landing" ||
     location.pathname === "/checkout" ||
     location.pathname === "/creator-studio";
@@ -102,6 +104,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/shop" element={<Shop searchQuery={searchQuery} />} />
+
+            {/* FIX: Added /* to allow the Admin component to handle its own sub-routes */}
+            <Route path="/admin/*" element={<Admin />} />
 
             {/* SEO FIX: Use :slug instead of :id */}
             <Route path="/product/:slug" element={<Product />} />

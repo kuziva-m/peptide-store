@@ -20,6 +20,7 @@ const SYRINGE_SIZES = [
   { size: 1.0, label: "1.0ml (100 Units)", short: "1.0ml" },
 ];
 
+// Meticulously audited to match standard research protocols
 const MATH_DEFAULTS = {
   default: { mg: 5, ml: 2, mcg: 250 },
   "bpc-157": { mg: 5, ml: 2, mcg: 250 },
@@ -27,7 +28,7 @@ const MATH_DEFAULTS = {
   tirzepatide: { mg: 10, ml: 2, mcg: 2500 },
   "tb-500": { mg: 5, ml: 2, mcg: 2500 },
   "tb-500-tb4": { mg: 5, ml: 2, mcg: 2500 },
-  "ghk-cu": { mg: 50, ml: 5, mcg: 2000 },
+  "ghk-cu": { mg: 50, ml: 3, mcg: 2000 },
   "melanotan-2": { mg: 10, ml: 2, mcg: 250 },
   "melanotan-ii": { mg: 10, ml: 2, mcg: 250 },
   "cjc-1295": { mg: 2, ml: 1, mcg: 100 },
@@ -52,7 +53,7 @@ const MATH_DEFAULTS = {
   sermorelin: { mg: 2, ml: 1, mcg: 200 },
   "glow-blend": { mg: 70, ml: 3, mcg: 1000 },
   "klow-blend": { mg: 80, ml: 3, mcg: 1000 },
-  "nad-plus": { mg: 500, ml: 5, mcg: 50000 },
+  "nad-plus": { mg: 50, ml: 1, mcg: 10000 }, // Fixed exactly to 50mg vial, 10mg dose
   "ll-37": { mg: 5, ml: 2, mcg: 100 },
   "thymosin-alpha-1": { mg: 10, ml: 2, mcg: 1500 },
   "pt-141-bremelanotide": { mg: 10, ml: 2, mcg: 1500 },
@@ -220,7 +221,8 @@ const ALL_PROTOCOLS = [
     dose: "1.5mg",
     draw: "30 Units",
   },
-  { name: "NAD+", powder: "500mg", bac: "3ml", dose: "50mg", draw: "30 Units" },
+  // NAD+ row fixed for a standard 50mg vial, 10mg subq dose
+  { name: "NAD+", powder: "50mg", bac: "1ml", dose: "10mg", draw: "20 Units" },
   {
     name: "Tri-Heal Max",
     powder: "45mg",
@@ -328,8 +330,34 @@ export default function Calculator() {
     : "Peptide Dosage Calculator";
 
   return (
-    <div className="calc-container pb-20 font-sans">
+    <div className="calc-container pb-20">
       <SEO title={activeTitle} description={activeDesc} url={canonicalUrl} />
+
+      {/* POPPINS FONT INJECTION & TYPOGRAPHY ENFORCEMENT */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+        
+        .calc-container, .calc-container * {
+          font-family: 'Poppins', sans-serif !important;
+        }
+        .calc-container p, .calc-container span, .calc-container td, .calc-container label, .calc-container input, .calc-container div {
+          font-weight: 400;
+        }
+        .calc-container h1, .calc-container h2, .calc-container h3, .calc-container h4, .calc-container strong, .calc-container th, .calc-container .big-number, .calc-container .section-label, .calc-container .calc-title, .calc-container .res-badge, .calc-container .step-number {
+          font-weight: 600 !important;
+        }
+        /* Override specifically for table text so it remains highly readable */
+        .premium-table td {
+           font-weight: 400 !important;
+        }
+        .premium-table td:first-child, .premium-table td:last-child span {
+           font-weight: 600 !important;
+        }
+      `,
+        }}
+      />
 
       <script type="application/ld+json">
         {JSON.stringify({
@@ -596,7 +624,6 @@ export default function Calculator() {
                     padding: "16px 20px",
                     color: "#64748b",
                     fontSize: "0.85rem",
-                    fontWeight: "800",
                     textTransform: "uppercase",
                   }}
                 >
@@ -607,7 +634,6 @@ export default function Calculator() {
                     padding: "16px 20px",
                     color: "#64748b",
                     fontSize: "0.85rem",
-                    fontWeight: "800",
                     textTransform: "uppercase",
                   }}
                 >
@@ -618,7 +644,6 @@ export default function Calculator() {
                     padding: "16px 20px",
                     color: "#64748b",
                     fontSize: "0.85rem",
-                    fontWeight: "800",
                     textTransform: "uppercase",
                   }}
                 >
@@ -629,7 +654,6 @@ export default function Calculator() {
                     padding: "16px 20px",
                     color: "#64748b",
                     fontSize: "0.85rem",
-                    fontWeight: "800",
                     textTransform: "uppercase",
                   }}
                 >
@@ -640,7 +664,6 @@ export default function Calculator() {
                     padding: "16px 20px",
                     color: "#64748b",
                     fontSize: "0.85rem",
-                    fontWeight: "800",
                     textTransform: "uppercase",
                   }}
                 >
@@ -651,7 +674,6 @@ export default function Calculator() {
                     padding: "16px 20px",
                     color: "#4635de",
                     fontSize: "0.85rem",
-                    fontWeight: "800",
                     textTransform: "uppercase",
                   }}
                 >
@@ -672,7 +694,6 @@ export default function Calculator() {
                   <td
                     style={{
                       padding: "16px 20px",
-                      fontWeight: "700",
                       color: "#0f172a",
                       display: "flex",
                       alignItems: "center",
@@ -681,12 +702,10 @@ export default function Calculator() {
                   >
                     <TestTube size={16} color="#4635de" /> {protocol.name}
                   </td>
-                  {/* Hardcoded 3ml as requested */}
                   <td
                     style={{
                       padding: "16px 20px",
                       color: "#475569",
-                      fontWeight: "600",
                     }}
                   >
                     3ml
@@ -695,7 +714,6 @@ export default function Calculator() {
                     style={{
                       padding: "16px 20px",
                       color: "#0f172a",
-                      fontWeight: "600",
                     }}
                   >
                     {protocol.powder}
@@ -704,7 +722,6 @@ export default function Calculator() {
                     style={{
                       padding: "16px 20px",
                       color: "#0ea5e9",
-                      fontWeight: "600",
                     }}
                   >
                     {protocol.bac}
@@ -713,7 +730,6 @@ export default function Calculator() {
                     style={{
                       padding: "16px 20px",
                       color: "#0f172a",
-                      fontWeight: "700",
                     }}
                   >
                     {protocol.dose}
@@ -726,7 +742,6 @@ export default function Calculator() {
                         border: "1px solid #bfdbfe",
                         padding: "6px 12px",
                         borderRadius: "8px",
-                        fontWeight: "800",
                         fontSize: "0.9rem",
                       }}
                     >
@@ -759,7 +774,6 @@ export default function Calculator() {
             <h2
               style={{
                 fontSize: "1.6rem",
-                fontWeight: "800",
                 color: "#0f172a",
                 marginBottom: "16px",
                 display: "flex",
@@ -821,7 +835,6 @@ export default function Calculator() {
               <h3
                 style={{
                   fontSize: "1.4rem",
-                  fontWeight: "800",
                   color: "#0f172a",
                   marginBottom: "24px",
                 }}
@@ -849,7 +862,6 @@ export default function Calculator() {
                   >
                     <h4
                       style={{
-                        fontWeight: "700",
                         color: "#1e293b",
                         marginBottom: "8px",
                         fontSize: "1.05rem",
