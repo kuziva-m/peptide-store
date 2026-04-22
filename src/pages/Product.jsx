@@ -23,7 +23,6 @@ import { getRelatedProductSlugsForProduct } from "../lib/productRelationships";
 import "./Product.css";
 
 // --- PRE-DEFINED PEPTIDE RESEARCH PROFILES ---
-// --- PRE-DEFINED PEPTIDE RESEARCH PROFILES ---
 const PEPTIDE_PROFILES = {
   retatrutide: {
     overview:
@@ -835,8 +834,6 @@ export default function Product() {
   const isPreorder = selectedVariant?.is_preorder === true;
   const isCurrentlyPurchasable =
     isMainProductInStock && (isSelectedVariantInStock || isPreorder);
-  const activeLabUrl =
-    selectedVariant?.lab_result_url || product.lab_result_url;
 
   const isAccessory =
     product.category === "Accessories" ||
@@ -845,10 +842,6 @@ export default function Product() {
   const seoCanonicalUrl = isAccessory
     ? absoluteUrl
     : `https://melbournepeptides.com.au/${slug}`;
-  const sizeLabel = selectedVariant?.size_label || "";
-  const numericMatch = sizeLabel.match(/\d+/);
-  const sizeNumber = numericMatch ? parseInt(numericMatch[0], 10) : 0;
-  const showFulfillmentNotice = sizeNumber > 10;
 
   // Retrieve Profile if available
   const profile =
@@ -1119,37 +1112,6 @@ export default function Product() {
                       : `Add to Cart - ${formatPrice(selectedVariant.price * quantity)}`}
             </button>
           </div>
-
-          {!isAccessory && showFulfillmentNotice && (
-            <div
-              style={{
-                marginTop: "-10px",
-                marginBottom: "30px",
-                padding: "12px 16px",
-                backgroundColor: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                borderRadius: "8px",
-                display: "flex",
-                gap: "12px",
-                alignItems: "flex-start",
-                color: "#1e3a8a",
-                fontSize: "0.85rem",
-                lineHeight: "1.5",
-              }}
-            >
-              <Info
-                size={18}
-                style={{ flexShrink: 0, marginTop: "2px" }}
-                color="#3b82f6"
-              />
-              <div>
-                <strong>Fulfillment Notice:</strong> To ensure the fastest
-                dispatch, your {sizeLabel} order may be fulfilled using a
-                combination of smaller vials (e.g. 2x 20mg or 4x 10mg) equating
-                to the exact total amount ordered.
-              </div>
-            </div>
-          )}
 
           {/* --- NEW: STRUCTURED RESEARCH PROFILE OR FALLBACK --- */}
           {!isAccessory && (
