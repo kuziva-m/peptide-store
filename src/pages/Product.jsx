@@ -835,6 +835,10 @@ export default function Product() {
   const isCurrentlyPurchasable =
     isMainProductInStock && (isSelectedVariantInStock || isPreorder);
 
+  // --- THE COA VARIABLE WAS STILL HERE ---
+  const activeLabUrl =
+    selectedVariant?.lab_result_url || product.lab_result_url;
+
   const isAccessory =
     product.category === "Accessories" ||
     product.category === "Syringes" ||
@@ -1036,6 +1040,35 @@ export default function Product() {
                 })}
             </div>
           </div>
+
+          {/* --- RESTORED COA BUTTON INJECTION --- */}
+          {activeLabUrl && !isAccessory && (
+            <div style={{ marginBottom: "25px" }}>
+              <a
+                href={activeLabUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "0.9rem",
+                  fontWeight: "700",
+                  color: "#0f172a",
+                  background: "#f8fafc",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                  textDecoration: "none",
+                  transition: "background 0.2s",
+                }}
+              >
+                <FileText size={16} color="#4635de" />
+                View Certificate of Analysis (COA)
+                <ExternalLink size={14} color="#64748b" />
+              </a>
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: "15px", marginBottom: "30px" }}>
             <div
