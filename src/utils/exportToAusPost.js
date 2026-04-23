@@ -1,46 +1,54 @@
 export const downloadAusPostCSV = (orders) => {
-  // Define headers strictly required by MyPost Business CSV
+  // Exact headers recognized by Australia Post MyPost Business
   const headers = [
     "Order Number",
     "Deliver to Name",
-    "Deliver to Phone",
-    "Deliver to Email",
     "Deliver to Address Line 1",
     "Deliver to Address Line 2",
     "Deliver to Suburb",
     "Deliver to State",
     "Deliver to Postcode",
-    "Deliver to Country",
-    "Item Description",
-    "Item Weight (kg)",
+    "Deliver to Email",
+    "Deliver to Phone",
+    "Dangerous Goods Declaration",
+    "Weight (kg)",
     "Length (cm)",
     "Width (cm)",
     "Height (cm)",
+    "Service",
   ];
 
   const rows = orders.map((order) => {
-    // Basic weight assumption (e.g. 0.5kg) or calculate from items
-    const weight = 0.5;
+    // Map your database shipping method to AusPost's exact service names
+    const isExpress = order.shipping_method?.toLowerCase() === "express";
+    const serviceType = isExpress ? "Express Post" : "Parcel Post";
+
+    // Safely extract phone number
+    const phone = order.shipping_address?.phone || "";
 
     return [
-      order.id.slice(0, 8), // Order Number (Shortened)
-      order.customer_name, // Name
-      "", // Phone (Optional)
-      order.customer_email, // Email
-      order.shipping_address.line1, // Address 1
-      "", // Address 2
-      order.shipping_address.city, // Suburb
-      order.shipping_address.state, // State
-      order.shipping_address.postal_code, // Postcode
-      "AU", // Country
-      "Peptides", // Item Description
-      weight, // Weight
-      20,
-      10,
-      5, // Dimensions (Standard Box)
+      order.id.slice(0, 8), // Order Number
+      order.customer_name || "", // Deliver to Name
+      order.shipping_address?.line1 || "", // Deliver to Address Line 1
+      order.shipping_address?.line2 || "", // Deliver to Address Line 2
+      order.shipping_address?.city || "", // Deliver to Suburb
+      order.shipping_address?.state || "", // Deliver to State
+      order.shipping_address?.postal_code || "", // Deliver to Postcode
+      order.customer_email || "", // Deliver to Email
+      phone, // Deliver to Phone
+      "No", // Dangerous Goods Declaration
+      "0.25", // Weight (kg)
+      "15", // Length (cm)
+      "10", // Width (cm)
+      "2", // Height (cm)
+      serviceType, // Service (Express Post or Parcel Post)
     ]
-      .map((field) => `"${field}"`)
-      .join(","); // Escape commas
+      .map((field) => {
+        // Safely escape any commas or quotes that might be in an address line
+        const stringField = String(field || "").replace(/"/g, '""');
+        return `"${stringField}"`;
+      })
+      .join(",");
   });
 
   const csvContent = [headers.join(","), ...rows].join("\n");
@@ -51,7 +59,7 @@ export const downloadAusPostCSV = (orders) => {
   link.href = URL.createObjectURL(blob);
   link.setAttribute(
     "download",
-    `AusPost_Import_${new Date().toISOString().slice(0, 10)}.csv`
+    `AusPost_Import_${new Date().toISOString().slice(0, 10)}.csv`,
   );
   document.body.appendChild(link);
   link.click();
