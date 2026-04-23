@@ -33,7 +33,11 @@ export const downloadAusPostCSV = (orders) => {
       order.shipping_address?.line2 || "", // Deliver to Address Line 2
       order.shipping_address?.city || "", // Deliver to Suburb
       order.shipping_address?.state || "", // Deliver to State
-      order.shipping_address?.postal_code || "", // Deliver to Postcode
+      // Bulletproof fallback to catch the postcode no matter how it's named in the DB
+      order.shipping_address?.postal_code ||
+        order.shipping_address?.postcode ||
+        order.shipping_address?.zip ||
+        "",
       order.customer_email || "", // Deliver to Email
       phone, // Deliver to Phone
       "No", // Dangerous Goods Declaration
@@ -44,8 +48,10 @@ export const downloadAusPostCSV = (orders) => {
       serviceType, // Service (Express Post or Parcel Post)
     ]
       .map((field) => {
+        // If the field is actually undefined or null, force it to be an empty string
+        const cleanField = field === undefined || field === null ? "" : field;
         // Safely escape any commas or quotes that might be in an address line
-        const stringField = String(field || "").replace(/"/g, '""');
+        const stringField = String(cleanField).replace(/"/g, '""');
         return `"${stringField}"`;
       })
       .join(",");
