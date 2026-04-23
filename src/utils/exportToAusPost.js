@@ -1,7 +1,11 @@
 export const downloadAusPostCSV = (orders) => {
-  // Exact headers recognized by Australia Post MyPost Business (Strictly Case Sensitive)
+  // Exact headers strictly required by the Australia Post Domestic Bulk Import Template
   const headers = [
-    "Customer Reference 1",
+    "Send From Name",
+    "Send From Address Line 1",
+    "Send From Suburb",
+    "Send From State",
+    "Send From Postcode",
     "Deliver To Name",
     "Deliver To Address Line 1",
     "Deliver To Address Line 2",
@@ -10,25 +14,34 @@ export const downloadAusPostCSV = (orders) => {
     "Deliver To Postcode",
     "Deliver To Email Address",
     "Deliver To Phone Number",
-    "Dangerous Goods Declaration",
+    "Item Packaging Type",
+    "Item Delivery Service",
+    "Item weight",
+    "Item length",
+    "Item width",
+    "Item height",
     "Item Description",
-    "Item Weight (kg)",
-    "Item Length (cm)",
-    "Item Width (cm)",
-    "Item Height (cm)",
-    "Service",
+    "Item Dangerous Goods Flag",
+    "Additional Label Information 1",
   ];
 
   const rows = orders.map((order) => {
-    // Map your database shipping method to AusPost's exact service names
+    // Map to AusPost's exact service codes (EXP = Express, PP = Parcel Post)
     const isExpress = order.shipping_method?.toLowerCase() === "express";
-    const serviceType = isExpress ? "Express Post" : "Parcel Post";
+    const serviceCode = isExpress ? "EXP" : "PP";
 
     // Safely extract phone number
     const phone = order.shipping_address?.phone || "";
 
     return [
-      order.id.slice(0, 8), // Customer Reference 1
+      // --- SENDER INFO (LOCKED) ---
+      "Melbourne Peptides", // Send From Name
+      "567 Collins St", // Send From Address Line 1
+      "Melbourne", // Send From Suburb
+      "VIC", // Send From State
+      "3000", // Send From Postcode
+
+      // --- RECIPIENT INFO ---
       order.customer_name || "", // Deliver To Name
       order.shipping_address?.line1 || "", // Deliver To Address Line 1
       order.shipping_address?.line2 || "", // Deliver To Address Line 2
@@ -40,25 +53,28 @@ export const downloadAusPostCSV = (orders) => {
         "", // Deliver To Postcode
       order.customer_email || "", // Deliver To Email Address
       phone, // Deliver To Phone Number
-      "No", // Dangerous Goods Declaration
+
+      // --- PARCEL INFO ---
+      "OWN_PACKAGING", // Item Packaging Type
+      serviceCode, // Item Delivery Service (EXP or PP)
+      "0.25", // Item weight (must be lowercase 'w' as per doc)
+      "15", // Item length
+      "10", // Item width
+      "2", // Item height
       "Peptides", // Item Description
-      "0.25", // Item Weight (kg)
-      "15", // Item Length (cm)
-      "10", // Item Width (cm)
-      "2", // Item Height (cm)
-      serviceType, // Service (Express Post or Parcel Post)
+      "NO", // Item Dangerous Goods Flag
+      order.id.slice(0, 8), // Additional Label Information 1 (Prints order ID on the label)
     ]
       .map((field) => {
-        // If the field is actually undefined or null, force it to be an empty string
+        // Force null/undefined to empty string
         const cleanField = field === undefined || field === null ? "" : field;
-        // Safely escape any commas or quotes that might be in an address line
+        // Escape quotes to prevent CSV breakage
         const stringField = String(cleanField).replace(/"/g, '""');
         return `"${stringField}"`;
       })
       .join(",");
   });
 
-  // AusPost requires unquoted headers, but correctly handles quoted row data
   const csvContent = [headers.join(","), ...rows].join("\n");
 
   // Trigger Download
@@ -67,7 +83,7 @@ export const downloadAusPostCSV = (orders) => {
   link.href = URL.createObjectURL(blob);
   link.setAttribute(
     "download",
-    `AusPost_Import_${new Date().toISOString().slice(0, 10)}.csv`,
+    `AusPost_Domestic_Bulk_${new Date().toISOString().slice(0, 10)}.csv`,
   );
   document.body.appendChild(link);
   link.click();
