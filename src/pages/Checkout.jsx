@@ -11,7 +11,7 @@ import {
   CheckCircle,
   Landmark,
   Tag,
-  AlertTriangle, // NEW: Imported Alert Icon
+  AlertTriangle,
 } from "lucide-react";
 import "../components/CartDrawer.css";
 
@@ -21,11 +21,8 @@ export default function Checkout() {
 
   // --- STABILIZED ORDER ID ---
   const [orderId] = useState(() => {
-    // Check if we already have an ID for this checkout session
     const existingId = sessionStorage.getItem("active_checkout_id");
     if (existingId) return existingId;
-
-    // Otherwise generate a new one and lock it in
     const newId = crypto.randomUUID();
     sessionStorage.setItem("active_checkout_id", newId);
     return newId;
@@ -38,11 +35,8 @@ export default function Checkout() {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState("");
 
-  // File Upload State
   const [receiptFile, setReceiptFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-
-  // Live Variants State (To check pre-orders for old carts)
   const [liveVariants, setLiveVariants] = useState({});
 
   const [formData, setFormData] = useState({
@@ -72,7 +66,7 @@ export default function Checkout() {
     }
   }, [cart, navigate]);
 
-  // Fetch Live Preorder Status for Cart Items
+  // Fetch Live Preorder Status
   useEffect(() => {
     async function fetchLiveVariants() {
       if (!cart || cart.length === 0) return;
@@ -118,7 +112,6 @@ export default function Checkout() {
     setTimeout(() => setCopied(""), 2000);
   };
 
-  // --- LIVE SUPABASE DISCOUNT LOGIC ---
   const handleApplyDiscount = async () => {
     setDiscountError("");
     setDiscountSuccess("");
@@ -194,9 +187,7 @@ export default function Checkout() {
     setDiscountError("");
   };
 
-  // --- SHIPPING & TOTAL CALCULATIONS ---
   const discountedSubtotal = Math.max(0, cartTotal - discountAmount);
-
   const isStandardFree = cartTotal >= 150 || promoFreeShipping;
   const isExpressFree = cartTotal >= 250 || promoFreeShipping;
 
@@ -213,7 +204,6 @@ export default function Checkout() {
 
   const estimatedTotal = discountedSubtotal + shippingCost;
 
-  // --- FINAL SUBMIT ---
   const submitOrder = async (e) => {
     e.preventDefault();
 
@@ -229,9 +219,6 @@ export default function Checkout() {
     setError(null);
 
     try {
-      // =========================================================================
-      // 🛑 LIVE SERVER-SIDE INVENTORY & PREORDER CHECK
-      // =========================================================================
       const variantIds = cart.map((item) => item.variantId || item.id);
 
       const { data: liveStock, error: stockError } = await supabase
@@ -255,7 +242,6 @@ export default function Checkout() {
           liveVariant?.is_preorder === true ||
           liveVariant?.is_preorder === "true";
 
-        // If the item was deleted, OR it's out of stock AND NOT a preorder
         if (!liveVariant || (isStockFalse && !isPreorderTrue)) {
           const variantLabel = getVariantLabel(cartItem.variant);
           outOfStockItems.push(
@@ -270,16 +256,12 @@ export default function Checkout() {
         );
       }
 
-      // Inject the live preorder status into the items array so the database remembers it!
       const itemsToSave = cart.map((item) => ({
         ...item,
         is_preorder:
           item.is_preorder || liveVariants[item.variantId || item.id] || false,
       }));
 
-      // =========================================================================
-
-      // 1. Upload the Receipt Image
       const fileExt = receiptFile.name.split(".").pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
 
@@ -296,7 +278,6 @@ export default function Checkout() {
 
       const receiptUrl = publicUrlData.publicUrl;
 
-      // 2. Insert Order
       const orderPayload = {
         id: orderId,
         customer_name: formData.name,
@@ -305,7 +286,7 @@ export default function Checkout() {
         shipping_cost: shippingCost,
         shipping_method: shippingMethod === "express" ? "Express" : "Standard",
         shipping_address: formData,
-        items: itemsToSave, // Saved with preorder flag!
+        items: itemsToSave,
         receipt_url: receiptUrl,
         status: "pending",
         discount_code:
@@ -321,7 +302,6 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
-      // 3. Increment the Discount Usage Count
       if (discountCode && (discountAmount > 0 || promoFreeShipping)) {
         try {
           const { data: dData } = await supabase
@@ -340,7 +320,6 @@ export default function Checkout() {
         }
       }
 
-      // 4. SEND EMAIL NOTIFICATIONS
       try {
         const emailItems = itemsToSave.map((item) => ({
           name: item.name,
@@ -348,7 +327,6 @@ export default function Checkout() {
           size: getVariantLabel(item.variant),
         }));
 
-        // A. Email to Customer
         await supabase.functions.invoke("send-email", {
           body: {
             email: formData.email,
@@ -362,7 +340,6 @@ export default function Checkout() {
           },
         });
 
-        // B. Email to Admin (WITH DYNAMIC PREORDER LABELS)
         const adminItemsHtml = itemsToSave
           .map((item) => {
             const safeVariant = getVariantLabel(item.variant);
@@ -418,7 +395,6 @@ export default function Checkout() {
         console.error("Failed to send notification emails:", emailErr);
       }
 
-      // 5. Redirect to Success
       navigate(`/success?order_id=${orderId}`);
     } catch (err) {
       console.error("Checkout Error:", err);
@@ -453,7 +429,6 @@ export default function Checkout() {
       `}</style>
 
       <div className="checkout-wrapper">
-        {/* LEFT SIDE: COMBINED FORM & PAYMENT INFO */}
         <div>
           <button onClick={() => navigate("/shop")} style={backBtnStyle}>
             <ArrowLeft size={16} /> Back to Shop
@@ -491,7 +466,6 @@ export default function Checkout() {
             onSubmit={submitOrder}
             style={{ display: "flex", flexDirection: "column", gap: "24px" }}
           >
-            {/* SECTION 1: SHIPPING */}
             <div>
               <h3
                 style={{
@@ -521,6 +495,7 @@ export default function Checkout() {
                     type="text"
                     name="name"
                     placeholder="Full Name"
+                    autoComplete="name"
                     value={formData.name}
                     onChange={handleChange}
                     style={inputStyle}
@@ -530,6 +505,7 @@ export default function Checkout() {
                     type="email"
                     name="email"
                     placeholder="Email Address"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={handleChange}
                     style={inputStyle}
@@ -540,19 +516,24 @@ export default function Checkout() {
                   type="tel"
                   name="phone"
                   placeholder="Phone Number"
+                  autoComplete="tel"
                   value={formData.phone}
                   onChange={handleChange}
                   style={inputStyle}
                 />
+                
+                {/* 100% FREE BROWSER AUTOFILL */}
                 <input
                   required
                   type="text"
                   name="line1"
                   placeholder="Street Address"
+                  autoComplete="shipping address-line1"
                   value={formData.line1}
                   onChange={handleChange}
                   style={inputStyle}
                 />
+                
                 <div
                   style={{
                     display: "grid",
@@ -564,7 +545,8 @@ export default function Checkout() {
                     required
                     type="text"
                     name="city"
-                    placeholder="City / Suburb"
+                    placeholder="Suburb / City"
+                    autoComplete="shipping address-level2"
                     value={formData.city}
                     onChange={handleChange}
                     style={inputStyle}
@@ -574,6 +556,7 @@ export default function Checkout() {
                     type="text"
                     name="state"
                     placeholder="State (e.g. VIC)"
+                    autoComplete="shipping address-level1"
                     value={formData.state}
                     onChange={handleChange}
                     style={inputStyle}
@@ -583,6 +566,7 @@ export default function Checkout() {
                     type="text"
                     name="postcode"
                     placeholder="Postcode"
+                    autoComplete="shipping postal-code"
                     value={formData.postcode}
                     onChange={handleChange}
                     style={inputStyle}
@@ -841,7 +825,6 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* DYNAMIC REFERENCE NUMBER */}
                 <div
                   style={{
                     padding: "12px",
@@ -873,7 +856,6 @@ export default function Checkout() {
                   </button>
                 </div>
 
-                {/* --- NEW: CRITICAL PAYMENT WARNING --- */}
                 <div
                   style={{
                     marginTop: "12px",
@@ -1069,7 +1051,6 @@ export default function Checkout() {
             >
               {cart.map((item, i) => {
                 const safeVariant = getVariantLabel(item.variant);
-                // NEW: Determine if this item is a preorder
                 const isItemPreorder =
                   item.is_preorder || liveVariants[item.variantId || item.id];
 
@@ -1114,7 +1095,7 @@ export default function Checkout() {
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {item.name} {/* NEW: Preorder Label Injection */}
+                          {item.name}
                           {safeVariant && (
                             <span
                               style={{
@@ -1266,7 +1247,6 @@ export default function Checkout() {
               <span>${cartTotal.toFixed(2)}</span>
             </div>
 
-            {/* SHOW DISCOUNT DEDUCTION IF APPLIED */}
             {discountAmount > 0 && (
               <div
                 style={{
