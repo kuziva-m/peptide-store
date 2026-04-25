@@ -102,22 +102,23 @@ export default function Checkout() {
     script.async = true;
 
     script.onload = () => {
-      if (!addressInputRef.current) return;
+      // Must use capital "F" in AddressFinder per their official documentation
+      if (!addressInputRef.current || !window.AddressFinder) return;
 
       // Initializing the Addressfinder widget with your Licence Key
-      const widget = new window.Addressfinder.Widget(
+      const widget = new window.AddressFinder.Widget(
         addressInputRef.current,
         "M64FCTH9LBRYUNQ38J7W", // Your Live Licence Key
         "AU",
         {
           address_params: {
-            // Optional: You can bias results to specific states if needed, but leaving blank searches all of AU
+            source: "gnaf,paf", // explicitly queries the Post Address File
           },
         },
       );
 
       // When the user clicks an address from the dropdown...
-      widget.on("result:select", (fullAddress, metaData) => {
+      widget.on("address:select", (fullAddress, metaData) => {
         // metaData contains strictly formatted Australia Post variables!
         setFormData((prev) => ({
           ...prev,
@@ -129,7 +130,7 @@ export default function Checkout() {
       });
     };
 
-    document.head.appendChild(script);
+    document.body.appendChild(script);
 
     return () => {
       // Cleanup if component unmounts
@@ -577,6 +578,7 @@ export default function Checkout() {
                   required
                   type="text"
                   name="line1"
+                  id="address"
                   ref={addressInputRef}
                   placeholder="Start typing your Street Address..."
                   value={formData.line1}
