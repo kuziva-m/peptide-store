@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCart } from "../lib/CartContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -59,6 +59,9 @@ export default function Checkout() {
   const [discountSuccess, setDiscountSuccess] = useState("");
   const [isVerifyingDiscount, setIsVerifyingDiscount] = useState(false);
 
+  // --- ADDRESSFINDER REF ---
+  const addressInputRef = useRef(null);
+
   // Redirect if cart is empty
   useEffect(() => {
     if (!cart || cart.length === 0) {
@@ -85,6 +88,56 @@ export default function Checkout() {
     }
     fetchLiveVariants();
   }, [cart]);
+
+  // =========================================================================
+  // 📮 ADDRESSFINDER (AUSPOST) AUTOCOMPLETE INJECTION
+  // =========================================================================
+  useEffect(() => {
+    // Prevent loading multiple times if React strict mode double-fires
+    if (document.getElementById("addressfinder-script")) return;
+
+    const script = document.createElement("script");
+    script.id = "addressfinder-script";
+    script.src = "https://api.addressfinder.io/assets/v3/widget.js";
+    script.async = true;
+
+    script.onload = () => {
+      if (!addressInputRef.current) return;
+
+      // Initializing the Addressfinder widget with your Licence Key
+      const widget = new window.Addressfinder.Widget(
+        addressInputRef.current,
+        "M64FCTH9LBRYUNQ38J7W", // Your Live Licence Key
+        "AU",
+        {
+          address_params: {
+            // Optional: You can bias results to specific states if needed, but leaving blank searches all of AU
+          },
+        },
+      );
+
+      // When the user clicks an address from the dropdown...
+      widget.on("result:select", (fullAddress, metaData) => {
+        // metaData contains strictly formatted Australia Post variables!
+        setFormData((prev) => ({
+          ...prev,
+          line1: metaData.address_line_1 || fullAddress,
+          city: metaData.locality_name || prev.city,
+          state: metaData.state_territory || prev.state,
+          postcode: metaData.postcode || prev.postcode,
+        }));
+      });
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup if component unmounts
+      const scriptEl = document.getElementById("addressfinder-script");
+      if (scriptEl) scriptEl.remove();
+    };
+  }, []);
+  // =========================================================================
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -495,7 +548,6 @@ export default function Checkout() {
                     type="text"
                     name="name"
                     placeholder="Full Name"
-                    autoComplete="name"
                     value={formData.name}
                     onChange={handleChange}
                     style={inputStyle}
@@ -505,7 +557,6 @@ export default function Checkout() {
                     type="email"
                     name="email"
                     placeholder="Email Address"
-                    autoComplete="email"
                     value={formData.email}
                     onChange={handleChange}
                     style={inputStyle}
@@ -516,24 +567,26 @@ export default function Checkout() {
                   type="tel"
                   name="phone"
                   placeholder="Phone Number"
-                  autoComplete="tel"
                   value={formData.phone}
                   onChange={handleChange}
                   style={inputStyle}
                 />
-                
-                {/* 100% FREE BROWSER AUTOFILL */}
+
+                {/* 📮 ADDRESSFINDER INPUT */}
                 <input
                   required
                   type="text"
                   name="line1"
-                  placeholder="Street Address"
-                  autoComplete="shipping address-line1"
+                  ref={addressInputRef}
+                  placeholder="Start typing your Street Address..."
                   value={formData.line1}
                   onChange={handleChange}
-                  style={inputStyle}
+                  style={{
+                    ...inputStyle,
+                    borderColor: "#3b82f6", // Give it a slight highlight so users know it's a smart input
+                  }}
                 />
-                
+
                 <div
                   style={{
                     display: "grid",
@@ -546,7 +599,6 @@ export default function Checkout() {
                     type="text"
                     name="city"
                     placeholder="Suburb / City"
-                    autoComplete="shipping address-level2"
                     value={formData.city}
                     onChange={handleChange}
                     style={inputStyle}
@@ -556,7 +608,6 @@ export default function Checkout() {
                     type="text"
                     name="state"
                     placeholder="State (e.g. VIC)"
-                    autoComplete="shipping address-level1"
                     value={formData.state}
                     onChange={handleChange}
                     style={inputStyle}
@@ -566,7 +617,6 @@ export default function Checkout() {
                     type="text"
                     name="postcode"
                     placeholder="Postcode"
-                    autoComplete="shipping postal-code"
                     value={formData.postcode}
                     onChange={handleChange}
                     style={inputStyle}
