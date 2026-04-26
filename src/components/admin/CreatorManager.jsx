@@ -18,6 +18,8 @@ import {
   Activity,
   Zap,
   Edit2,
+  CreditCard,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function CreatorManager() {
@@ -29,6 +31,11 @@ export default function CreatorManager() {
   // Form & Edit States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  // Payout Modal States
+  const [payoutModalOpen, setPayoutModalOpen] = useState(false);
+  const [selectedAffiliate, setSelectedAffiliate] = useState(null);
+  const [payoutAmount, setPayoutAmount] = useState("");
 
   // Animation States
   const [isAnimating, setIsAnimating] = useState(true);
@@ -100,7 +107,6 @@ export default function CreatorManager() {
     setPin(affiliate.pin);
     setEditingId(affiliate.id);
     setIsFormOpen(true);
-
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -126,6 +132,8 @@ export default function CreatorManager() {
         .eq("id", editingId);
       error = updateError;
     } else {
+      // Ensure new affiliates start with 0 total_paid
+      payload.total_paid = 0;
       const { error: insertError } = await supabase
         .from("affiliates")
         .insert([payload]);
@@ -157,6 +165,44 @@ export default function CreatorManager() {
       return;
     await supabase.from("affiliates").delete().eq("id", id);
     fetchData();
+  };
+
+  // --- NEW: PAYOUT LOGIC ---
+  const handleOpenPayout = (affiliate) => {
+    const stats = getAffiliateStats(affiliate.discount_code);
+    const totalEarned = stats.totalSales * affiliate.commission_rate;
+    const totalPaid = affiliate.total_paid || 0;
+    const owedAmount = Math.max(0, totalEarned - totalPaid);
+
+    setSelectedAffiliate(affiliate);
+    setPayoutAmount(owedAmount.toFixed(2)); // Auto-fill with exact amount owed
+    setPayoutModalOpen(true);
+  };
+
+  const handleRecordPayout = async (e) => {
+    e.preventDefault();
+    const amount = parseFloat(payoutAmount);
+
+    if (isNaN(amount) || amount <= 0) {
+      return alert("Please enter a valid payout amount greater than 0.");
+    }
+
+    const currentPaid = selectedAffiliate.total_paid || 0;
+    const newTotalPaid = currentPaid + amount;
+
+    const { error } = await supabase
+      .from("affiliates")
+      .update({ total_paid: newTotalPaid })
+      .eq("id", selectedAffiliate.id);
+
+    if (error) {
+      alert(`Error recording payout: ${error.message}`);
+    } else {
+      setPayoutModalOpen(false);
+      setSelectedAffiliate(null);
+      setPayoutAmount("");
+      fetchData(); // Refresh the data to update UI
+    }
   };
 
   const getAffiliateStats = (discountCode) => {
@@ -225,6 +271,82 @@ export default function CreatorManager() {
         </div>
       )}
 
+      {/* --- PAYOUT MODAL --- */}
+      {payoutModalOpen && selectedAffiliate && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.formHeader}>
+              <h4
+                style={{
+                  margin: 0,
+                  color: "#0f172a",
+                  fontSize: "1.2rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <CreditCard size={20} color="#10b981" /> Record Payout
+              </h4>
+              <button
+                onClick={() => setPayoutModalOpen(false)}
+                style={styles.closeBtn}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p
+              style={{
+                color: "#475569",
+                marginBottom: "20px",
+                fontSize: "0.95rem",
+                lineHeight: "1.5",
+              }}
+            >
+              Log a manual payout for <strong>{selectedAffiliate.name}</strong>.
+              This amount will be deducted from their "Currently Owed" balance.
+            </p>
+
+            <form onSubmit={handleRecordPayout}>
+              <label style={styles.label}>Amount Paid ($)</label>
+              <div style={styles.inputWrapper}>
+                <DollarSign style={styles.inputIcon} size={16} />
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={payoutAmount}
+                  onChange={(e) => setPayoutAmount(e.target.value)}
+                  style={styles.inputWithIcon}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  marginTop: "24px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setPayoutModalOpen(false)}
+                  style={styles.cancelBtn}
+                >
+                  Cancel
+                </button>
+                <button type="submit" style={styles.payoutSubmitBtn}>
+                  <CheckCircle2 size={16} /> Confirm Payout
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div
         className="fade-in-ui"
         style={{
@@ -243,7 +365,6 @@ export default function CreatorManager() {
                 <Star size={20} color="#4635de" />
               </div>
               Creator Management
-              {/* --- NEW DYNAMIC COUNTER BADGE --- */}
               <span
                 style={{
                   background: "#f1f5f9",
@@ -405,8 +526,8 @@ export default function CreatorManager() {
                 <tr style={styles.trHead}>
                   <th style={styles.th}>Creator Partner</th>
                   <th style={styles.th}>Assigned Code</th>
-                  <th style={styles.th}>Metrics</th>
-                  <th style={styles.th}>Owed Payout</th>
+                  <th style={styles.th}>Sales Metrics</th>
+                  <th style={styles.th}>Financials</th>
                   <th style={{ ...styles.th, textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
@@ -427,7 +548,9 @@ export default function CreatorManager() {
                 ) : (
                   affiliates.map((aff) => {
                     const stats = getAffiliateStats(aff.discount_code);
-                    const totalPayout = stats.totalSales * aff.commission_rate;
+                    const totalEarned = stats.totalSales * aff.commission_rate;
+                    const totalPaid = aff.total_paid || 0;
+                    const owedAmount = Math.max(0, totalEarned - totalPaid);
 
                     return (
                       <tr key={aff.id} style={styles.trBody}>
@@ -457,7 +580,7 @@ export default function CreatorManager() {
                         </td>
                         <td style={styles.td}>
                           <div style={{ fontWeight: 700, color: "#0f172a" }}>
-                            ${stats.totalSales.toFixed(2)} Sales
+                            ${stats.totalSales.toFixed(2)} Revenue
                           </div>
                           <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
                             {stats.usageCount} uses @{" "}
@@ -465,9 +588,29 @@ export default function CreatorManager() {
                           </div>
                         </td>
                         <td style={styles.td}>
+                          <div
+                            style={{ fontSize: "0.85rem", color: "#64748b" }}
+                          >
+                            Total Earned:{" "}
+                            <strong style={{ color: "#0f172a" }}>
+                              ${totalEarned.toFixed(2)}
+                            </strong>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "#64748b",
+                              margin: "2px 0 6px 0",
+                            }}
+                          >
+                            Already Paid:{" "}
+                            <strong style={{ color: "#16a34a" }}>
+                              ${totalPaid.toFixed(2)}
+                            </strong>
+                          </div>
                           <div style={styles.payoutBadge}>
                             <DollarSign size={14} />
-                            {totalPayout.toFixed(2)}
+                            Owed: {owedAmount.toFixed(2)}
                           </div>
                         </td>
                         <td style={{ ...styles.td, textAlign: "right" }}>
@@ -478,6 +621,13 @@ export default function CreatorManager() {
                               justifyContent: "flex-end",
                             }}
                           >
+                            <button
+                              onClick={() => handleOpenPayout(aff)}
+                              style={styles.payoutActionBtn}
+                              title="Record Payout"
+                            >
+                              <CreditCard size={16} /> Pay
+                            </button>
                             <button
                               onClick={() => handleEdit(aff)}
                               style={styles.editBtn}
@@ -693,14 +843,29 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: "2px",
-    background: "#ecfdf5",
-    color: "#059669",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontWeight: 800,
-    fontSize: "0.95rem",
+    background: "#fef2f2",
+    color: "#ef4444",
+    padding: "4px 8px",
+    borderRadius: "8px",
+    fontWeight: 700,
+    fontSize: "0.85rem",
   },
 
+  // Action Buttons
+  payoutActionBtn: {
+    background: "#ecfdf5",
+    border: "1px solid #a7f3d0",
+    color: "#059669",
+    cursor: "pointer",
+    padding: "8px 12px",
+    borderRadius: "8px",
+    transition: "all 0.2s",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontWeight: "bold",
+    fontSize: "0.85rem",
+  },
   editBtn: {
     background: "#eff6ff",
     border: "1px solid #dbeafe",
@@ -718,6 +883,42 @@ const styles = {
     padding: "8px",
     borderRadius: "8px",
     transition: "all 0.2s",
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    background: "rgba(15, 23, 42, 0.6)",
+    backdropFilter: "blur(4px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+  },
+  modalContent: {
+    background: "white",
+    padding: "30px",
+    borderRadius: "16px",
+    width: "90%",
+    maxWidth: "400px",
+    boxShadow:
+      "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+  },
+  payoutSubmitBtn: {
+    background: "#10b981",
+    color: "white",
+    border: "none",
+    padding: "10px 20px",
+    borderRadius: "8px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   },
 
   // --- FULL SCREEN ANIMATION STYLES ---
