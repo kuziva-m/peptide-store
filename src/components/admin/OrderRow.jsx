@@ -91,7 +91,6 @@ export function OrderRow({
     });
   };
 
-  // --- PRINT LOGIC ---
   const handlePrintSlip = () => {
     setIsPrinting(true);
     setTimeout(() => {
@@ -347,32 +346,38 @@ export function OrderRow({
 
   return (
     <>
-      {/* 🖨️ THE HIDDEN PRINTABLE PACKING SLIP OVERLAY (FIXED FOR 1 PAGE) */}
+      {/* 🖨️ THE HIDDEN PRINTABLE PACKING SLIP OVERLAY (FIXED FOR STRICTLY 1 PAGE) */}
       {isPrinting && (
         <div className="print-section">
           <style>{`
             @media print {
-              body { 
-                visibility: hidden; 
-                margin: 0;
-                padding: 0;
+              html, body {
+                height: 100vh !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
               }
-              .print-section { 
-                visibility: visible; 
-                position: fixed; 
-                left: 0; 
-                top: 0; 
-                width: 100vw; 
-                height: 100vh;
-                background: white;
-                padding: 20mm;
-                font-family: sans-serif;
-                z-index: 99999;
-                box-sizing: border-box;
+              body * { 
+                visibility: hidden; 
+              }
+              .print-section {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                margin: 0 !important;
+                padding: 20mm !important;
+                visibility: visible !important;
+                z-index: 2147483647 !important;
+                background: white !important;
+                box-sizing: border-box !important;
               }
               .print-section * {
-                visibility: visible;
+                visibility: visible !important;
               }
+              @page { margin: 0mm; }
             }
           `}</style>
 
@@ -618,7 +623,7 @@ export function OrderRow({
                   style={{
                     marginLeft: "8px",
                     background: "#fee2e2",
-                    color: "#b91c1c",
+                    color: "#b91c1c", // RED FOR EXPRESS
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.65rem",
@@ -635,7 +640,7 @@ export function OrderRow({
                   style={{
                     marginLeft: "8px",
                     background: "#fef08a",
-                    color: "#a16207",
+                    color: "#a16207", // YELLOW FOR STANDARD
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.65rem",
@@ -1270,7 +1275,6 @@ export function OrderRow({
                         </div>
                       )}
 
-                      {/* --- PRINT PACKING SLIP BUTTON --- */}
                       <button
                         onClick={handlePrintSlip}
                         style={{
@@ -1397,7 +1401,6 @@ export function OrderRow({
                         Update & Email Customer
                       </button>
 
-                      {/* EDIT DETAILS BUTTON */}
                       <button
                         onClick={() => setIsEditing(true)}
                         style={{
@@ -1409,7 +1412,6 @@ export function OrderRow({
                         <Edit2 size={14} /> Edit Full Order Details
                       </button>
 
-                      {/* CANCEL ORDER BUTTON */}
                       <button
                         onClick={handleCancelOrder}
                         style={{
