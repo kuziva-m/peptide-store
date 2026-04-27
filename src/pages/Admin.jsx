@@ -32,7 +32,6 @@ import InquiryManager from "../components/admin/InquiryManager";
 import SubscriberManager from "../components/admin/SubscriberManager";
 import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
-import EmailManager from "../components/admin/EmailManager";
 import CreatorManager from "../components/admin/CreatorManager";
 import SeoLandingManager from "../components/admin/SeoLandingManager"; // NEW: Import the SEO Manager
 
@@ -285,7 +284,6 @@ export default function Admin() {
       <main style={styles.mainContent}>
         <div style={styles.contentCard}>
           {activeTab === "orders" && <OrderManager />}
-          {activeTab === "email" && <EmailManager />}
           {activeTab === "creators" && <CreatorManager />}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}

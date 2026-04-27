@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Fragment } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import {
@@ -20,7 +20,6 @@ const SYRINGE_SIZES = [
   { size: 1.0, label: "1.0ml (100 Units)", short: "1.0ml" },
 ];
 
-// Meticulously audited to match standard research protocols
 const MATH_DEFAULTS = {
   default: { mg: 5, ml: 2, mcg: 250 },
   "bpc-157": { mg: 5, ml: 2, mcg: 250 },
@@ -53,196 +52,412 @@ const MATH_DEFAULTS = {
   sermorelin: { mg: 2, ml: 1, mcg: 200 },
   "glow-blend": { mg: 70, ml: 3, mcg: 1000 },
   "klow-blend": { mg: 80, ml: 3, mcg: 1000 },
-  "nad-plus": { mg: 50, ml: 1, mcg: 10000 }, // Fixed exactly to 50mg vial, 10mg dose
+  "nad-plus": { mg: 50, ml: 1, mcg: 10000 },
   "ll-37": { mg: 5, ml: 2, mcg: 100 },
   "thymosin-alpha-1": { mg: 10, ml: 2, mcg: 1500 },
   "pt-141-bremelanotide": { mg: 10, ml: 2, mcg: 1500 },
   "cjc-1295-no-dac-plus-ipamorelin": { mg: 10, ml: 2, mcg: 200 },
 };
 
-// --- COMPREHENSIVE DOSAGE PROTOCOL LIBRARY ---
-const ALL_PROTOCOLS = [
+// --- NEW COMPREHENSIVE CATEGORIZED DOSAGE DATA ---
+const PROTOCOL_CATEGORIES = [
   {
-    name: "BPC-157",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "250mcg",
-    draw: "10 Units",
+    category: "Anti Aging",
+    peptides: [
+      {
+        name: "Epitalon",
+        recommended: "5–10mg per day",
+        frequency: "Daily",
+        cycle: "10–20 days",
+      },
+      {
+        name: "FOXO4",
+        recommended: "1–3mg per cycle",
+        frequency: "Intermittent",
+        cycle: "Single-cycle protocols",
+      },
+      {
+        name: "MOTS-c",
+        recommended: "5–15mg per week",
+        frequency: "2–3× weekly",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "NAD+",
+        recommended: "250–500mg per week",
+        frequency: "Weekly",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "PE-22-28",
+        recommended: "50–200 mcg per day",
+        frequency: "Once daily or protocol dependent",
+        cycle: "2–6 weeks",
+      },
+      {
+        name: "SNAP-8",
+        recommended: "100–300 mcg per day",
+        frequency: "Once daily or divided doses, protocol dependent",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "SS-31",
+        recommended: "5–20mg per week",
+        frequency: "2–3× weekly",
+        cycle: "4–8 weeks",
+      },
+    ],
   },
   {
-    name: "TB-500",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "2.5mg",
-    draw: "100 Units",
+    category: "Blends",
+    peptides: [
+      {
+        name: "BPC-157 / TB4 Blend",
+        recommended: "250–500mcg daily",
+        frequency: "Daily",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "CJC-1295 no DAC / Ipamorelin Blend",
+        recommended: "300–600mcg nightly",
+        frequency: "Daily",
+        cycle: "8–16 weeks",
+      },
+      {
+        name: "GLOW Blend",
+        recommended: "2–4mg per week",
+        frequency: "Weekly",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "Klow Blend",
+        recommended: "0.5mg-1.5mg",
+        frequency: "Once daily or divided doses, protocol dependent",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "Tesamorelin / Ipamorelin Blend",
+        recommended: "500–1000mcg nightly",
+        frequency: "Daily",
+        cycle: "8–16 weeks",
+      },
+    ],
   },
   {
-    name: "Semaglutide",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "0.25mg",
-    draw: "10 Units",
+    category: "Cognitive",
+    peptides: [
+      {
+        name: "ARA-290",
+        recommended: "2–8 mg per day",
+        frequency: "Once daily or protocol dependent",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "Adamax",
+        recommended: "300–600mcg daily",
+        frequency: "Daily",
+        cycle: "10–30 days",
+      },
+      {
+        name: "Cyanocobalamin (Vitamin B12)",
+        recommended: "1mg per dose",
+        frequency: "1–3x weekly",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "IllumiNeuro",
+        recommended: "500–1000mcg per day",
+        frequency: "Daily",
+        cycle: "30 days",
+      },
+      {
+        name: "NA Selank",
+        recommended: "300–600mcg per day",
+        frequency: "Daily",
+        cycle: "10–30 days",
+      },
+      {
+        name: "NA Semax",
+        recommended: "300–600mcg per day",
+        frequency: "Daily",
+        cycle: "10–30 days",
+      },
+      {
+        name: "Selank",
+        recommended: "300–600mcg per day",
+        frequency: "Daily",
+        cycle: "10–30 days",
+      },
+      {
+        name: "Semax",
+        recommended: "300–600mcg per day",
+        frequency: "Daily",
+        cycle: "10–30 days",
+      },
+    ],
   },
   {
-    name: "Tirzepatide",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "2.5mg",
-    draw: "50 Units",
+    category: "Healing Repair",
+    peptides: [
+      {
+        name: "AHK-Cu",
+        recommended: "1–2mg per week",
+        frequency: "2–3× weekly",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "Abaloparatide",
+        recommended: "80mcg daily",
+        frequency: "Daily",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "BPC-157",
+        recommended: "200–500mcg per day",
+        frequency: "Daily",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "GHK-Cu",
+        recommended: "1–2mg per week",
+        frequency: "2–3× weekly",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "TB-500 (tb4)",
+        recommended: "2–5mg per week",
+        frequency: "1–2× weekly",
+        cycle: "4–6 weeks",
+      },
+      {
+        name: "TB-500 FRAG",
+        recommended: "2–5mg per week",
+        frequency: "Weekly",
+        cycle: "4–6 weeks",
+      },
+      {
+        name: "Teriparatide",
+        recommended: "20mcg daily",
+        frequency: "Daily",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "Tri-Heal Max",
+        recommended: "2–4mg per week",
+        frequency: "Weekly",
+        cycle: "4–6 weeks",
+      },
+    ],
   },
   {
-    name: "Retatrutide",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "2mg",
-    draw: "40 Units",
+    category: "Immune Support",
+    peptides: [
+      {
+        name: "KPV",
+        recommended: "100–500 mcg per day",
+        frequency: "Once daily or divided doses, protocol dependent",
+        cycle: "4–8 week",
+      },
+      {
+        name: "Thymosin Alpha-1",
+        recommended: "1–2mg per week",
+        frequency: "2× weekly",
+        cycle: "6–12 weeks",
+      },
+      {
+        name: "Thymulin",
+        recommended: "1–2mg per week",
+        frequency: "Weekly",
+        cycle: "6–12 weeks",
+      },
+    ],
   },
   {
-    name: "Cagrilintide",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "0.25mg",
-    draw: "10 Units",
+    category: "Muscle Growth",
+    peptides: [
+      {
+        name: "CJC-1295 no DAC",
+        recommended: "100–300mcg per dose",
+        frequency: "1–3x daily",
+        cycle: "8–16 weeks",
+      },
+      {
+        name: "CJC-1295 with DAC",
+        recommended: "1–2mg per week",
+        frequency: "Weekly",
+        cycle: "12–24 weeks",
+      },
+      {
+        name: "GHRP-2",
+        recommended: "100–300mcg",
+        frequency: "1–3x daily",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "GHRP-6",
+        recommended: "100–300mcg",
+        frequency: "1–3x daily",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "HGH 10IU",
+        recommended: "1–4 IU per day",
+        frequency: "Daily",
+        cycle: "12–24 weeks",
+      },
+      {
+        name: "HGH Fragment 176–191",
+        recommended: "250–500mcg per day",
+        frequency: "Daily",
+        cycle: "8–12 weeks",
+      },
+      {
+        name: "IGF-1 LR3",
+        recommended: "20–50mcg per day",
+        frequency: "Daily",
+        cycle: "4–6 weeks",
+      },
+      {
+        name: "Ipamorelin",
+        recommended: "200–300mcg",
+        frequency: "1–2x daily",
+        cycle: "8–16 weeks",
+      },
+      {
+        name: "L-Carnitine",
+        recommended: "500–2000mg per day",
+        frequency: "Daily",
+        cycle: "8–16 weeks",
+      },
+      {
+        name: "Sermorelin",
+        recommended: "200–300mcg per day",
+        frequency: "Daily",
+        cycle: "12–24 weeks",
+      },
+      {
+        name: "Tesamorelin",
+        recommended: "1–2mg per day",
+        frequency: "Daily",
+        cycle: "12–24 weeks",
+      },
+    ],
   },
   {
-    name: "Mazdutide",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "2.5mg",
-    draw: "50 Units",
+    category: "Sexual Health",
+    peptides: [
+      {
+        name: "Kisspeptin",
+        recommended: "100–300mcg per dose",
+        frequency: "2–3× weekly",
+        cycle: "4–8 weeks",
+      },
+      {
+        name: "Oxytocin",
+        recommended: "50–200mcg",
+        frequency: "As needed",
+        cycle: "Intermittent",
+      },
+      {
+        name: "PT-141",
+        recommended: "1–2mg per use",
+        frequency: "As needed",
+        cycle: "Research dependent",
+      },
+    ],
   },
   {
-    name: "Survodutide",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "2.5mg",
-    draw: "50 Units",
+    category: "Skin Pigmentation",
+    peptides: [
+      {
+        name: "Melanotan I (MT1)",
+        recommended: "250–500mcg per day",
+        frequency: "Daily",
+        cycle: "2–4 weeks",
+      },
+      {
+        name: "Melanotan II (MT2)",
+        recommended: "250–1000mcg per day",
+        frequency: "Daily",
+        cycle: "2–4 weeks",
+      },
+    ],
   },
   {
-    name: "Melanotan 2",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "250mcg",
-    draw: "5 Units",
-  },
-  { name: "GHK-Cu", powder: "50mg", bac: "3ml", dose: "2mg", draw: "12 Units" },
-  {
-    name: "CJC-1295 (No DAC)",
-    powder: "2mg",
-    bac: "1ml",
-    dose: "100mcg",
-    draw: "5 Units",
+    category: "Sleep",
+    peptides: [
+      {
+        name: "DSIP",
+        recommended: "100–300mcg before sleep",
+        frequency: "Nightly",
+        cycle: "2–4 weeks",
+      },
+    ],
   },
   {
-    name: "Ipamorelin",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "100mcg",
-    draw: "4 Units",
-  },
-  {
-    name: "CJC/Ipamorelin Blend",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "200mcg",
-    draw: "4 Units",
-  },
-  {
-    name: "Epitalon",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "1mg",
-    draw: "20 Units",
-  },
-  {
-    name: "HGH (191aa)",
-    powder: "10IU",
-    bac: "1ml",
-    dose: "1IU",
-    draw: "10 Units",
-  },
-  {
-    name: "IGF-1 LR3",
-    powder: "1mg",
-    bac: "1ml",
-    dose: "50mcg",
-    draw: "5 Units",
-  },
-  {
-    name: "GHRP-6",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "100mcg",
-    draw: "4 Units",
-  },
-  {
-    name: "GHRP-2",
-    powder: "5mg",
-    bac: "2ml",
-    dose: "100mcg",
-    draw: "4 Units",
-  },
-  {
-    name: "Tesamorelin",
-    powder: "2mg",
-    bac: "1ml",
-    dose: "1mg",
-    draw: "50 Units",
-  },
-  {
-    name: "Sermorelin",
-    powder: "2mg",
-    bac: "1ml",
-    dose: "200mcg",
-    draw: "10 Units",
-  },
-  {
-    name: "MOTS-c",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "5mg",
-    draw: "100 Units",
-  },
-  { name: "Semax", powder: "10mg", bac: "2ml", dose: "1mg", draw: "20 Units" },
-  { name: "Selank", powder: "10mg", bac: "2ml", dose: "1mg", draw: "20 Units" },
-  { name: "KPV", powder: "10mg", bac: "2ml", dose: "250mcg", draw: "5 Units" },
-  { name: "LL-37", powder: "5mg", bac: "2ml", dose: "100mcg", draw: "4 Units" },
-  {
-    name: "Thymosin Alpha-1",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "1.5mg",
-    draw: "30 Units",
-  },
-  {
-    name: "PT-141",
-    powder: "10mg",
-    bac: "2ml",
-    dose: "1.5mg",
-    draw: "30 Units",
-  },
-  // NAD+ row fixed for a standard 50mg vial, 10mg subq dose
-  { name: "NAD+", powder: "50mg", bac: "1ml", dose: "10mg", draw: "20 Units" },
-  {
-    name: "Tri-Heal Max",
-    powder: "45mg",
-    bac: "3ml",
-    dose: "250mcg",
-    draw: "1.7 Units",
-  },
-  {
-    name: "Wolverine Stack",
-    powder: "15mg",
-    bac: "2ml",
-    dose: "250mcg",
-    draw: "3.3 Units",
-  },
-  {
-    name: "Glow Blend",
-    powder: "70mg",
-    bac: "3ml",
-    dose: "1mg",
-    draw: "4.3 Units",
+    category: "Weight Loss",
+    peptides: [
+      {
+        name: "5-Amino-1MQ",
+        recommended: "25 mg per day",
+        frequency: "Daily",
+        cycle: "4–6 weeks",
+      },
+      {
+        name: "Adipotide",
+        recommended: "1–2mg daily",
+        frequency: "Daily",
+        cycle: "2–4 weeks",
+      },
+      {
+        name: "Cagrilintide",
+        recommended: "0.3–4.5mg per week",
+        frequency: "Once weekly",
+        cycle: "12–20 weeks",
+      },
+      {
+        name: "Mazdutide",
+        recommended: "3–9mg per week",
+        frequency: "Once weekly",
+        cycle: "12–20 weeks",
+      },
+      {
+        name: "PNC-27",
+        recommended: "100–300 mcg",
+        frequency: "Once daily or protocol dependent",
+        cycle: "4–6 weeks",
+      },
+      {
+        name: "Retatrutide",
+        recommended: "2–12mg per week",
+        frequency: "Once weekly",
+        cycle: "12–24 weeks",
+      },
+      {
+        name: "Semaglutide",
+        recommended: "0.25–2.4mg per week",
+        frequency: "Once weekly",
+        cycle: "16–20 weeks",
+      },
+      {
+        name: "Survodutide",
+        recommended: "2–8mg per week",
+        frequency: "Once weekly",
+        cycle: "12–20 weeks",
+      },
+      {
+        name: "Tirzepatide",
+        recommended: "2.5–15mg per week",
+        frequency: "Once weekly",
+        cycle: "16–24 weeks",
+      },
+      {
+        name: "VIP",
+        recommended: "25–100 mcg per day",
+        frequency: "Once daily or divided doses, depending on protocol",
+        cycle: "4–12 weeks",
+      },
+    ],
   },
 ];
 
@@ -587,10 +802,6 @@ export default function Calculator() {
           }}
         >
           Industry-standard starting protocols based on common research goals.
-          <br />
-          <em>
-            Note: All calculations assume the standard 3ml physical glass vial.
-          </em>
         </p>
 
         <div
@@ -637,7 +848,7 @@ export default function Calculator() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Vial Size
+                  Recommended Dose
                 </th>
                 <th
                   style={{
@@ -647,7 +858,7 @@ export default function Calculator() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Powder
+                  Frequency
                 </th>
                 <th
                   style={{
@@ -657,98 +868,84 @@ export default function Calculator() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Bac Water
-                </th>
-                <th
-                  style={{
-                    padding: "16px 20px",
-                    color: "#64748b",
-                    fontSize: "0.85rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Starting Dose
-                </th>
-                <th
-                  style={{
-                    padding: "16px 20px",
-                    color: "#4635de",
-                    fontSize: "0.85rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Syringe Draw (U-100)
+                  Cycle Length
                 </th>
               </tr>
             </thead>
             <tbody>
-              {ALL_PROTOCOLS.map((protocol, index) => (
-                <tr
-                  key={index}
-                  style={{
-                    borderBottom: "1px solid #f1f5f9",
-                    transition: "background 0.2s",
-                    "&:hover": { background: "#f8fafc" },
-                  }}
-                >
-                  <td
+              {PROTOCOL_CATEGORIES.map((categoryGroup, catIdx) => (
+                <Fragment key={catIdx}>
+                  {/* Category Header Row */}
+                  <tr
                     style={{
-                      padding: "16px 20px",
-                      color: "#0f172a",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
+                      background: "#f8fafc",
+                      borderBottom: "2px solid #e2e8f0",
+                      borderTop: catIdx > 0 ? "2px solid #e2e8f0" : "none",
                     }}
                   >
-                    <TestTube size={16} color="#4635de" /> {protocol.name}
-                  </td>
-                  <td
-                    style={{
-                      padding: "16px 20px",
-                      color: "#475569",
-                    }}
-                  >
-                    3ml
-                  </td>
-                  <td
-                    style={{
-                      padding: "16px 20px",
-                      color: "#0f172a",
-                    }}
-                  >
-                    {protocol.powder}
-                  </td>
-                  <td
-                    style={{
-                      padding: "16px 20px",
-                      color: "#0ea5e9",
-                    }}
-                  >
-                    {protocol.bac}
-                  </td>
-                  <td
-                    style={{
-                      padding: "16px 20px",
-                      color: "#0f172a",
-                    }}
-                  >
-                    {protocol.dose}
-                  </td>
-                  <td style={{ padding: "16px 20px" }}>
-                    <span
+                    <td
+                      colSpan={4}
                       style={{
-                        background: "#eff6ff",
-                        color: "#1d4ed8",
-                        border: "1px solid #bfdbfe",
-                        padding: "6px 12px",
-                        borderRadius: "8px",
-                        fontSize: "0.9rem",
+                        padding: "16px 20px",
+                        color: "#4635de",
+                        fontWeight: "bold",
+                        fontSize: "1.1rem",
                       }}
                     >
-                      {protocol.draw}
-                    </span>
-                  </td>
-                </tr>
+                      {categoryGroup.category}
+                    </td>
+                  </tr>
+
+                  {/* Peptide Rows */}
+                  {categoryGroup.peptides.map((peptide, pepIdx) => (
+                    <tr
+                      key={pepIdx}
+                      style={{
+                        borderBottom: "1px solid #f1f5f9",
+                        transition: "background 0.2s",
+                        "&:hover": { background: "#f8fafc" },
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "16px 20px",
+                          color: "#0f172a",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        <TestTube size={16} color="#64748b" /> {peptide.name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "16px 20px",
+                          color: "#475569",
+                        }}
+                      >
+                        {peptide.recommended}
+                      </td>
+                      <td
+                        style={{
+                          padding: "16px 20px",
+                          color: "#475569",
+                        }}
+                      >
+                        {peptide.frequency}
+                      </td>
+                      <td
+                        style={{
+                          padding: "16px 20px",
+                          color: "#0ea5e9",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {peptide.cycle}
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
