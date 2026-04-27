@@ -165,8 +165,10 @@ export default function CreatorStudio() {
     (sum, order) => sum + Number(order.total_amount || 0),
     0,
   );
-  const commissionPercentage = (Number(affiliate?.commission_rate || 0) * 100).toFixed(0);
-  
+  const commissionPercentage = (
+    Number(affiliate?.commission_rate || 0) * 100
+  ).toFixed(0);
+
   const totalEarnings = totalSales * Number(affiliate?.commission_rate || 0);
   const totalPaid = Number(affiliate?.total_paid || 0);
   const owedAmount = Math.max(0, totalEarnings - totalPaid);
@@ -1572,8 +1574,10 @@ export default function CreatorStudio() {
                 marginBottom: "32px",
               }}
             >
-              {/* Available Balance Card */}
-              <div style={styles.metricCard}>
+              {/* Available Balance Card (Currently Owed) */}
+              <div
+                style={{ ...styles.metricCard, borderTop: "4px solid #10b981" }}
+              >
                 <div
                   style={{
                     position: "absolute",
@@ -1596,10 +1600,10 @@ export default function CreatorStudio() {
                   }}
                 >
                   <div>
-                    <p style={styles.metricLabel}>Available Balance</p>
-                    <h2 style={styles.metricValue}>
-                      ${owedAmount.toFixed(2)}
-                    </h2>
+                    <p style={{ ...styles.metricLabel, color: "#10b981" }}>
+                      Available Balance (Owed)
+                    </p>
+                    <h2 style={styles.metricValue}>${owedAmount.toFixed(2)}</h2>
                   </div>
                   <div
                     style={{
@@ -1615,34 +1619,13 @@ export default function CreatorStudio() {
                     <DollarSign size={24} color="#059669" />
                   </div>
                 </div>
-                <div
-                  style={{
-                    position: "relative",
-                    zIndex: 10,
-                    marginTop: "16px",
-                    borderTop: "1px solid #e2e8f0",
-                    paddingTop: "16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                    <span style={{ color: "#64748b" }}>Lifetime Earned:</span>
-                    <strong style={{ color: "#0f172a" }}>${totalEarnings.toFixed(2)}</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                    <span style={{ color: "#64748b" }}>Already Paid:</span>
-                    <strong style={{ color: "#16a34a" }}>${totalPaid.toFixed(2)}</strong>
-                  </div>
-                </div>
-                
+
                 <button
                   onClick={() => setShowPayoutModal(true)}
                   disabled={owedAmount <= 0}
                   style={{
                     width: "100%",
-                    marginTop: "16px",
+                    marginTop: "24px",
                     background: owedAmount > 0 ? "#0f172a" : "#cbd5e1",
                     color: "white",
                     padding: "10px 16px",
@@ -1657,15 +1640,17 @@ export default function CreatorStudio() {
                     gap: "6px",
                     transition: "all 0.2s",
                     position: "relative",
-                    zIndex: 10
+                    zIndex: 10,
                   }}
                 >
                   <Banknote size={16} /> Cash Out Balance
                 </button>
               </div>
 
-              {/* Code Usage Card */}
-              <div style={styles.metricCard}>
+              {/* Lifetime Total Earnings Card */}
+              <div
+                style={{ ...styles.metricCard, borderTop: "4px solid #4635de" }}
+              >
                 <div
                   style={{
                     position: "absolute",
@@ -1673,7 +1658,7 @@ export default function CreatorStudio() {
                     top: "-20px",
                     width: "100px",
                     height: "100px",
-                    background: "#eff6ff",
+                    background: "#e0e7ff",
                     borderRadius: "50%",
                     opacity: 0.5,
                   }}
@@ -1683,36 +1668,67 @@ export default function CreatorStudio() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
-                    marginBottom: "16px",
                     position: "relative",
                     zIndex: 10,
                   }}
                 >
                   <div>
-                    <p style={styles.metricLabel}>Code Usage</p>
-                    <h2 style={styles.metricValue}>{orders.length}</h2>
+                    <p style={{ ...styles.metricLabel, color: "#4635de" }}>
+                      Lifetime Total Earnings
+                    </p>
+                    <h2 style={styles.metricValue}>
+                      ${totalEarnings.toFixed(2)}
+                    </h2>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    position: "relative",
+                    zIndex: 10,
+                    marginTop: "16px",
+                    borderTop: "1px solid #e2e8f0",
+                    paddingTop: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    <span style={{ color: "#64748b", fontWeight: "bold" }}>
+                      Total Sales Driven:
+                    </span>
+                    <strong style={{ color: "#0f172a" }}>
+                      ${totalSales.toFixed(2)}
+                    </strong>
                   </div>
                   <div
                     style={{
-                      width: "48px",
-                      height: "48px",
-                      background: "#dbeafe",
-                      borderRadius: "12px",
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      justifyContent: "space-between",
+                      fontSize: "0.9rem",
                     }}
                   >
-                    <Package size={24} color="#2563eb" />
+                    <span style={{ color: "#64748b", fontWeight: "bold" }}>
+                      Total Payouts Received:
+                    </span>
+                    <strong style={{ color: "#ef4444" }}>
+                      -${totalPaid.toFixed(2)}
+                    </strong>
                   </div>
                 </div>
-                <p style={{ ...styles.metricDesc, marginTop: "24px" }}>
-                  Total orders using your code
-                </p>
               </div>
 
-              {/* Sales Driven Card */}
-              <div style={styles.metricCard}>
+              {/* Referrals Generated Card */}
+              <div
+                style={{ ...styles.metricCard, borderTop: "4px solid #9333ea" }}
+              >
                 <div
                   style={{
                     position: "absolute",
@@ -1736,8 +1752,10 @@ export default function CreatorStudio() {
                   }}
                 >
                   <div>
-                    <p style={styles.metricLabel}>Sales Driven</p>
-                    <h2 style={styles.metricValue}>${totalSales.toFixed(2)}</h2>
+                    <p style={{ ...styles.metricLabel, color: "#9333ea" }}>
+                      Referrals Generated
+                    </p>
+                    <h2 style={styles.metricValue}>{orders.length}</h2>
                   </div>
                   <div
                     style={{
@@ -1750,11 +1768,11 @@ export default function CreatorStudio() {
                       justifyContent: "center",
                     }}
                   >
-                    <TrendingUp size={24} color="#9333ea" />
+                    <Package size={24} color="#9333ea" />
                   </div>
                 </div>
                 <p style={{ ...styles.metricDesc, marginTop: "24px" }}>
-                  Total revenue generated for store
+                  Total successful orders via your code
                 </p>
               </div>
             </div>
@@ -1787,7 +1805,7 @@ export default function CreatorStudio() {
                     color: "#0f172a",
                   }}
                 >
-                  Recent Referrals
+                  Recent Referrals & Payouts
                 </h3>
                 <span
                   style={{
@@ -1820,10 +1838,10 @@ export default function CreatorStudio() {
                       }}
                     >
                       <th style={styles.th}>Date</th>
-                      <th style={styles.th}>Customer</th>
+                      <th style={styles.th}>Transaction Type</th>
                       <th style={styles.th}>Order Total</th>
                       <th style={{ ...styles.th, textAlign: "right" }}>
-                        Your Cut ({commissionPercentage}%)
+                        Ledger Amount
                       </th>
                     </tr>
                   </thead>
@@ -1841,76 +1859,25 @@ export default function CreatorStudio() {
                           Loading your data...
                         </td>
                       </tr>
-                    ) : orders.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan="4"
-                          style={{ padding: "60px 20px", textAlign: "center" }}
-                        >
-                          <div
+                    ) : (
+                      <>
+                        {/* SYNTHETIC PAYOUT ROW (INJECTS IF PAID) */}
+                        {totalPaid > 0 && (
+                          <tr
                             style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
+                              borderBottom: "1px solid #fecaca",
+                              background: "#fef2f2",
                             }}
                           >
-                            <Package
-                              size={48}
-                              color="#cbd5e1"
-                              style={{ marginBottom: "16px" }}
-                            />
-                            <p
-                              style={{
-                                fontSize: "1.1rem",
-                                fontWeight: 600,
-                                color: "#475569",
-                                margin: "0 0 8px 0",
-                              }}
-                            >
-                              No orders yet.
-                            </p>
-                            <p
-                              style={{
-                                fontSize: "0.9rem",
-                                color: "#94a3b8",
-                                margin: 0,
-                              }}
-                            >
-                              Share your code{" "}
-                              <strong style={{ color: "#4635de" }}>
-                                {affiliate.discount_code}
-                              </strong>{" "}
-                              to start earning!
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      orders.map((order, idx) => {
-                        const orderDate = new Date(
-                          order.created_at,
-                        ).toLocaleDateString("en-AU", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        });
-
-                        const commission =
-                          Number(order.total_amount || 0) *
-                          Number(affiliate.commission_rate);
-
-                        return (
-                          <tr key={idx} style={styles.trBody}>
                             <td style={styles.td}>
                               <span
                                 style={{
-                                  color: "#64748b",
+                                  color: "#ef4444",
                                   fontSize: "0.9rem",
-                                  fontWeight: 500,
+                                  fontWeight: "bold",
                                 }}
                               >
-                                {orderDate}
+                                Lifetime Record
                               </span>
                             </td>
                             <td style={styles.td}>
@@ -1925,26 +1892,25 @@ export default function CreatorStudio() {
                                   style={{
                                     width: "28px",
                                     height: "28px",
-                                    background: "#f1f5f9",
+                                    background: "#fecaca",
                                     borderRadius: "50%",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    color: "#94a3b8",
+                                    color: "#b91c1c",
                                     flexShrink: 0,
                                   }}
                                 >
-                                  <User size={14} />
+                                  <Banknote size={14} />
                                 </div>
                                 <span
                                   style={{
                                     fontSize: "0.95rem",
-                                    fontWeight: 600,
-                                    color: "#0f172a",
-                                    whiteSpace: "nowrap",
+                                    fontWeight: 800,
+                                    color: "#b91c1c",
                                   }}
                                 >
-                                  {formatName(order.customer_name)}
+                                  PAYOUTS PROCESSED
                                 </span>
                               </div>
                             </td>
@@ -1952,10 +1918,10 @@ export default function CreatorStudio() {
                               style={{
                                 ...styles.td,
                                 fontWeight: 700,
-                                color: "#334155",
+                                color: "#94a3b8",
                               }}
                             >
-                              ${Number(order.total_amount || 0).toFixed(2)}
+                              ---
                             </td>
                             <td style={{ ...styles.td, textAlign: "right" }}>
                               <span
@@ -1963,8 +1929,8 @@ export default function CreatorStudio() {
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
-                                  background: "#ecfdf5",
-                                  color: "#059669",
+                                  background: "#fee2e2",
+                                  color: "#b91c1c",
                                   fontWeight: 800,
                                   padding: "6px 12px",
                                   borderRadius: "20px",
@@ -1972,12 +1938,157 @@ export default function CreatorStudio() {
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                +${commission.toFixed(2)}
+                                -${totalPaid.toFixed(2)}
                               </span>
                             </td>
                           </tr>
-                        );
-                      })
+                        )}
+
+                        {/* STANDARD ORDER ROWS */}
+                        {orders.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan="4"
+                              style={{
+                                padding: "60px 20px",
+                                textAlign: "center",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Package
+                                  size={48}
+                                  color="#cbd5e1"
+                                  style={{ marginBottom: "16px" }}
+                                />
+                                <p
+                                  style={{
+                                    fontSize: "1.1rem",
+                                    fontWeight: 600,
+                                    color: "#475569",
+                                    margin: "0 0 8px 0",
+                                  }}
+                                >
+                                  No orders yet.
+                                </p>
+                                <p
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    color: "#94a3b8",
+                                    margin: 0,
+                                  }}
+                                >
+                                  Share your code{" "}
+                                  <strong style={{ color: "#4635de" }}>
+                                    {affiliate.discount_code}
+                                  </strong>{" "}
+                                  to start earning!
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          orders.map((order, idx) => {
+                            const orderDate = new Date(
+                              order.created_at,
+                            ).toLocaleDateString("en-AU", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            });
+
+                            const commission =
+                              Number(order.total_amount || 0) *
+                              Number(affiliate.commission_rate);
+
+                            return (
+                              <tr key={idx} style={styles.trBody}>
+                                <td style={styles.td}>
+                                  <span
+                                    style={{
+                                      color: "#64748b",
+                                      fontSize: "0.9rem",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {orderDate}
+                                  </span>
+                                </td>
+                                <td style={styles.td}>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: "28px",
+                                        height: "28px",
+                                        background: "#f1f5f9",
+                                        borderRadius: "50%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        color: "#94a3b8",
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      <User size={14} />
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontSize: "0.95rem",
+                                        fontWeight: 600,
+                                        color: "#0f172a",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {formatName(order.customer_name)}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.td,
+                                    fontWeight: 700,
+                                    color: "#334155",
+                                  }}
+                                >
+                                  ${Number(order.total_amount || 0).toFixed(2)}
+                                </td>
+                                <td
+                                  style={{ ...styles.td, textAlign: "right" }}
+                                >
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      background: "#ecfdf5",
+                                      color: "#059669",
+                                      fontWeight: 800,
+                                      padding: "6px 12px",
+                                      borderRadius: "20px",
+                                      fontSize: "0.9rem",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    +${commission.toFixed(2)}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </>
                     )}
                   </tbody>
                 </table>

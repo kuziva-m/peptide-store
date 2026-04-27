@@ -167,7 +167,7 @@ export default function CreatorManager() {
     fetchData();
   };
 
-  // --- NEW: PAYOUT LOGIC ---
+  // --- PAYOUT LOGIC ---
   const handleOpenPayout = (affiliate) => {
     const stats = getAffiliateStats(affiliate.discount_code);
     const totalEarned = stats.totalSales * affiliate.commission_rate;
@@ -589,10 +589,14 @@ export default function CreatorManager() {
                         </td>
                         <td style={styles.td}>
                           <div
-                            style={{ fontSize: "0.85rem", color: "#64748b" }}
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "#64748b",
+                              marginBottom: "4px",
+                            }}
                           >
-                            Total Earned:{" "}
-                            <strong style={{ color: "#0f172a" }}>
+                            Lifetime Earnings:{" "}
+                            <strong style={{ color: "#4635de" }}>
                               ${totalEarned.toFixed(2)}
                             </strong>
                           </div>
@@ -600,17 +604,30 @@ export default function CreatorManager() {
                             style={{
                               fontSize: "0.85rem",
                               color: "#64748b",
-                              margin: "2px 0 6px 0",
+                              marginBottom: "8px",
                             }}
                           >
-                            Already Paid:{" "}
-                            <strong style={{ color: "#16a34a" }}>
-                              ${totalPaid.toFixed(2)}
+                            Total Paid Out:{" "}
+                            <strong style={{ color: "#ef4444" }}>
+                              -${totalPaid.toFixed(2)}
                             </strong>
                           </div>
-                          <div style={styles.payoutBadge}>
+                          <div
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              background:
+                                owedAmount > 0 ? "#ecfdf5" : "#f1f5f9",
+                              color: owedAmount > 0 ? "#059669" : "#64748b",
+                              padding: "4px 10px",
+                              borderRadius: "8px",
+                              fontWeight: 800,
+                              fontSize: "0.85rem",
+                            }}
+                          >
                             <DollarSign size={14} />
-                            Owed: {owedAmount.toFixed(2)}
+                            Owed: ${owedAmount.toFixed(2)}
                           </div>
                         </td>
                         <td style={{ ...styles.td, textAlign: "right" }}>
