@@ -123,10 +123,13 @@ export default function OrderManager() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const s = search.toLowerCase();
+
+      // 🚨 ADDED TRACKING NUMBER TO SEARCH LOGIC SO THE BARCODE SCANNER WORKS
       const matchesSearch =
         order.id.toLowerCase().includes(s) ||
         order.customer_email?.toLowerCase().includes(s) ||
-        order.customer_name?.toLowerCase().includes(s);
+        order.customer_name?.toLowerCase().includes(s) ||
+        order.tracking_number?.toLowerCase().includes(s);
 
       let matchesStatus = false;
 
@@ -296,7 +299,7 @@ export default function OrderManager() {
           <div style={styles.searchWrapper}>
             <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
             <input
-              placeholder="Search..."
+              placeholder="Search or scan barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={styles.inputReset}
