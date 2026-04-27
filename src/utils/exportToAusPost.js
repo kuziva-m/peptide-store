@@ -80,7 +80,7 @@ export const downloadAusPostCSV = (orders) => {
 
     return [
       // --- SENDER INFO (LOCKED) ---
-      "Melbourne Peptides", // Send From Name
+      "MP Research", // Send From Name
       "567 Collins St", // Send From Address Line 1
       "Melbourne", // Send From Suburb
       "VIC", // Send From State
@@ -103,7 +103,7 @@ export const downloadAusPostCSV = (orders) => {
       "15", // Item length
       "10", // Item width
       "2", // Item height
-      "Peptides", // Item Description
+      " ", // Item Description
       "NO", // Item Dangerous Goods Flag
       String(order.id || "").slice(0, 8), // Additional Label Information 1
     ]

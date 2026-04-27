@@ -250,27 +250,28 @@ export function OrderRow({
     }
   };
 
-  const handleDeleteOrder = async () => {
+  // --- REPLACED HARD DELETE WITH SOFT CANCEL ---
+  const handleCancelOrder = async () => {
     promptConfirm(
-      "Delete Order",
-      "Are you absolutely sure? This will permanently delete the order from the database and cannot be undone.",
+      "Cancel Order",
+      "Are you sure you want to cancel this order? It will be moved to the Canceled tab instead of being permanently deleted.",
       async () => {
         try {
           const { error } = await supabase
             .from("orders")
-            .delete()
+            .update({ status: "cancelled" })
             .eq("id", order.id);
 
           if (error) throw error;
 
-          showToast("Order deleted successfully!");
+          showToast("Order canceled successfully!");
           onUpdate();
         } catch (err) {
-          console.error("Error deleting order:", err);
-          showToast("Failed to delete order. Check console.");
+          console.error("Error cancelling order:", err);
+          showToast("Failed to cancel order. Check console.");
         }
       },
-      true,
+      true, // Keeps the red confirmation button style
     );
   };
 
@@ -1173,9 +1174,9 @@ export function OrderRow({
                       <Edit2 size={14} /> Edit Full Order Details
                     </button>
 
-                    {/* DELETE BUTTON */}
+                    {/* CANCEL ORDER BUTTON (Replaces Hard Delete) */}
                     <button
-                      onClick={handleDeleteOrder}
+                      onClick={handleCancelOrder}
                       style={{
                         background: "#fee2e2",
                         color: "#b91c1c",
@@ -1192,7 +1193,7 @@ export function OrderRow({
                         marginTop: "5px",
                       }}
                     >
-                      <Trash2 size={16} /> Delete Order
+                      <XCircle size={16} /> Cancel Order
                     </button>
                   </div>
                 </div>

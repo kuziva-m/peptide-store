@@ -160,14 +160,16 @@ export default function CreatorStudio() {
     setMountOverlay(true);
   };
 
+  // --- FINANCIAL CALCULATIONS ---
   const totalSales = orders.reduce(
     (sum, order) => sum + Number(order.total_amount || 0),
     0,
   );
+  const commissionPercentage = (Number(affiliate?.commission_rate || 0) * 100).toFixed(0);
+  
   const totalEarnings = totalSales * Number(affiliate?.commission_rate || 0);
-  const commissionPercentage = (
-    Number(affiliate?.commission_rate || 0) * 100
-  ).toFixed(0);
+  const totalPaid = Number(affiliate?.total_paid || 0);
+  const owedAmount = Math.max(0, totalEarnings - totalPaid);
 
   const formatName = (fullName) => {
     if (!fullName) return "Guest";
@@ -315,7 +317,7 @@ export default function CreatorStudio() {
             <h2 style="margin-bottom: 20px;">New Creator Payout Request</h2>
             <p><strong>Creator Name:</strong> ${affiliate.name}</p>
             <p><strong>Discount Code:</strong> ${affiliate.discount_code}</p>
-            <p><strong>Requested Amount:</strong> <span style="color: #10b981; font-weight: bold; font-size: 18px;">$${totalEarnings.toFixed(2)}</span></p>
+            <p><strong>Requested Amount:</strong> <span style="color: #10b981; font-weight: bold; font-size: 18px;">$${owedAmount.toFixed(2)}</span></p>
             <br/>
             <h3 style="color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">Verified Banking Details</h3>
             <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 14px;">
@@ -324,7 +326,7 @@ export default function CreatorStudio() {
               <p style="margin:0;"><strong>Account Number:</strong> ${affiliate.bank_account_number}</p>
             </div>
             <br/>
-            <p style="color: #64748b; font-size: 14px;">Please process this payment via your banking portal within 48 hours.</p>
+            <p style="color: #64748b; font-size: 14px;">Please process this payment via your banking portal within 48 hours, then mark it as paid in the Admin Creator Manager.</p>
           </div>
         `,
       },
@@ -761,7 +763,7 @@ export default function CreatorStudio() {
                         letterSpacing: "-0.5px",
                       }}
                     >
-                      ${totalEarnings.toFixed(2)}
+                      ${owedAmount.toFixed(2)}
                     </span>
                   </div>
 
@@ -884,7 +886,7 @@ export default function CreatorStudio() {
 
                       <button
                         onClick={handleRequestPayout}
-                        disabled={isSubmittingPayout || totalEarnings <= 0}
+                        disabled={isSubmittingPayout || owedAmount <= 0}
                         style={{
                           width: "100%",
                           background: "#4635de",
@@ -894,11 +896,11 @@ export default function CreatorStudio() {
                           borderRadius: "12px",
                           border: "none",
                           cursor:
-                            isSubmittingPayout || totalEarnings <= 0
+                            isSubmittingPayout || owedAmount <= 0
                               ? "not-allowed"
                               : "pointer",
                           opacity:
-                            isSubmittingPayout || totalEarnings <= 0 ? 0.7 : 1,
+                            isSubmittingPayout || owedAmount <= 0 ? 0.7 : 1,
                           transition: "all 0.2s",
                           fontSize: "1.05rem",
                           display: "flex",
@@ -1570,7 +1572,7 @@ export default function CreatorStudio() {
                 marginBottom: "32px",
               }}
             >
-              {/* Total Earnings Card */}
+              {/* Available Balance Card */}
               <div style={styles.metricCard}>
                 <div
                   style={{
@@ -1594,9 +1596,9 @@ export default function CreatorStudio() {
                   }}
                 >
                   <div>
-                    <p style={styles.metricLabel}>Total Earnings</p>
+                    <p style={styles.metricLabel}>Available Balance</p>
                     <h2 style={styles.metricValue}>
-                      ${totalEarnings.toFixed(2)}
+                      ${owedAmount.toFixed(2)}
                     </h2>
                   </div>
                   <div
@@ -1615,37 +1617,51 @@ export default function CreatorStudio() {
                 </div>
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
                     position: "relative",
                     zIndex: 10,
                     marginTop: "16px",
                     borderTop: "1px solid #e2e8f0",
                     paddingTop: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px"
                   }}
                 >
-                  <p style={styles.metricDesc}>Your lifetime commission</p>
-                  <button
-                    onClick={() => setShowPayoutModal(true)}
-                    style={{
-                      background: "#0f172a",
-                      color: "white",
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      border: "none",
-                      fontSize: "0.85rem",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <Banknote size={16} /> Cash Out
-                  </button>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                    <span style={{ color: "#64748b" }}>Lifetime Earned:</span>
+                    <strong style={{ color: "#0f172a" }}>${totalEarnings.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                    <span style={{ color: "#64748b" }}>Already Paid:</span>
+                    <strong style={{ color: "#16a34a" }}>${totalPaid.toFixed(2)}</strong>
+                  </div>
                 </div>
+                
+                <button
+                  onClick={() => setShowPayoutModal(true)}
+                  disabled={owedAmount <= 0}
+                  style={{
+                    width: "100%",
+                    marginTop: "16px",
+                    background: owedAmount > 0 ? "#0f172a" : "#cbd5e1",
+                    color: "white",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "0.9rem",
+                    fontWeight: "700",
+                    cursor: owedAmount > 0 ? "pointer" : "not-allowed",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    transition: "all 0.2s",
+                    position: "relative",
+                    zIndex: 10
+                  }}
+                >
+                  <Banknote size={16} /> Cash Out Balance
+                </button>
               </div>
 
               {/* Code Usage Card */}

@@ -66,6 +66,7 @@ export default function OrderManager() {
       paid: 0,
       label_created: 0,
       shipped: 0,
+      cancelled: 0,
       has_preorder: 0,
       has_notes: 0,
       all: orders.length,
@@ -85,6 +86,8 @@ export default function OrderManager() {
         counts.label_created++;
       } else if (order.status === "shipped") {
         counts.shipped++;
+      } else if (order.status === "cancelled") {
+        counts.cancelled++;
       }
 
       // Notes
@@ -155,6 +158,7 @@ export default function OrderManager() {
           matchesStatus = false;
         }
       } else {
+        // Handles label_created, shipped, and cancelled
         matchesStatus = order.status === statusFilter;
       }
 
@@ -261,6 +265,12 @@ export default function OrderManager() {
             count={tabCounts.label_created}
           />
           <FilterTab id="shipped" label="Shipped" count={tabCounts.shipped} />
+          <FilterTab
+            id="cancelled"
+            label="Canceled"
+            color="#ef4444"
+            count={tabCounts.cancelled}
+          />
 
           {/* --- PRE-ORDER & NOTES TABS --- */}
           <FilterTab
