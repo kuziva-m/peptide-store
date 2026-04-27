@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { styles } from "./OrderManagerStyles";
-import Barcode from "react-barcode"; // <-- NEW IMPORT
+import Barcode from "react-barcode";
 import {
   ExternalLink,
   Edit2,
@@ -23,7 +23,7 @@ import {
   AlertTriangle,
   Image as ImageIcon,
   XCircle,
-  Printer, // <-- NEW ICON
+  Printer,
 } from "lucide-react";
 
 export function OrderRow({
@@ -35,13 +35,12 @@ export function OrderRow({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false); // <-- NEW PRINT STATE
+  const [isPrinting, setIsPrinting] = useState(false);
   const [noteText, setNoteText] = useState(order.notes || "");
   const [emailMode, setEmailMode] = useState(false);
   const [customEmailText, setCustomEmailText] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
-  // --- Tracking & Status State ---
   const [quickTracking, setQuickTracking] = useState(
     order.tracking_number || "",
   );
@@ -63,13 +62,11 @@ export function OrderRow({
     notes: order.notes || "",
   });
 
-  // 🛡️ SAFELY PARSE ITEMS 🛡️
   const displayItems = useMemo(() => {
     try {
       if (order.order_items && order.order_items.length > 0) {
-        return order.order_items; // Old checkout format
+        return order.order_items;
       } else if (order.items) {
-        // If it was saved as a string, parse it into a real array
         return typeof order.items === "string"
           ? JSON.parse(order.items)
           : order.items;
@@ -94,10 +91,9 @@ export function OrderRow({
     });
   };
 
-  // --- NEW PRINT LOGIC ---
+  // --- PRINT LOGIC ---
   const handlePrintSlip = () => {
     setIsPrinting(true);
-    // Brief timeout to let React render the print overlay before calling print
     setTimeout(() => {
       window.print();
       setIsPrinting(false);
@@ -263,7 +259,6 @@ export function OrderRow({
     }
   };
 
-  // --- REPLACED HARD DELETE WITH SOFT CANCEL ---
   const handleCancelOrder = async () => {
     promptConfirm(
       "Cancel Order",
@@ -284,7 +279,7 @@ export function OrderRow({
           showToast("Failed to cancel order. Check console.");
         }
       },
-      true, // Keeps the red confirmation button style
+      true,
     );
   };
 
@@ -352,23 +347,32 @@ export function OrderRow({
 
   return (
     <>
-      {/* 🖨️ THE HIDDEN PRINTABLE PACKING SLIP OVERLAY */}
+      {/* 🖨️ THE HIDDEN PRINTABLE PACKING SLIP OVERLAY (FIXED FOR 1 PAGE) */}
       {isPrinting && (
         <div className="print-section">
           <style>{`
             @media print {
-              body * { visibility: hidden; }
-              .print-section, .print-section * { visibility: visible; }
+              body { 
+                visibility: hidden; 
+                margin: 0;
+                padding: 0;
+              }
               .print-section { 
-                position: absolute; 
+                visibility: visible; 
+                position: fixed; 
                 left: 0; 
                 top: 0; 
-                width: 100%; 
+                width: 100vw; 
+                height: 100vh;
                 background: white;
-                padding: 20px;
+                padding: 20mm;
                 font-family: sans-serif;
+                z-index: 99999;
+                box-sizing: border-box;
               }
-              @page { margin: 20mm; }
+              .print-section * {
+                visibility: visible;
+              }
             }
           `}</style>
 
@@ -392,13 +396,13 @@ export function OrderRow({
               Packing Slip
             </h1>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              {/* Code128 format handles UUIDs well. Width scaled down so it fits on page. */}
+              {/* Shortened Barcode so it scans fast and looks clean */}
               <Barcode
-                value={order.id}
+                value={order.id.slice(0, 8)}
                 format="CODE128"
-                width={1.2}
+                width={2}
                 height={60}
-                fontSize={12}
+                fontSize={14}
                 margin={0}
               />
             </div>
@@ -587,7 +591,6 @@ export function OrderRow({
                 <MessageCircle size={14} color="#3b82f6" title="Has Notes" />
               )}
 
-              {/* DISCOUNT CODE PILL - NOW GREEN */}
               {order.discount_code && (
                 <span
                   style={{
@@ -615,7 +618,7 @@ export function OrderRow({
                   style={{
                     marginLeft: "8px",
                     background: "#fee2e2",
-                    color: "#b91c1c", // RED FOR EXPRESS
+                    color: "#b91c1c",
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.65rem",
@@ -632,7 +635,7 @@ export function OrderRow({
                   style={{
                     marginLeft: "8px",
                     background: "#fef08a",
-                    color: "#a16207", // YELLOW FOR STANDARD
+                    color: "#a16207",
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.65rem",
@@ -659,7 +662,6 @@ export function OrderRow({
               {sStyle.label}
             </span>
           </div>
-          {/* --- FIX: ROUNDED TOTAL EXACTLY TO 2 DECIMALS --- */}
           <div style={styles.colTotal}>
             ${Number(order.total_amount || 0).toFixed(2)}
           </div>
@@ -678,9 +680,6 @@ export function OrderRow({
         {isExpanded && (
           <div style={styles.expandedPanel}>
             {isEditing ? (
-              /* ============================== */
-              /* 📝 EDIT MODE UI                */
-              /* ============================== */
               <div
                 style={{
                   padding: "10px",
@@ -978,9 +977,6 @@ export function OrderRow({
                 </div>
               </div>
             ) : (
-              /* ============================== */
-              /* 👁️ NORMAL VIEW MODE           */
-              /* ============================== */
               <>
                 {(order.status === "pending" ||
                   order.status === "payment_reported" ||
@@ -1135,7 +1131,6 @@ export function OrderRow({
                                       item.name ||
                                       "Product"}
                                   </span>
-                                  {/* PRE-ORDER PILL - NOW PURPLE */}
                                   {isItemPreorder && (
                                     <span
                                       style={{
@@ -1152,7 +1147,6 @@ export function OrderRow({
                                     </span>
                                   )}
                                 </div>
-                                {/* PRE-ORDER VARIANT TEXT - NOW PURPLE */}
                                 {sizeText && (
                                   <span
                                     style={{
@@ -1178,7 +1172,6 @@ export function OrderRow({
                       )}
                     </div>
 
-                    {/* --- SHIPPING COST DISPLAY --- */}
                     <div
                       style={{
                         marginTop: "12px",
@@ -1258,7 +1251,6 @@ export function OrderRow({
                       <div>{order.customer_email}</div>
                       <div>{order.shipping_address?.phone}</div>
 
-                      {/* SHOW DISCOUNT CODE DETAILS IN EXPANDED VIEW - NOW GREEN */}
                       {order.discount_code && (
                         <div style={{ marginTop: "4px" }}>
                           <span
@@ -1278,7 +1270,7 @@ export function OrderRow({
                         </div>
                       )}
 
-                      {/* --- NEW PRINT PACKING SLIP BUTTON --- */}
+                      {/* --- PRINT PACKING SLIP BUTTON --- */}
                       <button
                         onClick={handlePrintSlip}
                         style={{
@@ -1417,7 +1409,7 @@ export function OrderRow({
                         <Edit2 size={14} /> Edit Full Order Details
                       </button>
 
-                      {/* CANCEL ORDER BUTTON (Replaces Hard Delete) */}
+                      {/* CANCEL ORDER BUTTON */}
                       <button
                         onClick={handleCancelOrder}
                         style={{

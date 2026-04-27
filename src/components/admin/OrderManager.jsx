@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { downloadAusPostCSV } from "../../utils/exportToAusPost";
 import { styles } from "./OrderManagerStyles";
@@ -6,361 +6,395 @@ import { OrderRow } from "./OrderRow";
 import { Search, Download, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function OrderManager() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  // Default to "pending" so you immediately see new manual orders!
-  const [statusFilter, setStatusFilter] = useState("pending");
-  const [notification, setNotification] = useState(null);
+  // --- NEW: AUTO-FOCUS SEARCH REF ---
+  const searchInputRef = useRef(null);
 
-  const [modalConfig, setModalConfig] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    onConfirm: null,
-    isDestructive: false,
-  });
+  // Default to "pending" so you immediately see new manual orders!
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [notification, setNotification] = useState(null);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    isDestructive: false,
+  });
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("orders")
-      .select(
-        `*, order_items (quantity, price_at_purchase, product_name_snapshot, variants (size_label, products (name, image_url)))`,
-      )
-      .order("created_at", { ascending: false });
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
-    if (error) console.error("Error fetching orders:", error);
-    else setOrders(data || []);
-    setLoading(false);
-  };
+  // --- NEW: GLOBAL BARCODE SCANNER LISTENER ---
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // 1. If they are already typing in a text box or select menu, leave them alone!
+      const activeTag = document.activeElement.tagName.toLowerCase();
+      if (
+        activeTag === "input" ||
+        activeTag === "textarea" ||
+        activeTag === "select"
+      ) {
+        return;
+      }
 
-  const showToast = (msg) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
-  };
+      // 2. Ignore system command keys (ctrl, alt, shift, meta)
+      if (e.metaKey || e.ctrlKey || e.altKey || e.key.length > 1) {
+        return;
+      }
 
-  const promptConfirm = (title, message, onConfirm, isDestructive = false) => {
-    setModalConfig({
-      isOpen: true,
-      title,
-      message,
-      isDestructive,
-      onConfirm: async () => {
-        await onConfirm();
-        setModalConfig((prev) => ({ ...prev, isOpen: false }));
-      },
-    });
-  };
+      // 3. If a normal character is typed (like a barcode scanner firing), instantly focus the search bar
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    };
 
-  // --- TAB COUNTER LOGIC ---
-  // Pre-calculate how many orders fit into each tab
-  const tabCounts = useMemo(() => {
-    const counts = {
-      pending: 0,
-      paid: 0,
-      label_created: 0,
-      shipped: 0,
-      cancelled: 0,
-      has_preorder: 0,
-      has_notes: 0,
-      all: orders.length,
-    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
-    orders.forEach((order) => {
-      // Basic Statuses
-      if (
-        order.status === "pending" ||
-        order.status === "payment_reported" ||
-        order.status === "pending_contact"
-      ) {
-        counts.pending++;
-      } else if (order.status === "paid" || order.status === "processing") {
-        counts.paid++;
-      } else if (order.status === "label_created") {
-        counts.label_created++;
-      } else if (order.status === "shipped") {
-        counts.shipped++;
-      } else if (order.status === "cancelled") {
-        counts.cancelled++;
-      }
+  const fetchOrders = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("orders")
+      .select(
+        `*, order_items (quantity, price_at_purchase, product_name_snapshot, variants (size_label, products (name, image_url)))`,
+      )
+      .order("created_at", { ascending: false });
 
-      // Notes
-      if (order.notes && order.notes.trim().length > 0) {
-        counts.has_notes++;
-      }
+    if (error) console.error("Error fetching orders:", error);
+    else setOrders(data || []);
+    setLoading(false);
+  };
 
-      // Pre-orders
-      try {
-        let items = [];
-        if (order.items) {
-          items =
-            typeof order.items === "string"
-              ? JSON.parse(order.items)
-              : order.items;
-        }
-        if (
-          items.some(
-            (item) => item.is_preorder === true || item.is_preorder === "true",
-          )
-        ) {
-          counts.has_preorder++;
-        }
-      } catch (e) {
-        // ignore parse errors
-      }
-    });
+  const showToast = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
 
-    return counts;
-  }, [orders]);
+  const promptConfirm = (title, message, onConfirm, isDestructive = false) => {
+    setModalConfig({
+      isOpen: true,
+      title,
+      message,
+      isDestructive,
+      onConfirm: async () => {
+        await onConfirm();
+        setModalConfig((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
 
-  // --- FILTERING LOGIC ---
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const s = search.toLowerCase();
-      const matchesSearch =
-        order.id.toLowerCase().includes(s) ||
-        order.customer_email?.toLowerCase().includes(s) ||
-        order.customer_name?.toLowerCase().includes(s);
+  // --- TAB COUNTER LOGIC ---
+  const tabCounts = useMemo(() => {
+    const counts = {
+      pending: 0,
+      paid: 0,
+      label_created: 0,
+      shipped: 0,
+      cancelled: 0,
+      has_preorder: 0,
+      has_notes: 0,
+      all: orders.length,
+    };
 
-      let matchesStatus = false;
+    orders.forEach((order) => {
+      // Basic Statuses
+      if (
+        order.status === "pending" ||
+        order.status === "payment_reported" ||
+        order.status === "pending_contact"
+      ) {
+        counts.pending++;
+      } else if (order.status === "paid" || order.status === "processing") {
+        counts.paid++;
+      } else if (order.status === "label_created") {
+        counts.label_created++;
+      } else if (order.status === "shipped") {
+        counts.shipped++;
+      } else if (order.status === "cancelled") {
+        counts.cancelled++;
+      }
 
-      if (statusFilter === "all") {
-        matchesStatus = true;
-      } else if (statusFilter === "pending") {
-        matchesStatus =
-          order.status === "pending" ||
-          order.status === "payment_reported" ||
-          order.status === "pending_contact";
-      } else if (statusFilter === "paid") {
-        matchesStatus =
-          order.status === "paid" || order.status === "processing";
-      } else if (statusFilter === "has_notes") {
-        matchesStatus = order.notes && order.notes.trim().length > 0;
-      } else if (statusFilter === "has_preorder") {
-        try {
-          let items = [];
-          if (order.items) {
-            items =
-              typeof order.items === "string"
-                ? JSON.parse(order.items)
-                : order.items;
-          }
-          matchesStatus = items.some(
-            (item) => item.is_preorder === true || item.is_preorder === "true",
-          );
-        } catch (e) {
-          matchesStatus = false;
-        }
-      } else {
-        // Handles label_created, shipped, and cancelled
-        matchesStatus = order.status === statusFilter;
-      }
+      // Notes
+      if (order.notes && order.notes.trim().length > 0) {
+        counts.has_notes++;
+      }
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, search, statusFilter]);
+      // Pre-orders
+      try {
+        let items = [];
+        if (order.items) {
+          items =
+            typeof order.items === "string"
+              ? JSON.parse(order.items)
+              : order.items;
+        }
+        if (
+          items.some(
+            (item) => item.is_preorder === true || item.is_preorder === "true",
+          )
+        ) {
+          counts.has_preorder++;
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    });
 
-  // --- STATS LOGIC ---
-  const stats = useMemo(() => {
-    // Only count ACTUAL REVENUE (Approved/Paid/Shipped orders)
-    const confirmedPaidOrders = orders.filter(
-      (o) =>
-        o.status === "paid" ||
-        o.status === "processing" ||
-        o.status === "label_created" ||
-        o.status === "shipped" ||
-        o.status === "delivered",
-    );
+    return counts;
+  }, [orders]);
 
-    const totalRevenue = confirmedPaidOrders.reduce(
-      (sum, o) => sum + Number(o.total_amount || 0),
-      0,
-    );
+  // --- FILTERING LOGIC ---
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const s = search.toLowerCase();
 
-    return {
-      totalRevenue,
-      totalOrders: confirmedPaidOrders.length,
-    };
-  }, [orders]);
+      // 🚨 ADDED: `tracking_number` to the search logic
+      const matchesSearch =
+        order.id.toLowerCase().includes(s) ||
+        order.customer_email?.toLowerCase().includes(s) ||
+        order.customer_name?.toLowerCase().includes(s) ||
+        order.tracking_number?.toLowerCase().includes(s);
 
-  const handleBulkExport = () => {
-    if (filteredOrders.length === 0) return showToast("No orders to export");
-    downloadAusPostCSV(filteredOrders);
-    showToast(`Exported ${filteredOrders.length} orders`);
-  };
+      let matchesStatus = false;
 
-  // --- UPDATED DYNAMIC FILTER TAB COMPONENT ---
-  const FilterTab = ({ id, label, color, count }) => {
-    const isActive = statusFilter === id;
+      if (statusFilter === "all") {
+        matchesStatus = true;
+      } else if (statusFilter === "pending") {
+        matchesStatus =
+          order.status === "pending" ||
+          order.status === "payment_reported" ||
+          order.status === "pending_contact";
+      } else if (statusFilter === "paid") {
+        matchesStatus =
+          order.status === "paid" || order.status === "processing";
+      } else if (statusFilter === "has_notes") {
+        matchesStatus = order.notes && order.notes.trim().length > 0;
+      } else if (statusFilter === "has_preorder") {
+        try {
+          let items = [];
+          if (order.items) {
+            items =
+              typeof order.items === "string"
+                ? JSON.parse(order.items)
+                : order.items;
+          }
+          matchesStatus = items.some(
+            (item) => item.is_preorder === true || item.is_preorder === "true",
+          );
+        } catch (e) {
+          matchesStatus = false;
+        }
+      } else {
+        // Handles label_created, shipped, and cancelled
+        matchesStatus = order.status === statusFilter;
+      }
 
-    return (
-      <button
-        onClick={() => setStatusFilter(id)}
-        style={{
-          ...styles.filterBtn,
-          background: isActive ? color || "#0f172a" : "white",
-          color: isActive ? "white" : "#64748b",
-          borderColor: isActive ? color || "#0f172a" : "#e2e8f0",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
-        <span>{label}</span>
-        <span
-          style={{
-            background: isActive ? "rgba(255, 255, 255, 0.25)" : "#f1f5f9",
-            color: isActive ? "white" : "#475569",
-            padding: "2px 8px",
-            borderRadius: "12px",
-            fontSize: "0.75rem",
-            fontWeight: "bold",
-            flexShrink: 0, // Prevents the badge from squishing on small screens
-          }}
-        >
-          {count}
-        </span>
-      </button>
-    );
-  };
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, search, statusFilter]);
 
-  return (
-    <div style={{ position: "relative" }}>
-      {/* STATS BAR */}
-      <div style={styles.statsContainer}>
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Total Paid Orders</span>
-          <span style={styles.statValue}>{stats.totalOrders}</span>
-        </div>
-        <div style={styles.statDivider} />
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Total Revenue</span>
-          <span style={styles.statValue}>${stats.totalRevenue.toFixed(2)}</span>
-        </div>
-      </div>
+  // --- STATS LOGIC ---
+  const stats = useMemo(() => {
+    // Only count ACTUAL REVENUE (Approved/Paid/Shipped orders)
+    const confirmedPaidOrders = orders.filter(
+      (o) =>
+        o.status === "paid" ||
+        o.status === "processing" ||
+        o.status === "label_created" ||
+        o.status === "shipped" ||
+        o.status === "delivered",
+    );
 
-      <div style={styles.toolbar}>
-        <div style={styles.filterGroup}>
-          <FilterTab
-            id="pending"
-            label="Action Required (New)"
-            color="#d97706"
-            count={tabCounts.pending}
-          />
-          <FilterTab
-            id="paid"
-            label="Approved (Paid)"
-            color="#16a34a"
-            count={tabCounts.paid}
-          />
-          <FilterTab
-            id="label_created"
-            label="Label Created"
-            count={tabCounts.label_created}
-          />
-          <FilterTab id="shipped" label="Shipped" count={tabCounts.shipped} />
-          <FilterTab
-            id="cancelled"
-            label="Canceled"
-            color="#ef4444"
-            count={tabCounts.cancelled}
-          />
+    const totalRevenue = confirmedPaidOrders.reduce(
+      (sum, o) => sum + Number(o.total_amount || 0),
+      0,
+    );
 
-          {/* --- PRE-ORDER & NOTES TABS --- */}
-          <FilterTab
-            id="has_preorder"
-            label="Contains Pre-order"
-            color="#ea580c"
-            count={tabCounts.has_preorder}
-          />
-          <FilterTab
-            id="has_notes"
-            label="With Notes"
-            color="#8b5cf6"
-            count={tabCounts.has_notes}
-          />
+    return {
+      totalRevenue,
+      totalOrders: confirmedPaidOrders.length,
+    };
+  }, [orders]);
 
-          <FilterTab id="all" label="All" count={tabCounts.all} />
-        </div>
+  const handleBulkExport = () => {
+    if (filteredOrders.length === 0) return showToast("No orders to export");
+    downloadAusPostCSV(filteredOrders);
+    showToast(`Exported ${filteredOrders.length} orders`);
+  };
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button onClick={handleBulkExport} style={styles.exportBtn}>
-            <Download size={16} /> Export
-          </button>
-          <div style={styles.searchWrapper}>
-            <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
-            <input
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={styles.inputReset}
-            />
-          </div>
-        </div>
-      </div>
+  // --- UPDATED DYNAMIC FILTER TAB COMPONENT ---
+  const FilterTab = ({ id, label, color, count }) => {
+    const isActive = statusFilter === id;
 
-      <div style={styles.tableContainer}>
-        {loading ? (
-          <div style={styles.emptyState}>Loading...</div>
-        ) : filteredOrders.length === 0 ? (
-          <div style={styles.emptyState}>No orders found.</div>
-        ) : (
-          filteredOrders.map((order) => (
-            <OrderRow
-              key={order.id}
-              order={order}
-              onUpdate={fetchOrders}
-              showToast={showToast}
-              promptConfirm={promptConfirm}
-            />
-          ))
-        )}
-      </div>
+    return (
+      <button
+        onClick={() => setStatusFilter(id)}
+        style={{
+          ...styles.filterBtn,
+          background: isActive ? color || "#0f172a" : "white",
+          color: isActive ? "white" : "#64748b",
+          borderColor: isActive ? color || "#0f172a" : "#e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <span>{label}</span>
+        <span
+          style={{
+            background: isActive ? "rgba(255, 255, 255, 0.25)" : "#f1f5f9",
+            color: isActive ? "white" : "#475569",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            flexShrink: 0, // Prevents the badge from squishing on small screens
+          }}
+        >
+          {count}
+        </span>
+      </button>
+    );
+  };
 
-      {notification && (
-        <div style={styles.toast}>
-          <CheckCircle size={16} /> {notification}
-        </div>
-      )}
-      {modalConfig.isOpen && (
-        <ConfirmationModal
-          config={modalConfig}
-          onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
-        />
-      )}
-    </div>
-  );
+  return (
+    <div style={{ position: "relative" }}>
+      {/* STATS BAR */}
+      <div style={styles.statsContainer}>
+        <div style={styles.statItem}>
+          <span style={styles.statLabel}>Total Paid Orders</span>
+          <span style={styles.statValue}>{stats.totalOrders}</span>
+        </div>
+        <div style={styles.statDivider} />
+        <div style={styles.statItem}>
+          <span style={styles.statLabel}>Total Revenue</span>
+          <span style={styles.statValue}>${stats.totalRevenue.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div style={styles.toolbar}>
+        <div style={styles.filterGroup}>
+          <FilterTab
+            id="pending"
+            label="Action Required (New)"
+            color="#d97706"
+            count={tabCounts.pending}
+          />
+          <FilterTab
+            id="paid"
+            label="Approved (Paid)"
+            color="#16a34a"
+            count={tabCounts.paid}
+          />
+          <FilterTab
+            id="label_created"
+            label="Label Created"
+            count={tabCounts.label_created}
+          />
+          <FilterTab id="shipped" label="Shipped" count={tabCounts.shipped} />
+          <FilterTab
+            id="cancelled"
+            label="Canceled"
+            color="#ef4444"
+            count={tabCounts.cancelled}
+          />
+
+          {/* --- PRE-ORDER & NOTES TABS --- */}
+          <FilterTab
+            id="has_preorder"
+            label="Contains Pre-order"
+            color="#ea580c"
+            count={tabCounts.has_preorder}
+          />
+          <FilterTab
+            id="has_notes"
+            label="With Notes"
+            color="#8b5cf6"
+            count={tabCounts.has_notes}
+          />
+
+          <FilterTab id="all" label="All" count={tabCounts.all} />
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button onClick={handleBulkExport} style={styles.exportBtn}>
+            <Download size={16} /> Export
+          </button>
+          <div style={styles.searchWrapper}>
+            <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
+            <input
+              ref={searchInputRef} // 🚨 ADDED REF FOR SCANNER
+              placeholder="Search or scan barcode..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={styles.inputReset}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.tableContainer}>
+        {loading ? (
+          <div style={styles.emptyState}>Loading...</div>
+        ) : filteredOrders.length === 0 ? (
+          <div style={styles.emptyState}>No orders found.</div>
+        ) : (
+          filteredOrders.map((order) => (
+            <OrderRow
+              key={order.id}
+              order={order}
+              onUpdate={fetchOrders}
+              showToast={showToast}
+              promptConfirm={promptConfirm}
+            />
+          ))
+        )}
+      </div>
+
+      {notification && (
+        <div style={styles.toast}>
+          <CheckCircle size={16} /> {notification}
+        </div>
+      )}
+      {modalConfig.isOpen && (
+        <ConfirmationModal
+          config={modalConfig}
+          onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+        />
+      )}
+    </div>
+  );
 }
 
 function ConfirmationModal({ config, onClose }) {
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={styles.modalContent}>
-        <div style={styles.modalHeader}>
-          {config.isDestructive && <AlertTriangle size={20} color="#ef4444" />}
-          <h3 style={styles.modalTitle}>{config.title}</h3>
-        </div>
-        <p style={styles.modalMessage}>{config.message}</p>
-        <div style={styles.modalActions}>
-          <button onClick={onClose} style={styles.modalCancel}>
-            Cancel
-          </button>
-          <button
-            onClick={config.onConfirm}
-            style={
-              config.isDestructive ? styles.modalDelete : styles.modalConfirm
-            }
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.modalContent}>
+        <div style={styles.modalHeader}>
+          {config.isDestructive && <AlertTriangle size={20} color="#ef4444" />}
+          <h3 style={styles.modalTitle}>{config.title}</h3>
+        </div>
+        <p style={styles.modalMessage}>{config.message}</p>
+        <div style={styles.modalActions}>
+          <button onClick={onClose} style={styles.modalCancel}>
+            Cancel
+          </button>
+          <button
+            onClick={config.onConfirm}
+            style={
+              config.isDestructive ? styles.modalDelete : styles.modalConfirm
+            }
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
