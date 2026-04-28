@@ -51,10 +51,17 @@ export default function Checkout() {
 
   const [shippingMethod, setShippingMethod] = useState("standard");
 
-  // --- DISCOUNT STATE ---
+  // --- 🚨 UPDATED DISCOUNT & VOUCHER STATE 🚨 ---
   const [discountCode, setDiscountCode] = useState("");
+  const [appliedCodeType, setAppliedCodeType] = useState(null); // 'promo' | 'voucher' | null
+
+  // Promo State
   const [discountAmount, setDiscountAmount] = useState(0);
   const [promoFreeShipping, setPromoFreeShipping] = useState(false);
+
+  // Voucher State
+  const [voucherData, setVoucherData] = useState(null);
+
   const [discountError, setDiscountError] = useState("");
   const [discountSuccess, setDiscountSuccess] = useState("");
   const [isVerifyingDiscount, setIsVerifyingDiscount] = useState(false);
@@ -93,7 +100,6 @@ export default function Checkout() {
   // 📮 ADDRESSFINDER (AUSPOST) AUTOCOMPLETE INJECTION
   // =========================================================================
   useEffect(() => {
-    // Prevent loading multiple times if React strict mode double-fires
     if (document.getElementById("addressfinder-script")) return;
 
     const script = document.createElement("script");
@@ -102,24 +108,20 @@ export default function Checkout() {
     script.async = true;
 
     script.onload = () => {
-      // Must use capital "F" in AddressFinder per their official documentation
       if (!addressInputRef.current || !window.AddressFinder) return;
 
-      // Initializing the Addressfinder widget with your Licence Key
       const widget = new window.AddressFinder.Widget(
         addressInputRef.current,
         "M64FCTH9LBRYUNQ38J7W", // Your Live Licence Key
         "AU",
         {
           address_params: {
-            source: "gnaf,paf", // explicitly queries the Post Address File
+            source: "gnaf,paf",
           },
         },
       );
 
-      // When the user clicks an address from the dropdown...
       widget.on("address:select", (fullAddress, metaData) => {
-        // metaData contains strictly formatted Australia Post variables!
         setFormData((prev) => ({
           ...prev,
           line1: metaData.address_line_1 || fullAddress,
@@ -133,7 +135,6 @@ export default function Checkout() {
     document.body.appendChild(script);
 
     return () => {
-      // Cleanup if component unmounts
       const scriptEl = document.getElementById("addressfinder-script");
       if (scriptEl) scriptEl.remove();
     };
@@ -166,6 +167,7 @@ export default function Checkout() {
     setTimeout(() => setCopied(""), 2000);
   };
 
+  // --- 🚨 UPDATED "SMART" DISCOUNT VERIFIER 🚨 ---
   const handleApplyDiscount = async () => {
     setDiscountError("");
     setDiscountSuccess("");
@@ -179,6 +181,36 @@ export default function Checkout() {
     setIsVerifyingDiscount(true);
 
     try {
+      // 1. FIRST, CHECK IF IT'S A STORE CREDIT VOUCHER
+      const { data: voucher } = await supabase
+        .from("vouchers")
+        .select("*")
+        .ilike("code", code)
+        .maybeSingle();
+
+      if (voucher) {
+        if (!voucher.is_active) {
+          setDiscountError("This voucher has been deactivated.");
+          return;
+        }
+        if (new Date(voucher.expires_at) < new Date()) {
+          setDiscountError("This voucher has expired.");
+          return;
+        }
+        if (Number(voucher.current_balance) <= 0) {
+          setDiscountError("This voucher has a $0 balance.");
+          return;
+        }
+
+        setAppliedCodeType("voucher");
+        setVoucherData(voucher);
+        setDiscountSuccess(
+          `Store Credit Applied! Balance: $${Number(voucher.current_balance).toFixed(2)}`,
+        );
+        return;
+      }
+
+      // 2. IF NOT A VOUCHER, CHECK IF IT'S A PROMO CODE
       const { data: discount, error } = await supabase
         .from("discounts")
         .select("*")
@@ -191,7 +223,7 @@ export default function Checkout() {
         discount.active === false ||
         discount.active === "false"
       ) {
-        setDiscountError("Invalid or inactive discount code.");
+        setDiscountError("Invalid code.");
         setDiscountAmount(0);
         setPromoFreeShipping(false);
         return;
@@ -223,6 +255,7 @@ export default function Checkout() {
         successMessages.push("Free Shipping");
       }
 
+      setAppliedCodeType("promo");
       setDiscountAmount(calculatedAmount);
       setDiscountSuccess(successMessages.join(" + ") + " Applied!");
     } catch (err) {
@@ -235,13 +268,16 @@ export default function Checkout() {
 
   const removeDiscount = () => {
     setDiscountCode("");
+    setAppliedCodeType(null);
     setDiscountAmount(0);
     setPromoFreeShipping(false);
+    setVoucherData(null);
     setDiscountSuccess("");
     setDiscountError("");
   };
 
-  const discountedSubtotal = Math.max(0, cartTotal - discountAmount);
+  // --- 🚨 UPDATED CART MATH (HANDLES PROMOS & VOUCHERS) 🚨 ---
+  // 1. Calculate Base Shipping
   const isStandardFree = cartTotal >= 150 || promoFreeShipping;
   const isExpressFree = cartTotal >= 250 || promoFreeShipping;
 
@@ -256,12 +292,28 @@ export default function Checkout() {
     shippingLabel = isStandardFree ? "Free" : "$9.99";
   }
 
-  const estimatedTotal = discountedSubtotal + shippingCost;
+  // 2. Calculate Subtotal with Promo (if any)
+  let finalPromoAmount = appliedCodeType === "promo" ? discountAmount : 0;
+  let totalBeforeVoucher =
+    Math.max(0, cartTotal - finalPromoAmount) + shippingCost;
+
+  // 3. Calculate Voucher Deduction (if any)
+  let voucherDeduction = 0;
+  if (appliedCodeType === "voucher" && voucherData) {
+    voucherDeduction = Math.min(
+      totalBeforeVoucher,
+      Number(voucherData.current_balance),
+    );
+  }
+
+  // 4. Final amount customer actually owes
+  const estimatedTotal = totalBeforeVoucher - voucherDeduction;
 
   const submitOrder = async (e) => {
     e.preventDefault();
 
-    if (!receiptFile) {
+    // Only require receipt if they actually owe money!
+    if (estimatedTotal > 0 && !receiptFile) {
       setError(
         "Please upload a screenshot of your payment receipt to complete your order.",
       );
@@ -316,21 +368,38 @@ export default function Checkout() {
           item.is_preorder || liveVariants[item.variantId || item.id] || false,
       }));
 
-      const fileExt = receiptFile.name.split(".").pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      // Only upload if a receipt exists
+      let receiptUrl = null;
+      if (receiptFile) {
+        const fileExt = receiptFile.name.split(".").pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("payment-proofs")
-        .upload(fileName, receiptFile);
+        const { error: uploadError } = await supabase.storage
+          .from("payment-proofs")
+          .upload(fileName, receiptFile);
 
-      if (uploadError)
-        throw new Error("Failed to upload receipt. Please try again.");
+        if (uploadError)
+          throw new Error("Failed to upload receipt. Please try again.");
 
-      const { data: publicUrlData } = supabase.storage
-        .from("payment-proofs")
-        .getPublicUrl(fileName);
+        const { data: publicUrlData } = supabase.storage
+          .from("payment-proofs")
+          .getPublicUrl(fileName);
 
-      const receiptUrl = publicUrlData.publicUrl;
+        receiptUrl = publicUrlData.publicUrl;
+      }
+
+      // --- 🚨 CRITICAL: DEDUCT VOUCHER BALANCE 🚨 ---
+      if (appliedCodeType === "voucher" && voucherData) {
+        const newBalance =
+          Number(voucherData.current_balance) - voucherDeduction;
+        const { error: vErr } = await supabase
+          .from("vouchers")
+          .update({ current_balance: newBalance })
+          .eq("id", voucherData.id);
+
+        if (vErr)
+          throw new Error("Failed to secure voucher funds. Please try again.");
+      }
 
       const orderPayload = {
         id: orderId,
@@ -342,12 +411,12 @@ export default function Checkout() {
         shipping_address: formData,
         items: itemsToSave,
         receipt_url: receiptUrl,
-        status: "pending",
-        discount_code:
-          discountAmount > 0 || promoFreeShipping
-            ? discountCode.toUpperCase()
-            : null,
-        discount_amount: discountAmount,
+        // If order was $0, automatically push it straight to paid status!
+        status: estimatedTotal === 0 ? "paid" : "pending",
+        discount_code: appliedCodeType ? discountCode.toUpperCase() : null,
+        // Save either the promo amount or the voucher amount so Admin panel math adds up
+        discount_amount:
+          appliedCodeType === "promo" ? finalPromoAmount : voucherDeduction,
       };
 
       const { error: orderError } = await supabase
@@ -356,7 +425,8 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
-      if (discountCode && (discountAmount > 0 || promoFreeShipping)) {
+      // Update Promo count
+      if (appliedCodeType === "promo" && discountCode) {
         try {
           const { data: dData } = await supabase
             .from("discounts")
@@ -388,7 +458,9 @@ export default function Checkout() {
             orderId: orderId,
             status: "custom",
             message:
-              "Thank you for your order! We have received your payment proof. Your order is currently under review and we will notify you as soon as your payment is confirmed and your package is ready to ship.",
+              estimatedTotal === 0
+                ? "Thank you for your order! Your store credit covered the full balance. Your order is now processing and we will notify you when it ships."
+                : "Thank you for your order! We have received your payment proof. Your order is currently under review and we will notify you as soon as your payment is confirmed and your package is ready to ship.",
             items: emailItems,
             address: formData,
           },
@@ -425,13 +497,25 @@ export default function Checkout() {
             </div>
 
             <p style="margin-bottom: 5px;"><strong>Subtotal:</strong> $${cartTotal.toFixed(2)}</p>
-            ${discountAmount > 0 ? `<p style="margin-bottom: 5px; color: #16a34a;"><strong>Discount (${discountCode.toUpperCase()}):</strong> -$${discountAmount.toFixed(2)}</p>` : ""}
+            ${appliedCodeType === "promo" ? `<p style="margin-bottom: 5px; color: #16a34a;"><strong>Promo (${discountCode.toUpperCase()}):</strong> -$${finalPromoAmount.toFixed(2)}</p>` : ""}
+            ${appliedCodeType === "voucher" ? `<p style="margin-bottom: 5px; color: #16a34a;"><strong>Store Credit (${discountCode.toUpperCase()}):</strong> -$${voucherDeduction.toFixed(2)}</p>` : ""}
+            
             <p style="margin-bottom: 20px; font-size: 18px;"><strong>Total Paid:</strong> $${estimatedTotal.toFixed(2)}</p>
             
+            ${
+              estimatedTotal > 0
+                ? `
             <div style="margin-top: 20px;">
               <p><strong>Payment Screenshot:</strong></p>
               <a href="${receiptUrl}" target="_blank" style="display: inline-block; background: #16a34a; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Receipt</a>
             </div>
+            `
+                : `
+            <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px; color: #166534; font-weight: bold;">
+              ✅ Fully Paid via Store Credit
+            </div>
+            `
+            }
             
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
             <p style="font-size: 12px; color: #64748b;">Log in to your admin panel to review and approve this order.</p>
@@ -585,7 +669,7 @@ export default function Checkout() {
                   onChange={handleChange}
                   style={{
                     ...inputStyle,
-                    borderColor: "#3b82f6", // Give it a slight highlight so users know it's a smart input
+                    borderColor: "#3b82f6",
                   }}
                 />
 
@@ -724,335 +808,368 @@ export default function Checkout() {
 
             <hr style={{ border: "none", borderTop: "1px solid #e2e8f0" }} />
 
-            {/* SECTION 3: BANK DETAILS */}
-            <div>
-              <h3
-                style={{
-                  fontSize: "18px",
-                  marginBottom: "12px",
-                  color: "#0f172a",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <Landmark size={20} /> 2. Complete Payment
-              </h3>
-              <p
-                style={{
-                  color: "#475569",
-                  marginBottom: "16px",
-                  fontSize: "14px",
-                }}
-              >
-                Transfer exactly{" "}
-                <strong style={{ color: "#0f172a" }}>
-                  ${estimatedTotal.toFixed(2)}
-                </strong>{" "}
-                to the account below.
-              </p>
-
-              <div
-                style={{
-                  background: "white",
-                  padding: "20px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    borderBottom: "1px solid #e2e8f0",
-                    paddingBottom: "12px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>
-                    Account Name
-                  </span>
-                  <div
+            {/* --- 🚨 DYNAMIC PAYMENT SECTIONS 🚨 --- */}
+            {estimatedTotal > 0 ? (
+              <>
+                {/* SECTION 3: BANK DETAILS */}
+                <div>
+                  <h3
                     style={{
+                      fontSize: "18px",
+                      marginBottom: "12px",
+                      color: "#0f172a",
                       display: "flex",
                       alignItems: "center",
-                      gap: "10px",
+                      gap: "8px",
                     }}
                   >
-                    <span
-                      style={{
-                        fontWeight: "600",
-                        color: "#0f172a",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Melbourne Peptides
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy("Melbourne Peptides", "name")}
-                      style={copyBtnStyle}
-                    >
-                      {copied === "name" ? "Copied!" : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
+                    <Landmark size={20} /> 2. Complete Payment
+                  </h3>
+                  <p
+                    style={{
+                      color: "#475569",
+                      marginBottom: "16px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Transfer exactly{" "}
+                    <strong style={{ color: "#0f172a" }}>
+                      ${estimatedTotal.toFixed(2)}
+                    </strong>{" "}
+                    to the account below.
+                  </p>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    borderBottom: "1px solid #e2e8f0",
-                    paddingBottom: "12px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>
-                    BSB
-                  </span>
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: "600",
-                        color: "#0f172a",
-                        fontSize: "16px",
-                      }}
-                    >
-                      013 226
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy("013226", "bsb")}
-                      style={copyBtnStyle}
-                    >
-                      {copied === "bsb" ? "Copied!" : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    borderBottom: "1px solid #e2e8f0",
-                    paddingBottom: "12px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>
-                    Account Number
-                  </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: "600",
-                        color: "#0f172a",
-                        fontSize: "16px",
-                      }}
-                    >
-                      806 890 436
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy("806890436", "acc")}
-                      style={copyBtnStyle}
-                    >
-                      {copied === "acc" ? "Copied!" : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    padding: "12px",
-                    background: "#eff6ff",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    color: "#1e3a8a",
-                    border: "1px solid #bfdbfe",
-                    textAlign: "center",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span>
-                    <strong>Reference:</strong> Please use{" "}
-                    <strong>#{shortRef}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(shortRef, "ref")}
-                    style={{
-                      ...copyBtnStyle,
                       background: "white",
-                      padding: "4px 8px",
+                      padding: "20px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
                     }}
                   >
-                    {copied === "ref" ? "Copied!" : <Copy size={14} />}
-                  </button>
-                </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: "1px solid #e2e8f0",
+                        paddingBottom: "12px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      <span style={{ fontSize: "13px", color: "#64748b" }}>
+                        Account Name
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: "600",
+                            color: "#0f172a",
+                            fontSize: "15px",
+                          }}
+                        >
+                          Melbourne Peptides
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy("Melbourne Peptides", "name")
+                          }
+                          style={copyBtnStyle}
+                        >
+                          {copied === "name" ? "Copied!" : <Copy size={14} />}
+                        </button>
+                      </div>
+                    </div>
 
-                <div
-                  style={{
-                    marginTop: "12px",
-                    padding: "12px",
-                    background: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    borderRadius: "6px",
-                    color: "#b91c1c",
-                    fontSize: "13px",
-                    lineHeight: "1.5",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                  }}
-                >
-                  <AlertTriangle
-                    size={16}
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />
-                  <div>
-                    <strong>CRITICAL:</strong> Please <strong>DO NOT</strong>{" "}
-                    put words like "peptide" or product names in the bank
-                    transfer description/reference. <strong>ONLY</strong> use
-                    the exact Reference Number above.
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: "1px solid #e2e8f0",
+                        paddingBottom: "12px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      <span style={{ fontSize: "13px", color: "#64748b" }}>
+                        BSB
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: "600",
+                            color: "#0f172a",
+                            fontSize: "16px",
+                          }}
+                        >
+                          013 226
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy("013226", "bsb")}
+                          style={copyBtnStyle}
+                        >
+                          {copied === "bsb" ? "Copied!" : <Copy size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: "1px solid #e2e8f0",
+                        paddingBottom: "12px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      <span style={{ fontSize: "13px", color: "#64748b" }}>
+                        Account Number
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: "600",
+                            color: "#0f172a",
+                            fontSize: "16px",
+                          }}
+                        >
+                          806 890 436
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy("806890436", "acc")}
+                          style={copyBtnStyle}
+                        >
+                          {copied === "acc" ? "Copied!" : <Copy size={14} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "12px",
+                        background: "#eff6ff",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        color: "#1e3a8a",
+                        border: "1px solid #bfdbfe",
+                        textAlign: "center",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>
+                        <strong>Reference:</strong> Please use{" "}
+                        <strong>#{shortRef}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(shortRef, "ref")}
+                        style={{
+                          ...copyBtnStyle,
+                          background: "white",
+                          padding: "4px 8px",
+                        }}
+                      >
+                        {copied === "ref" ? "Copied!" : <Copy size={14} />}
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        padding: "12px",
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        borderRadius: "6px",
+                        color: "#b91c1c",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "8px",
+                      }}
+                    >
+                      <AlertTriangle
+                        size={16}
+                        style={{ flexShrink: 0, marginTop: "2px" }}
+                      />
+                      <div>
+                        <strong>CRITICAL:</strong> Please{" "}
+                        <strong>DO NOT</strong> put words like "peptide" or
+                        product names in the bank transfer
+                        description/reference. <strong>ONLY</strong> use the
+                        exact Reference Number above.
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* SECTION 4: FILE UPLOAD */}
-            <div>
-              <h3
-                style={{
-                  fontSize: "18px",
-                  marginBottom: "12px",
-                  color: "#0f172a",
-                }}
-              >
-                3. Upload Proof
-              </h3>
-              <div
-                style={{
-                  border: previewUrl
-                    ? "2px solid #16a34a"
-                    : "2px dashed #cbd5e1",
-                  borderRadius: "12px",
-                  padding: "30px 20px",
-                  textAlign: "center",
-                  cursor: "pointer",
-                  position: "relative",
-                  backgroundColor: previewUrl ? "#f0fdf4" : "#f8fafc",
-                  transition: "all 0.2s",
-                }}
-              >
-                <input
-                  type="file"
-                  required
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    opacity: 0,
-                    cursor: "pointer",
-                    zIndex: 10,
-                  }}
-                />
-                {previewUrl ? (
+                {/* SECTION 4: FILE UPLOAD */}
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "18px",
+                      marginBottom: "12px",
+                      color: "#0f172a",
+                    }}
+                  >
+                    3. Upload Proof
+                  </h3>
                   <div
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
+                      border: previewUrl
+                        ? "2px solid #16a34a"
+                        : "2px dashed #cbd5e1",
+                      borderRadius: "12px",
+                      padding: "30px 20px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      position: "relative",
+                      backgroundColor: previewUrl ? "#f0fdf4" : "#f8fafc",
+                      transition: "all 0.2s",
                     }}
                   >
-                    <CheckCircle
-                      size={32}
-                      color="#16a34a"
-                      style={{ marginBottom: "10px" }}
-                    />
-                    <p
+                    <input
+                      type="file"
+                      required
+                      accept="image/*"
+                      onChange={handleFileChange}
                       style={{
-                        margin: "0 0 10px 0",
-                        fontWeight: "600",
-                        color: "#16a34a",
-                      }}
-                    >
-                      Receipt Attached!
-                    </p>
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      style={{
-                        maxHeight: "120px",
-                        borderRadius: "8px",
-                        border: "1px solid #bbf7d0",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        opacity: 0,
+                        cursor: "pointer",
+                        zIndex: 10,
                       }}
                     />
-                    <p
-                      style={{
-                        margin: "10px 0 0 0",
-                        fontSize: "12px",
-                        color: "#64748b",
-                      }}
-                    >
-                      Click or drag to replace
-                    </p>
+                    {previewUrl ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                        }}
+                      >
+                        <CheckCircle
+                          size={32}
+                          color="#16a34a"
+                          style={{ marginBottom: "10px" }}
+                        />
+                        <p
+                          style={{
+                            margin: "0 0 10px 0",
+                            fontWeight: "600",
+                            color: "#16a34a",
+                          }}
+                        >
+                          Receipt Attached!
+                        </p>
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
+                          style={{
+                            maxHeight: "120px",
+                            borderRadius: "8px",
+                            border: "1px solid #bbf7d0",
+                          }}
+                        />
+                        <p
+                          style={{
+                            margin: "10px 0 0 0",
+                            fontSize: "12px",
+                            color: "#64748b",
+                          }}
+                        >
+                          Click or drag to replace
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload
+                          size={32}
+                          color="#64748b"
+                          style={{ margin: "0 auto 10px auto" }}
+                        />
+                        <p
+                          style={{
+                            margin: 0,
+                            color: "#0f172a",
+                            fontWeight: "600",
+                            fontSize: "16px",
+                          }}
+                        >
+                          Upload Payment Screenshot
+                        </p>
+                        <p
+                          style={{
+                            margin: "5px 0 0 0",
+                            color: "#64748b",
+                            fontSize: "13px",
+                          }}
+                        >
+                          We need this to verify and ship your order
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div>
-                    <Upload
-                      size={32}
-                      color="#64748b"
-                      style={{ margin: "0 auto 10px auto" }}
-                    />
-                    <p
-                      style={{
-                        margin: 0,
-                        color: "#0f172a",
-                        fontWeight: "600",
-                        fontSize: "16px",
-                      }}
-                    >
-                      Upload Payment Screenshot
-                    </p>
-                    <p
-                      style={{
-                        margin: "5px 0 0 0",
-                        color: "#64748b",
-                        fontSize: "13px",
-                      }}
-                    >
-                      We need this to verify and ship your order
-                    </p>
-                  </div>
-                )}
+                </div>
+              </>
+            ) : (
+              // VOUCHER $0 CHECKOUT STATE
+              <div
+                style={{
+                  padding: "24px",
+                  background: "#f0fdf4",
+                  borderRadius: "12px",
+                  border: "2px solid #bbf7d0",
+                  color: "#166534",
+                  textAlign: "center",
+                }}
+              >
+                <CheckCircle
+                  size={32}
+                  color="#16a34a"
+                  style={{ margin: "0 auto 12px auto" }}
+                />
+                <h3 style={{ margin: "0 0 8px 0", fontSize: "20px" }}>
+                  Order Fully Covered!
+                </h3>
+                <p style={{ margin: 0, color: "#15803d" }}>
+                  Your store credit covers the entire balance of this order. No
+                  bank transfer or receipt required.
+                </p>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
-              disabled={isLoading || !receiptFile}
+              disabled={isLoading || (estimatedTotal > 0 && !receiptFile)}
               className="checkout-btn"
               style={{
                 marginTop: "10px",
@@ -1062,7 +1179,8 @@ export default function Checkout() {
                 justifyContent: "center",
                 alignItems: "center",
                 gap: "10px",
-                opacity: !receiptFile || isLoading ? 0.7 : 1,
+                opacity:
+                  (estimatedTotal > 0 && !receiptFile) || isLoading ? 0.7 : 1,
               }}
             >
               {isLoading ? (
@@ -1202,23 +1320,21 @@ export default function Checkout() {
                   />
                   <input
                     type="text"
-                    placeholder="Discount code"
+                    placeholder="Discount or Voucher code"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
-                    disabled={discountAmount > 0 || promoFreeShipping}
+                    disabled={appliedCodeType !== null}
                     style={{
                       ...inputStyle,
                       paddingLeft: "36px",
                       paddingTop: "10px",
                       paddingBottom: "10px",
                       background:
-                        discountAmount > 0 || promoFreeShipping
-                          ? "#f1f5f9"
-                          : "white",
+                        appliedCodeType !== null ? "#f1f5f9" : "white",
                     }}
                   />
                 </div>
-                {discountAmount > 0 || promoFreeShipping ? (
+                {appliedCodeType !== null ? (
                   <button
                     type="button"
                     onClick={removeDiscount}
@@ -1299,7 +1415,7 @@ export default function Checkout() {
               <span>${cartTotal.toFixed(2)}</span>
             </div>
 
-            {discountAmount > 0 && (
+            {appliedCodeType === "promo" && (
               <div
                 style={{
                   display: "flex",
@@ -1309,8 +1425,8 @@ export default function Checkout() {
                   fontWeight: "500",
                 }}
               >
-                <span>Discount ({discountCode.toUpperCase()})</span>
-                <span>-${discountAmount.toFixed(2)}</span>
+                <span>Promo ({discountCode.toUpperCase()})</span>
+                <span>-${finalPromoAmount.toFixed(2)}</span>
               </div>
             )}
 
@@ -1337,6 +1453,24 @@ export default function Checkout() {
               </span>
             </div>
 
+            {/* VOUCHER CREDIT LINE */}
+            {appliedCodeType === "voucher" && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "16px",
+                  color: "#16a34a",
+                  fontWeight: "600",
+                  paddingTop: "12px",
+                  borderTop: "1px dashed #cbd5e1",
+                }}
+              >
+                <span>Store Credit Used</span>
+                <span>-${voucherDeduction.toFixed(2)}</span>
+              </div>
+            )}
+
             <div
               style={{
                 display: "flex",
@@ -1344,6 +1478,9 @@ export default function Checkout() {
                 fontSize: "20px",
                 fontWeight: "bold",
                 color: "#0f172a",
+                paddingTop: appliedCodeType === "voucher" ? "0" : "12px",
+                borderTop:
+                  appliedCodeType === "voucher" ? "none" : "1px solid #e2e8f0",
               }}
             >
               <span>Total to Pay</span>
