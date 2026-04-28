@@ -7,7 +7,6 @@ import {
   LogOut,
   ShoppingBag,
   MessageSquare,
-  Mail,
   Users,
   Atom,
   ArrowRight,
@@ -16,11 +15,11 @@ import {
   Settings,
   Menu,
   X,
-  Inbox,
+  Mail, // Kept for Inbox
   Home,
-  BarChart3,
   Star,
-  Globe, // NEW: Imported Globe icon for SEO Pages
+  Globe,
+  Ticket, // NEW: Imported Ticket icon for Vouchers
 } from "lucide-react";
 
 // Components
@@ -33,7 +32,8 @@ import SubscriberManager from "../components/admin/SubscriberManager";
 import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
 import CreatorManager from "../components/admin/CreatorManager";
-import SeoLandingManager from "../components/admin/SeoLandingManager"; // NEW: Import the SEO Manager
+import SeoLandingManager from "../components/admin/SeoLandingManager";
+import VoucherManager from "../components/admin/VoucherManager"; // NEW: Import the Voucher Manager
 
 export default function Admin() {
   const [session, setSession] = useState(null);
@@ -72,10 +72,10 @@ export default function Admin() {
 
   const PRIMARY_MENU = [
     { id: "orders", label: "Orders", icon: ShoppingBag },
-    { id: "email", label: "Email", icon: Inbox },
     { id: "products", label: "Inventory", icon: Package },
     { id: "creators", label: "Creators", icon: Star },
     { id: "discounts", label: "Codes", icon: Tag },
+    { id: "vouchers", label: "Vouchers", icon: Ticket }, // 🚨 NEW: Added Vouchers right next to Codes
     { id: "subscribers", label: "Users", icon: Users },
     { id: "inquiries", label: "Inbox", icon: Mail },
   ];
@@ -83,7 +83,7 @@ export default function Admin() {
   const SECONDARY_MENU = [
     { id: "reviews", label: "Reviews", icon: MessageSquare },
     { id: "content", label: "Content", icon: FileText },
-    { id: "seo_pages", label: "SEO Pages", icon: Globe }, // NEW: Added SEO Pages to the top menu!
+    { id: "seo_pages", label: "SEO Pages", icon: Globe },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
@@ -289,10 +289,11 @@ export default function Admin() {
           {activeTab === "subscribers" && <SubscriberManager />}
           {activeTab === "products" && <ProductManager />}
           {activeTab === "discounts" && <DiscountManager />}
+          {activeTab === "vouchers" && <VoucherManager />}{" "}
+          {/* 🚨 NEW: Render Voucher Manager */}
           {activeTab === "reviews" && <ReviewManager />}
           {activeTab === "content" && <ContentEditor />}
-          {activeTab === "seo_pages" && <SeoLandingManager />}{" "}
-          {/* NEW: Render the component */}
+          {activeTab === "seo_pages" && <SeoLandingManager />}
           {activeTab === "settings" && <SettingsManager />}
         </div>
       </main>
