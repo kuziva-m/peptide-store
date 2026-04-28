@@ -13,6 +13,7 @@ export const downloadAusPostCSV = (orders) => {
     "Deliver To State",
     "Deliver To Postcode",
     "Deliver To Email Address",
+    "Send tracking email to recipient", // 🚨 NEW HEADER ADDED HERE
     "Deliver To Phone Number",
     "Item Packaging Type",
     "Item Delivery Service",
@@ -94,6 +95,7 @@ export const downloadAusPostCSV = (orders) => {
       state, // Deliver To State
       postcode, // Deliver To Postcode
       email, // Deliver To Email Address
+      email ? "YES" : "NO", // 🚨 MAGIC FIX: Tells AusPost to check the tracking email box!
       phone, // Deliver To Phone Number
 
       // --- PARCEL INFO ---
