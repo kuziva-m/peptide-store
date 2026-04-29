@@ -13,7 +13,7 @@ export const downloadAusPostCSV = (orders) => {
     "Deliver To State",
     "Deliver To Postcode",
     "Deliver To Email Address",
-    "Send tracking email to recipient", // 🚨 NEW HEADER ADDED HERE
+    "Send tracking email to recipient", // 🚨 The exact header AusPost looks for
     "Deliver To Phone Number",
     "Item Packaging Type",
     "Item Delivery Service",
@@ -57,6 +57,9 @@ export const downloadAusPostCSV = (orders) => {
     const name = (order.customer_name || "").trim().slice(0, 35);
     const email = (order.customer_email || "").trim();
 
+    // 🚨 Strict validation: AusPost will uncheck the box if the email is missing or invalid
+    const isValidEmail = email && email.includes("@") && email.includes(".");
+
     // Clean up location strings to fix destination match errors
     const suburb = (order.shipping_address?.city || "").trim().slice(0, 40);
     const state = formatState(order.shipping_address?.state);
@@ -95,7 +98,7 @@ export const downloadAusPostCSV = (orders) => {
       state, // Deliver To State
       postcode, // Deliver To Postcode
       email, // Deliver To Email Address
-      email ? "YES" : "NO", // 🚨 MAGIC FIX: Tells AusPost to check the tracking email box!
+      isValidEmail ? "TRUE" : "FALSE", // 🚨 MAGIC FIX: Changed to TRUE/FALSE Boolean format!
       phone, // Deliver To Phone Number
 
       // --- PARCEL INFO ---
