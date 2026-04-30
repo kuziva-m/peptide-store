@@ -10,10 +10,8 @@ export default function OrderManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // --- NEW: AUTO-FOCUS SEARCH REF ---
   const searchInputRef = useRef(null);
 
-  // Default to "pending" so you immediately see new manual orders!
   const [statusFilter, setStatusFilter] = useState("pending");
   const [notification, setNotification] = useState(null);
 
@@ -29,10 +27,8 @@ export default function OrderManager() {
     fetchOrders();
   }, []);
 
-  // --- NEW: GLOBAL BARCODE SCANNER LISTENER ---
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      // 1. If they are already typing in a text box or select menu, leave them alone!
       const activeTag = document.activeElement.tagName.toLowerCase();
       if (
         activeTag === "input" ||
@@ -41,16 +37,8 @@ export default function OrderManager() {
       ) {
         return;
       }
-
-      // 2. Ignore system command keys (ctrl, alt, shift, meta)
-      if (e.metaKey || e.ctrlKey || e.altKey || e.key.length > 1) {
-        return;
-      }
-
-      // 3. If a normal character is typed (like a barcode scanner firing), instantly focus the search bar
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
+      if (e.metaKey || e.ctrlKey || e.altKey || e.key.length > 1) return;
+      if (searchInputRef.current) searchInputRef.current.focus();
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
@@ -89,7 +77,6 @@ export default function OrderManager() {
     });
   };
 
-  // --- TAB COUNTER LOGIC ---
   const tabCounts = useMemo(() => {
     const counts = {
       pending: 0,
@@ -103,7 +90,6 @@ export default function OrderManager() {
     };
 
     orders.forEach((order) => {
-      // Basic Statuses
       if (
         order.status === "pending" ||
         order.status === "payment_reported" ||
@@ -120,12 +106,8 @@ export default function OrderManager() {
         counts.cancelled++;
       }
 
-      // Notes
-      if (order.notes && order.notes.trim().length > 0) {
-        counts.has_notes++;
-      }
+      if (order.notes && order.notes.trim().length > 0) counts.has_notes++;
 
-      // Pre-orders
       try {
         let items = [];
         if (order.items) {
@@ -141,20 +123,15 @@ export default function OrderManager() {
         ) {
           counts.has_preorder++;
         }
-      } catch (e) {
-        // ignore parse errors
-      }
+      } catch (e) {}
     });
 
     return counts;
   }, [orders]);
 
-  // --- FILTERING LOGIC ---
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const s = search.toLowerCase();
-
-      // 🚨 ADDED: `tracking_number` to the search logic
       const matchesSearch =
         order.id.toLowerCase().includes(s) ||
         order.customer_email?.toLowerCase().includes(s) ||
@@ -163,9 +140,8 @@ export default function OrderManager() {
 
       let matchesStatus = false;
 
-      if (statusFilter === "all") {
-        matchesStatus = true;
-      } else if (statusFilter === "pending") {
+      if (statusFilter === "all") matchesStatus = true;
+      else if (statusFilter === "pending") {
         matchesStatus =
           order.status === "pending" ||
           order.status === "payment_reported" ||
@@ -191,7 +167,6 @@ export default function OrderManager() {
           matchesStatus = false;
         }
       } else {
-        // Handles label_created, shipped, and cancelled
         matchesStatus = order.status === statusFilter;
       }
 
@@ -199,9 +174,107 @@ export default function OrderManager() {
     });
   }, [orders, search, statusFilter]);
 
-  // --- STATS LOGIC ---
+  // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
+  const processedOrders = useMemo(() => {
+    let grouped = [];
+
+    if (statusFilter === "paid") {
+      // 1. Group by Email if PAID
+      const emailMap = {};
+      filteredOrders.forEach((o) => {
+        const email = (o.customer_email || `unknown-${o.id}`).toLowerCase();
+        if (!emailMap[email]) emailMap[email] = [];
+        emailMap[email].push(o);
+      });
+
+      Object.values(emailMap).forEach((group) => {
+        if (group.length === 1) {
+          grouped.push(group[0]);
+        } else {
+          // Sort oldest first so we use the original address
+          group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          const oldest = group[0];
+          const hasExpress = group.some(
+            (o) => o.shipping_method?.toLowerCase() === "express",
+          );
+          const totalAmt = group.reduce(
+            (sum, o) => sum + Number(o.total_amount || 0),
+            0,
+          );
+
+          grouped.push({
+            isFused: true,
+            id: `FUSED-${oldest.id.slice(0, 5)}`,
+            real_ids: group.map((o) => o.id), // Array of actual Supabase IDs
+            customer_name: oldest.customer_name,
+            customer_email: oldest.customer_email,
+            shipping_address: oldest.shipping_address, // Uses oldest address
+            shipping_method: hasExpress ? "express" : "standard",
+            total_amount: totalAmt,
+            status: oldest.status,
+            created_at: oldest.created_at,
+            orders: group, // Store original orders for the expanded UI demarcation
+          });
+        }
+      });
+    } else if (
+      ["label_created", "shipped", "delivered"].includes(statusFilter)
+    ) {
+      // 2. Group by Tracking Number in Post-Paid Tabs
+      const trackMap = {};
+      const noTrack = [];
+
+      filteredOrders.forEach((o) => {
+        const t = o.tracking_number?.trim();
+        if (t) {
+          if (!trackMap[t]) trackMap[t] = [];
+          trackMap[t].push(o);
+        } else {
+          noTrack.push(o);
+        }
+      });
+
+      Object.values(trackMap).forEach((group) => {
+        if (group.length === 1) grouped.push(group[0]);
+        else {
+          group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          const oldest = group[0];
+          const hasExpress = group.some(
+            (o) => o.shipping_method?.toLowerCase() === "express",
+          );
+          const totalAmt = group.reduce(
+            (sum, o) => sum + Number(o.total_amount || 0),
+            0,
+          );
+
+          grouped.push({
+            isFused: true,
+            id: `TRK-${oldest.tracking_number.slice(-5)}`,
+            real_ids: group.map((o) => o.id),
+            customer_name: oldest.customer_name,
+            customer_email: oldest.customer_email,
+            shipping_address: oldest.shipping_address,
+            shipping_method: hasExpress ? "express" : "standard",
+            tracking_number: oldest.tracking_number,
+            total_amount: totalAmt,
+            status: oldest.status,
+            created_at: oldest.created_at,
+            orders: group,
+          });
+        }
+      });
+      grouped = [...grouped, ...noTrack];
+    } else {
+      // 3. Pending/Cancelled/All - No Grouping
+      grouped = filteredOrders;
+    }
+
+    // Re-sort the final fused array by date descending
+    grouped.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return grouped;
+  }, [filteredOrders, statusFilter]);
+
   const stats = useMemo(() => {
-    // Only count ACTUAL REVENUE (Approved/Paid/Shipped orders)
     const confirmedPaidOrders = orders.filter(
       (o) =>
         o.status === "paid" ||
@@ -223,15 +296,14 @@ export default function OrderManager() {
   }, [orders]);
 
   const handleBulkExport = () => {
-    if (filteredOrders.length === 0) return showToast("No orders to export");
-    downloadAusPostCSV(filteredOrders);
-    showToast(`Exported ${filteredOrders.length} orders`);
+    // We pass the visually processed/fused orders to the CSV so labels print cleanly!
+    if (processedOrders.length === 0) return showToast("No orders to export");
+    downloadAusPostCSV(processedOrders);
+    showToast(`Exported ${processedOrders.length} orders`);
   };
 
-  // --- UPDATED DYNAMIC FILTER TAB COMPONENT ---
   const FilterTab = ({ id, label, color, count }) => {
     const isActive = statusFilter === id;
-
     return (
       <button
         onClick={() => setStatusFilter(id)}
@@ -254,7 +326,7 @@ export default function OrderManager() {
             borderRadius: "12px",
             fontSize: "0.75rem",
             fontWeight: "bold",
-            flexShrink: 0, // Prevents the badge from squishing on small screens
+            flexShrink: 0,
           }}
         >
           {count}
@@ -265,7 +337,6 @@ export default function OrderManager() {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* STATS BAR */}
       <div style={styles.statsContainer}>
         <div style={styles.statItem}>
           <span style={styles.statLabel}>Total Paid Orders</span>
@@ -304,8 +375,6 @@ export default function OrderManager() {
             color="#ef4444"
             count={tabCounts.cancelled}
           />
-
-          {/* --- PRE-ORDER & NOTES TABS --- */}
           <FilterTab
             id="has_preorder"
             label="Contains Pre-order"
@@ -318,7 +387,6 @@ export default function OrderManager() {
             color="#8b5cf6"
             count={tabCounts.has_notes}
           />
-
           <FilterTab id="all" label="All" count={tabCounts.all} />
         </div>
 
@@ -329,7 +397,7 @@ export default function OrderManager() {
           <div style={styles.searchWrapper}>
             <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
             <input
-              ref={searchInputRef} // 🚨 ADDED REF FOR SCANNER
+              ref={searchInputRef}
               placeholder="Search or scan barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -342,10 +410,10 @@ export default function OrderManager() {
       <div style={styles.tableContainer}>
         {loading ? (
           <div style={styles.emptyState}>Loading...</div>
-        ) : filteredOrders.length === 0 ? (
+        ) : processedOrders.length === 0 ? (
           <div style={styles.emptyState}>No orders found.</div>
         ) : (
-          filteredOrders.map((order) => (
+          processedOrders.map((order) => (
             <OrderRow
               key={order.id}
               order={order}

@@ -1,41 +1,28 @@
 import { useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { styles } from "./OrderManagerStyles";
-import Barcode from "react-barcode";
 import {
-  ExternalLink,
   Edit2,
   Save,
   ChevronDown,
   ChevronUp,
   Truck,
-  MapPin,
   Package,
-  Phone,
-  Mail,
   User,
   Zap,
   MessageCircle,
-  Send,
   Tag,
   Trash2,
   CheckCircle,
   AlertTriangle,
   Image as ImageIcon,
   XCircle,
-  Printer,
+  Layers,
 } from "lucide-react";
 
-export function OrderRow({
-  order,
-  onUpdate,
-  showToast,
-  promptConfirm,
-  onDelete,
-}) {
+export function OrderRow({ order, onUpdate, showToast, promptConfirm }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [noteText, setNoteText] = useState(order.notes || "");
   const [emailMode, setEmailMode] = useState(false);
   const [customEmailText, setCustomEmailText] = useState("");
@@ -62,21 +49,24 @@ export function OrderRow({
     notes: order.notes || "",
   });
 
-  const displayItems = useMemo(() => {
+  // Helper to extract items safely whether fused or standard
+  const getDisplayItems = (targetOrder) => {
     try {
-      if (order.order_items && order.order_items.length > 0) {
-        return order.order_items;
-      } else if (order.items) {
-        return typeof order.items === "string"
-          ? JSON.parse(order.items)
-          : order.items;
+      if (targetOrder.order_items && targetOrder.order_items.length > 0) {
+        return targetOrder.order_items;
+      } else if (targetOrder.items) {
+        return typeof targetOrder.items === "string"
+          ? JSON.parse(targetOrder.items)
+          : targetOrder.items;
       }
       return [];
     } catch (e) {
       console.error("Error parsing order items:", e);
       return [];
     }
-  }, [order.order_items, order.items]);
+  };
+
+  const displayItems = useMemo(() => getDisplayItems(order), [order]);
 
   const formatAUSDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -91,36 +81,38 @@ export function OrderRow({
     });
   };
 
-  const handlePrintSlip = () => {
-    setIsPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setIsPrinting(false);
-    }, 300);
-  };
-
   const sendStatusEmail = async (tracking, statusType) => {
     try {
-      const emailItems = displayItems.map((item) => {
-        let name = item.product_name_snapshot || item.name || "Product";
-        let size = "";
+      // Loop through single or fused orders to send combined email notifications
+      const ordersToEmail = order.isFused ? order.orders : [order];
 
-        if (item.variants && item.variants.products) {
-          name = item.variants.products.name;
-          size = item.variants.size_label;
-        } else if (item.variant) {
-          size =
-            typeof item.variant === "string"
-              ? item.variant
-              : item.variant.size_label || "";
-        }
-
-        return { name, quantity: item.quantity, size };
+      const emailItems = [];
+      ordersToEmail.forEach((subOrder) => {
+        const items = getDisplayItems(subOrder);
+        items.forEach((item) => {
+          let name = item.product_name_snapshot || item.name || "Product";
+          let size = "";
+          if (item.variants && item.variants.products) {
+            name = item.variants.products.name;
+            size = item.variants.size_label;
+          } else if (item.variant) {
+            size =
+              typeof item.variant === "string"
+                ? item.variant
+                : item.variant.size_label || "";
+          }
+          emailItems.push({ name, quantity: item.quantity, size });
+        });
       });
+
+      // Construct a dynamic ID string for the email (e.g. "ABC12345 & XYZ98765")
+      const displayId = order.isFused
+        ? order.orders.map((o) => o.id.slice(0, 8)).join(" & ")
+        : order.id.slice(0, 8);
 
       const { error } = await supabase.functions.invoke("send-order-update", {
         body: {
-          orderId: order.id,
+          orderId: displayId,
           email: formData.email,
           name: formData.name,
           trackingNumber: tracking || "N/A",
@@ -147,12 +139,13 @@ export function OrderRow({
   const handleApprovePayment = async () => {
     promptConfirm(
       "Confirm Payment",
-      "Mark as Paid? This will move it to the Paid tab AND email the customer that their payment is approved.",
+      "Mark as Paid? This will move it to the Paid tab AND email the customer.",
       async () => {
+        const idsToUpdate = order.isFused ? order.real_ids : [order.id];
         const { error } = await supabase
           .from("orders")
           .update({ status: "paid" })
-          .eq("id", order.id);
+          .in("id", idsToUpdate);
 
         if (!error) {
           showToast("Payment Approved");
@@ -168,10 +161,11 @@ export function OrderRow({
       "Reject",
       "Cancel this order? This cannot be undone.",
       async () => {
+        const idsToUpdate = order.isFused ? order.real_ids : [order.id];
         const { error } = await supabase
           .from("orders")
           .update({ status: "cancelled" })
-          .eq("id", order.id);
+          .in("id", idsToUpdate);
 
         if (!error) {
           showToast("Order Cancelled");
@@ -183,10 +177,11 @@ export function OrderRow({
   };
 
   const handleSaveNote = async () => {
+    const idsToUpdate = order.isFused ? order.real_ids : [order.id];
     const { error } = await supabase
       .from("orders")
       .update({ notes: noteText })
-      .eq("id", order.id);
+      .in("id", idsToUpdate);
 
     if (error) showToast("Failed to save note");
     else {
@@ -201,15 +196,18 @@ export function OrderRow({
 
     let promptMsg = `Mark as ${selectedStatus.replace("_", " ")}?`;
     if (quickTracking) promptMsg += ` (Tracking: ${quickTracking})`;
+    if (order.isFused)
+      promptMsg += `\n🚨 This will update ALL fused orders simultaneously!`;
 
     promptConfirm("Update Status", promptMsg, async () => {
+      const idsToUpdate = order.isFused ? order.real_ids : [order.id];
       const { error } = await supabase
         .from("orders")
         .update({
           status: selectedStatus,
           tracking_number: quickTracking,
         })
-        .eq("id", order.id);
+        .in("id", idsToUpdate);
 
       if (!error) {
         showToast(`Updated to ${selectedStatus}`);
@@ -227,6 +225,7 @@ export function OrderRow({
 
   const handleSaveEdit = async () => {
     try {
+      const idsToUpdate = order.isFused ? order.real_ids : [order.id];
       const { error } = await supabase
         .from("orders")
         .update({
@@ -244,7 +243,7 @@ export function OrderRow({
             country: formData.country,
           },
         })
-        .eq("id", order.id);
+        .in("id", idsToUpdate);
 
       if (error) throw error;
 
@@ -261,21 +260,56 @@ export function OrderRow({
   const handleCancelOrder = async () => {
     promptConfirm(
       "Cancel Order",
-      "Are you sure you want to cancel this order? It will be moved to the Canceled tab instead of being permanently deleted.",
+      "Are you sure you want to cancel? It will be moved to the Canceled tab instead of being permanently deleted.",
       async () => {
         try {
+          const idsToUpdate = order.isFused ? order.real_ids : [order.id];
           const { error } = await supabase
             .from("orders")
             .update({ status: "cancelled" })
-            .eq("id", order.id);
+            .in("id", idsToUpdate);
 
           if (error) throw error;
-
           showToast("Order canceled successfully!");
           onUpdate();
         } catch (err) {
-          console.error("Error cancelling order:", err);
-          showToast("Failed to cancel order. Check console.");
+          showToast("Failed to cancel order.");
+        }
+      },
+      true,
+    );
+  };
+
+  const handleHardDelete = async () => {
+    promptConfirm(
+      "Delete Permanently",
+      "Are you absolutely sure? This will permanently wipe the order(s) and payment proof(s) from the database. This CANNOT be undone.",
+      async () => {
+        try {
+          const ordersToDelete = order.isFused ? order.orders : [order];
+
+          for (const o of ordersToDelete) {
+            // 1. Wipe image from storage if it exists
+            if (o.receipt_url) {
+              const urlParts = o.receipt_url.split("payment-proofs/");
+              if (urlParts.length > 1) {
+                const fileName = urlParts[1].split("?")[0];
+                const { error: storageError } = await supabase.storage
+                  .from("payment-proofs")
+                  .remove([fileName]);
+                if (storageError)
+                  console.error("Failed to delete image:", storageError);
+              }
+            }
+            // 2. Wipe row from database
+            await supabase.from("orders").delete().eq("id", o.id);
+          }
+
+          showToast("Order permanently deleted.");
+          onUpdate();
+        } catch (err) {
+          console.error("Error deleting order:", err);
+          showToast("Failed to delete order.");
         }
       },
       true,
@@ -344,224 +378,96 @@ export function OrderRow({
   const sStyle = getStatusStyle(order.status);
   const isExpress = order.shipping_method?.toLowerCase() === "express";
 
-  return (
-    <>
-      {/* 🖨️ THE HIDDEN PRINTABLE PACKING SLIP OVERLAY (FIXED FOR STRICTLY 1 PAGE) */}
-      {isPrinting && (
-        <div className="print-section">
-          <style>{`
-            @media print {
-              html, body {
-                height: 100vh !important;
-                overflow: hidden !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: white !important;
-              }
-              body * { 
-                visibility: hidden; 
-              }
-              .print-section {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                margin: 0 !important;
-                padding: 20mm !important;
-                visibility: visible !important;
-                z-index: 2147483647 !important;
-                background: white !important;
-                box-sizing: border-box !important;
-              }
-              .print-section * {
-                visibility: visible !important;
-              }
-              @page { margin: 0mm; }
-            }
-          `}</style>
+  // Sub-component to render the demarcated items for Fused Orders
+  const renderItemBlock = (subOrder) => {
+    const subItems = getDisplayItems(subOrder);
+    return (
+      <div
+        key={subOrder.id}
+        style={{
+          marginBottom: "16px",
+          padding: "12px",
+          background: "#f8fafc",
+          borderRadius: "8px",
+          border: "1px dashed #cbd5e1",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+            fontSize: "0.8rem",
+            color: "#64748b",
+            fontWeight: "bold",
+          }}
+        >
+          <span>Order #{subOrder.id.slice(0, 8)}</span>
+          <span>{formatAUSDate(subOrder.created_at)}</span>
+        </div>
+        {subItems.map((item, i) => {
+          let sizeText =
+            item.variants?.size_label ||
+            (typeof item.variant === "string"
+              ? item.variant
+              : item.variant?.size_label) ||
+            "";
+          const price = item.price_at_purchase || item.price || 0;
+          const isItemPreorder =
+            item.is_preorder === true || item.is_preorder === "true";
 
-          <div
-            style={{
-              textAlign: "center",
-              borderBottom: "2px solid #0f172a",
-              paddingBottom: "20px",
-              marginBottom: "20px",
-            }}
-          >
-            <h1
-              style={{
-                margin: "0 0 10px 0",
-                fontSize: "24px",
-                color: "#0f172a",
-                textTransform: "uppercase",
-                letterSpacing: "2px",
-              }}
-            >
-              Packing Slip
-            </h1>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              {/* Shortened Barcode so it scans fast and looks clean */}
-              <Barcode
-                value={order.id.slice(0, 8)}
-                format="CODE128"
-                width={2}
-                height={60}
-                fontSize={14}
-                margin={0}
-              />
-            </div>
-            <p
-              style={{ marginTop: "10px", color: "#64748b", fontSize: "14px" }}
-            >
-              Order Date: {formatAUSDate(order.created_at)}
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "30px",
-            }}
-          >
-            <div>
-              <h3
-                style={{
-                  margin: "0 0 10px 0",
-                  fontSize: "16px",
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                }}
-              >
-                Ship To:
-              </h3>
-              <div
-                style={{
-                  fontSize: "16px",
-                  color: "#0f172a",
-                  lineHeight: "1.5",
-                }}
-              >
-                <strong>{order.customer_name}</strong>
-                <br />
-                {order.shipping_address?.line1}
-                <br />
-                {order.shipping_address?.line2 && (
-                  <>
-                    {order.shipping_address.line2}
-                    <br />
-                  </>
-                )}
-                {order.shipping_address?.city}, {order.shipping_address?.state}{" "}
-                {order.shipping_address?.postal_code}
-                <br />
-                {order.shipping_address?.country || "AU"}
-                <br />
-              </div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <h3
-                style={{
-                  margin: "0 0 10px 0",
-                  fontSize: "16px",
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                }}
-              >
-                Shipping Method:
-              </h3>
-              <div
-                style={{
-                  fontSize: "20px",
-                  fontWeight: "bold",
-                  color: isExpress ? "#b91c1c" : "#0f172a",
-                }}
-              >
-                {isExpress ? "EXPRESS" : "STANDARD"}
-              </div>
-            </div>
-          </div>
-
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginTop: "20px",
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-                <th
+          return (
+            <div key={i} style={styles.itemRow}>
+              <span style={styles.itemQty}>{item.quantity}x</span>
+              <div style={styles.itemInfo}>
+                <div
                   style={{
-                    textAlign: "left",
-                    padding: "12px 0",
-                    color: "#64748b",
-                    fontSize: "14px",
-                    textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    flexWrap: "wrap",
                   }}
                 >
-                  Qty
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "12px 0",
-                    color: "#64748b",
-                    fontSize: "14px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Item Description
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayItems.map((item, i) => {
-                let sizeText = "";
-                if (item.variants?.size_label)
-                  sizeText = item.variants.size_label;
-                else if (typeof item.variant === "string")
-                  sizeText = item.variant;
-                else if (item.variant?.size_label)
-                  sizeText = item.variant.size_label;
-
-                return (
-                  <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <td
+                  <span style={styles.itemName}>
+                    {item.product_name_snapshot || item.name || "Product"}
+                  </span>
+                  {isItemPreorder && (
+                    <span
                       style={{
-                        padding: "16px 0",
-                        fontSize: "18px",
+                        background: "#f3e8ff",
+                        color: "#7e22ce",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "0.65rem",
                         fontWeight: "bold",
                       }}
                     >
-                      {item.quantity}
-                    </td>
-                    <td style={{ padding: "16px 0", fontSize: "16px" }}>
-                      <strong>
-                        {item.product_name_snapshot || item.name || "Product"}
-                      </strong>
-                      {sizeText && (
-                        <div
-                          style={{
-                            color: "#64748b",
-                            fontSize: "14px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          Variant: {sizeText}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      PRE-ORDER
+                    </span>
+                  )}
+                </div>
+                {sizeText && (
+                  <span
+                    style={{
+                      ...styles.variantLabel,
+                      color: isItemPreorder ? "#7e22ce" : "#64748b",
+                      fontWeight: isItemPreorder ? "600" : "normal",
+                    }}
+                  >
+                    {sizeText}
+                  </span>
+                )}
+              </div>
+              <span style={styles.itemPrice}>${price.toFixed(2)}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
-      {/* --- STANDARD ADMIN UI --- */}
+  return (
+    <>
       <div style={styles.orderRow}>
         <div
           style={{
@@ -585,6 +491,26 @@ export function OrderRow({
               <div style={styles.primaryText}>
                 {order.customer_name || "Guest"}
               </div>
+
+              {order.isFused && (
+                <span
+                  style={{
+                    background: "#f1f5f9",
+                    color: "#334155",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "bold",
+                    border: "1px solid #cbd5e1",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Layers size={12} /> {order.orders.length} Merged Orders
+                </span>
+              )}
+
               {order.receipt_url && (
                 <ImageIcon
                   size={14}
@@ -595,7 +521,6 @@ export function OrderRow({
               {order.notes && (
                 <MessageCircle size={14} color="#3b82f6" title="Has Notes" />
               )}
-
               {order.discount_code && (
                 <span
                   style={{
@@ -623,7 +548,7 @@ export function OrderRow({
                   style={{
                     marginLeft: "8px",
                     background: "#fee2e2",
-                    color: "#b91c1c", // RED FOR EXPRESS
+                    color: "#b91c1c",
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.65rem",
@@ -640,7 +565,7 @@ export function OrderRow({
                   style={{
                     marginLeft: "8px",
                     background: "#fef08a",
-                    color: "#a16207", // YELLOW FOR STANDARD
+                    color: "#a16207",
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.65rem",
@@ -1097,84 +1022,9 @@ export function OrderRow({
                       <Package size={14} /> Items
                     </div>
                     <div style={styles.itemsTable}>
-                      {displayItems.length === 0 ? (
-                        <div style={{ padding: "10px", color: "#64748b" }}>
-                          No items recorded.
-                        </div>
-                      ) : (
-                        displayItems.map((item, i) => {
-                          let sizeText = "";
-                          if (item.variants?.size_label)
-                            sizeText = item.variants.size_label;
-                          else if (typeof item.variant === "string")
-                            sizeText = item.variant;
-                          else if (item.variant?.size_label)
-                            sizeText = item.variant.size_label;
-
-                          const price =
-                            item.price_at_purchase || item.price || 0;
-                          const isItemPreorder =
-                            item.is_preorder === true ||
-                            item.is_preorder === "true";
-
-                          return (
-                            <div key={i} style={styles.itemRow}>
-                              <span style={styles.itemQty}>
-                                {item.quantity}x
-                              </span>
-                              <div style={styles.itemInfo}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <span style={styles.itemName}>
-                                    {item.product_name_snapshot ||
-                                      item.name ||
-                                      "Product"}
-                                  </span>
-                                  {isItemPreorder && (
-                                    <span
-                                      style={{
-                                        background: "#f3e8ff",
-                                        color: "#7e22ce",
-                                        padding: "2px 6px",
-                                        borderRadius: "4px",
-                                        fontSize: "0.65rem",
-                                        fontWeight: "bold",
-                                        letterSpacing: "0.5px",
-                                      }}
-                                    >
-                                      PRE-ORDER
-                                    </span>
-                                  )}
-                                </div>
-                                {sizeText && (
-                                  <span
-                                    style={{
-                                      ...styles.variantLabel,
-                                      color: isItemPreorder
-                                        ? "#7e22ce"
-                                        : "#64748b",
-                                      fontWeight: isItemPreorder
-                                        ? "600"
-                                        : "normal",
-                                    }}
-                                  >
-                                    {sizeText}
-                                  </span>
-                                )}
-                              </div>
-                              <span style={styles.itemPrice}>
-                                ${price.toFixed(2)}
-                              </span>
-                            </div>
-                          );
-                        })
-                      )}
+                      {order.isFused
+                        ? order.orders.map((sub) => renderItemBlock(sub))
+                        : renderItemBlock(order)}
                     </div>
 
                     <div
@@ -1275,28 +1125,6 @@ export function OrderRow({
                         </div>
                       )}
 
-                      <button
-                        onClick={handlePrintSlip}
-                        style={{
-                          marginTop: "12px",
-                          background: "#f1f5f9",
-                          color: "#3b82f6",
-                          border: "1px solid #bfdbfe",
-                          padding: "8px 12px",
-                          borderRadius: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          fontWeight: "bold",
-                          cursor: "pointer",
-                          width: "100%",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        <Printer size={16} /> Print Packing Slip
-                      </button>
-
                       <hr
                         style={{
                           margin: "10px 0",
@@ -1315,6 +1143,17 @@ export function OrderRow({
                         >
                           {order.shipping_method || "Standard"}
                         </span>
+                        {order.isFused && (
+                          <span
+                            style={{
+                              display: "block",
+                              fontSize: "0.7rem",
+                              color: "#64748b",
+                            }}
+                          >
+                            *Merged row uses highest tier
+                          </span>
+                        )}
                       </div>
                       <div>{order.shipping_address?.line1}</div>
                       <div>
@@ -1412,26 +1251,49 @@ export function OrderRow({
                         <Edit2 size={14} /> Edit Full Order Details
                       </button>
 
-                      <button
-                        onClick={handleCancelOrder}
-                        style={{
-                          background: "#fee2e2",
-                          color: "#b91c1c",
-                          border: "1px solid #fecaca",
-                          width: "100%",
-                          padding: "10px",
-                          borderRadius: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          fontWeight: "bold",
-                          cursor: "pointer",
-                          marginTop: "5px",
-                        }}
-                      >
-                        <XCircle size={16} /> Cancel Order
-                      </button>
+                      {order.status === "cancelled" ? (
+                        <button
+                          onClick={handleHardDelete}
+                          style={{
+                            background: "#7f1d1d",
+                            color: "white",
+                            border: "none",
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            marginTop: "5px",
+                          }}
+                        >
+                          <Trash2 size={16} /> Delete Permanently
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleCancelOrder}
+                          style={{
+                            background: "#fee2e2",
+                            color: "#b91c1c",
+                            border: "1px solid #fecaca",
+                            width: "100%",
+                            padding: "10px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            marginTop: "5px",
+                          }}
+                        >
+                          <XCircle size={16} /> Cancel Order
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
