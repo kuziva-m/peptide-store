@@ -3,17 +3,16 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useCart } from "../lib/CartContext";
 import SEO from "../components/SEO";
+import { breadcrumbSchema, productSchema } from "../seo/schema"; // 🚨 NEW SCHEMA IMPORTS
 import {
   ChevronLeft,
   ShieldCheck,
   Truck,
   AlertTriangle,
-  ChevronDown,
   FileText,
   ExternalLink,
   Plus,
   Minus,
-  Info,
   CheckCircle2,
   Beaker,
   Calculator,
@@ -835,41 +834,79 @@ export default function Product() {
   const isCurrentlyPurchasable =
     isMainProductInStock && (isSelectedVariantInStock || isPreorder);
 
-  // --- THE COA VARIABLE WAS STILL HERE ---
   const activeLabUrl =
     selectedVariant?.lab_result_url || product.lab_result_url;
-
-  const isAccessory =
-    product.category === "Accessories" ||
-    product.category === "Syringes" ||
-    product.category === "Prep Pads";
-  const seoCanonicalUrl = isAccessory
-    ? absoluteUrl
-    : `https://melbournepeptides.com.au/${slug}`;
 
   // Retrieve Profile if available
   const profile =
     PEPTIDE_PROFILES[slug] ||
     PEPTIDE_PROFILES[product.name.toLowerCase().replace(/\s+/g, "-")];
 
-  const metaDescription = product.description
-    ? `${product.description.substring(0, 140)}. Buy ${product.name} research peptide in Australia with fast shipping.`
-    : `Buy ${product.name} research peptide in Australia.`;
+  // 🚨 AUDIT-COMPLIANT PRODUCT TITLE AND DESCRIPTION
+  let variantSizeString = selectedVariant?.size_label || "";
+  let baseTitle = `${product.name} ${variantSizeString}`.trim();
+  let seoTitle = `${baseTitle} | Research Peptide | Melbourne Peptides`;
+  let seoDesc = `${baseTitle}. View batch/testing, storage, handling, and shipping details. Research use only.`;
+
+  // 🚨 BUILD PRODUCT SCHEMA DYNAMICALLY
+  let schemaData = [];
+  if (product) {
+    const schemaProduct = {
+      ...product,
+      price: selectedVariant?.price || 0,
+      inStock: isCurrentlyPurchasable,
+      images: [displayImage],
+    };
+    schemaData = [
+      breadcrumbSchema([
+        { name: "Home", path: "/" },
+        { name: "Shop", path: "/shop" },
+        { name: product.name, path: `/product/${slug}` },
+      ]),
+      productSchema(schemaProduct),
+    ];
+  }
 
   return (
     <div className="container product-page">
+      {/* 🚨 NEW AUDIT-COMPLIANT SEO BLOCK */}
       <SEO
-        title={`Buy ${product.name} Australia`}
-        description={metaDescription}
+        path={`/product/${slug}`}
+        title={seoTitle}
+        description={seoDesc}
         image={displayImage}
         type="product"
-        url={seoCanonicalUrl}
-        noindex={!isAccessory}
+        schema={schemaData}
       />
 
-      <Link to="/shop" className="back-link">
-        <ChevronLeft size={16} /> Back to Catalog
-      </Link>
+      {/* 🚨 NEW CRAWLABLE BREADCRUMBS */}
+      <nav
+        aria-label="Breadcrumb"
+        style={{
+          marginBottom: "20px",
+          fontSize: "0.9rem",
+          color: "var(--text-muted)",
+        }}
+      >
+        <Link
+          to="/"
+          style={{ color: "var(--primary)", textDecoration: "none" }}
+        >
+          Home
+        </Link>{" "}
+        /
+        <Link
+          to="/shop"
+          style={{
+            color: "var(--primary)",
+            textDecoration: "none",
+            margin: "0 6px",
+          }}
+        >
+          Shop
+        </Link>{" "}
+        /<span style={{ marginLeft: "6px" }}>{product.name}</span>
+      </nav>
 
       <div className="product-layout">
         <div className="product-gallery">
@@ -887,7 +924,7 @@ export default function Product() {
           >
             <img
               src={displayImage}
-              alt={`${product.name} research peptide vial`}
+              alt={`${product.name} research-use product vial`}
               loading="lazy"
               decoding="async"
               style={{
@@ -912,6 +949,18 @@ export default function Product() {
             {product.name}
           </h1>
 
+          {/* 🚨 COMPLIANCE SAFE SUMMARY INTRO */}
+          <p
+            style={{
+              color: "var(--text-muted)",
+              marginBottom: "20px",
+              lineHeight: "1.5",
+            }}
+          >
+            {product.name} supplied for research use with clear storage,
+            handling, and batch documentation.
+          </p>
+
           <div
             className="p-meta"
             style={{ display: "flex", gap: "15px", marginBottom: "20px" }}
@@ -930,34 +979,30 @@ export default function Product() {
               {product.category || "Product"}
             </span>
 
-            {!isAccessory && (
-              <>
-                <span
-                  className="p-cas"
-                  style={{
-                    background: "#f1f5f9",
-                    padding: "4px 10px",
-                    borderRadius: "4px",
-                    fontSize: "0.8rem",
-                    color: "#64748b",
-                  }}
-                >
-                  CAS: {product.cas_number || "Verified"}
-                </span>
-                <span
-                  className="p-purity"
-                  style={{
-                    background: "#f1f5f9",
-                    padding: "4px 10px",
-                    borderRadius: "4px",
-                    fontSize: "0.8rem",
-                    color: "#64748b",
-                  }}
-                >
-                  Purity: &gt;99% (HPLC)
-                </span>
-              </>
-            )}
+            <span
+              className="p-cas"
+              style={{
+                background: "#f1f5f9",
+                padding: "4px 10px",
+                borderRadius: "4px",
+                fontSize: "0.8rem",
+                color: "#64748b",
+              }}
+            >
+              CAS: {product.cas_number || "Verified"}
+            </span>
+            <span
+              className="p-purity"
+              style={{
+                background: "#f1f5f9",
+                padding: "4px 10px",
+                borderRadius: "4px",
+                fontSize: "0.8rem",
+                color: "#64748b",
+              }}
+            >
+              Purity: &gt;99% (HPLC)
+            </span>
           </div>
 
           <div className="p-price-box" style={{ marginBottom: "25px" }}>
@@ -1041,8 +1086,7 @@ export default function Product() {
             </div>
           </div>
 
-          {/* --- RESTORED COA BUTTON INJECTION --- */}
-          {activeLabUrl && !isAccessory && (
+          {activeLabUrl && (
             <div style={{ marginBottom: "25px" }}>
               <a
                 href={activeLabUrl}
@@ -1146,228 +1190,277 @@ export default function Product() {
             </button>
           </div>
 
-          {/* --- NEW: STRUCTURED RESEARCH PROFILE OR FALLBACK --- */}
-          {!isAccessory && (
-            <div
-              className="p-profile-section"
-              style={{ display: "flex", flexDirection: "column", gap: "24px" }}
-            >
-              {/* Overview */}
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.1rem",
-                    color: "#0f172a",
-                    marginBottom: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <FileText size={18} color="#4635de" /> Overview
-                </h3>
-                <p
-                  style={{
-                    color: "#475569",
-                    lineHeight: "1.6",
-                    fontSize: "0.95rem",
-                    margin: 0,
-                  }}
-                >
-                  {profile ? profile.overview : product.description}
-                </p>
-              </div>
+          {/* --- STRUCTURED RESEARCH PROFILE OR FALLBACK --- */}
+          <div
+            className="p-profile-section"
+            style={{ display: "flex", flexDirection: "column", gap: "24px" }}
+          >
+            {/* Overview */}
+            <section aria-labelledby="product-overview">
+              <h2
+                id="product-overview"
+                style={{
+                  fontSize: "1.1rem",
+                  color: "#0f172a",
+                  marginBottom: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <FileText size={18} color="#4635de" /> Product Overview
+              </h2>
+              <p
+                style={{
+                  color: "#475569",
+                  lineHeight: "1.6",
+                  fontSize: "0.95rem",
+                  margin: 0,
+                }}
+              >
+                {profile ? profile.overview : product.description}
+              </p>
+            </section>
 
-              {/* Dosage Protocol (Only if profile exists) */}
-              {profile && profile.dosage && (
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ background: "#e2e8f0", padding: "12px 16px" }}>
-                    <h3
+            {/* Dosage Protocol (Only if profile exists) */}
+            {profile && profile.dosage && (
+              <section
+                aria-labelledby="dosage-protocol"
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ background: "#e2e8f0", padding: "12px 16px" }}>
+                  <h2
+                    id="dosage-protocol"
+                    style={{
+                      fontSize: "1rem",
+                      color: "#0f172a",
+                      margin: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <AlertTriangle size={16} color="#0f172a" /> Dosage Protocol
+                    (Research Only)
+                  </h2>
+                </div>
+                <div style={{ padding: "16px" }}>
+                  {profile.dosage.phases.map((phase, idx) => (
+                    <div
+                      key={idx}
                       style={{
-                        fontSize: "1rem",
-                        color: "#0f172a",
-                        margin: 0,
                         display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
+                        justifyContent: "space-between",
+                        paddingBottom: "12px",
+                        marginBottom: "12px",
+                        borderBottom:
+                          idx !== profile.dosage.phases.length - 1
+                            ? "1px dashed #cbd5e1"
+                            : "none",
                       }}
                     >
-                      <AlertTriangle size={16} color="#0f172a" /> Dosage
-                      Protocol (Research Only)
+                      <span style={{ fontWeight: "700", color: "#334155" }}>
+                        {phase.phase}
+                      </span>
+                      <span
+                        style={{
+                          color: "#4635de",
+                          fontWeight: "600",
+                          textAlign: "right",
+                        }}
+                      >
+                        {phase.dose}
+                      </span>
+                    </div>
+                  ))}
+                  <div
+                    style={{
+                      marginTop: "16px",
+                      paddingTop: "16px",
+                      borderTop: "2px solid #e2e8f0",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "#0f172a",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      Protocol Rules
                     </h3>
-                  </div>
-                  <div style={{ padding: "16px" }}>
-                    {profile.dosage.phases.map((phase, idx) => (
+                    {profile.dosage.rules.map((rule, idx) => (
                       <div
                         key={idx}
                         style={{
                           display: "flex",
-                          justifyContent: "space-between",
-                          paddingBottom: "12px",
-                          marginBottom: "12px",
-                          borderBottom:
-                            idx !== profile.dosage.phases.length - 1
-                              ? "1px dashed #cbd5e1"
-                              : "none",
+                          alignItems: "flex-start",
+                          gap: "8px",
+                          marginBottom: "6px",
                         }}
                       >
-                        <span style={{ fontWeight: "700", color: "#334155" }}>
-                          {phase.phase}
-                        </span>
-                        <span
-                          style={{
-                            color: "#4635de",
-                            fontWeight: "600",
-                            textAlign: "right",
-                          }}
-                        >
-                          {phase.dose}
+                        <CheckCircle2
+                          size={14}
+                          color="#10b981"
+                          style={{ marginTop: "3px", flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: "0.9rem", color: "#475569" }}>
+                          {rule}
                         </span>
                       </div>
                     ))}
-                    <div
-                      style={{
-                        marginTop: "16px",
-                        paddingTop: "16px",
-                        borderTop: "2px solid #e2e8f0",
-                      }}
-                    >
-                      <h4
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#0f172a",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        Protocol Rules
-                      </h4>
-                      {profile.dosage.rules.map((rule, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "8px",
-                            marginBottom: "6px",
-                          }}
-                        >
-                          <CheckCircle2
-                            size={14}
-                            color="#10b981"
-                            style={{ marginTop: "3px", flexShrink: 0 }}
-                          />
-                          <span
-                            style={{ fontSize: "0.9rem", color: "#475569" }}
-                          >
-                            {rule}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
-              )}
+              </section>
+            )}
 
-              {/* Reconstitution */}
-              <div
+            {/* Reconstitution */}
+            <section
+              aria-labelledby="reconstitution-guide"
+              style={{
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                borderRadius: "12px",
+                padding: "16px",
+              }}
+            >
+              <h2
+                id="reconstitution-guide"
                 style={{
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  borderRadius: "12px",
-                  padding: "16px",
+                  fontSize: "1rem",
+                  color: "#166534",
+                  margin: "0 0 10px 0",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                <h3
+                <Beaker size={18} /> Reconstitution
+              </h2>
+              <p
+                style={{
+                  color: "#15803d",
+                  fontSize: "0.9rem",
+                  lineHeight: "1.5",
+                  margin: "0 0 12px 0",
+                }}
+              >
+                Reconstitute using bacteriostatic water. The amount of water
+                added will depend on your target dosage and study requirements.
+              </p>
+              <Link
+                to={`/peptide-calculator/${slug}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#16a34a",
+                  color: "white",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  fontSize: "0.9rem",
+                  fontWeight: "600",
+                  textDecoration: "none",
+                }}
+              >
+                <Calculator size={16} /> Open Peptide Calculator
+              </Link>
+            </section>
+
+            {/* Combos */}
+            {profile && profile.combos && (
+              <section aria-labelledby="research-combinations">
+                <h2
+                  id="research-combinations"
                   style={{
                     fontSize: "1rem",
-                    color: "#166534",
-                    margin: "0 0 10px 0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
+                    color: "#0f172a",
+                    marginBottom: "12px",
                   }}
                 >
-                  <Beaker size={18} /> Reconstitution
-                </h3>
-                <p
-                  style={{
-                    color: "#15803d",
-                    fontSize: "0.9rem",
-                    lineHeight: "1.5",
-                    margin: "0 0 12px 0",
-                  }}
-                >
-                  Reconstitute using bacteriostatic water. The amount of water
-                  added will depend on your target dosage and study
-                  requirements.
-                </p>
-                <Link
-                  to={`/peptide-calculator/${slug}`}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: "#16a34a",
-                    color: "white",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    fontSize: "0.9rem",
-                    fontWeight: "600",
-                    textDecoration: "none",
-                  }}
-                >
-                  <Calculator size={16} /> Open Peptide Calculator
-                </Link>
-              </div>
-
-              {/* Combos */}
-              {profile && profile.combos && (
-                <div>
-                  <h3
-                    style={{
-                      fontSize: "1rem",
-                      color: "#0f172a",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Common Research Combinations
-                  </h3>
-                  <div
-                    style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
-                  >
-                    {profile.combos.map((combo, idx) => (
-                      <Link
-                        key={idx}
-                        to={`/product/${combo.toLowerCase().replace(/\s+/g, "-")}`}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          background: "#f1f5f9",
-                          color: "#334155",
-                          padding: "6px 12px",
-                          borderRadius: "20px",
-                          fontSize: "0.85rem",
-                          fontWeight: "600",
-                          textDecoration: "none",
-                          border: "1px solid #cbd5e1",
-                        }}
-                      >
-                        {combo} <ArrowRight size={12} />
-                      </Link>
-                    ))}
-                  </div>
+                  Common Research Combinations
+                </h2>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {profile.combos.map((combo, idx) => (
+                    <Link
+                      key={idx}
+                      to={`/product/${combo.toLowerCase().replace(/\s+/g, "-")}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        background: "#f1f5f9",
+                        color: "#334155",
+                        padding: "6px 12px",
+                        borderRadius: "20px",
+                        fontSize: "0.85rem",
+                        fontWeight: "600",
+                        textDecoration: "none",
+                        border: "1px solid #cbd5e1",
+                      }}
+                    >
+                      {combo} <ArrowRight size={12} />
+                    </Link>
+                  ))}
                 </div>
-              )}
-            </div>
-          )}
+              </section>
+            )}
+
+            {/* 🚨 NEW CRAWLABLE RELATED LINKS PER AUDIT */}
+            <section
+              aria-labelledby="related-resources"
+              style={{ marginTop: "20px" }}
+            >
+              <h2
+                id="related-resources"
+                style={{
+                  fontSize: "1rem",
+                  color: "#0f172a",
+                  marginBottom: "12px",
+                }}
+              >
+                Related Resources
+              </h2>
+              <ul
+                style={{
+                  paddingLeft: "20px",
+                  margin: "0",
+                  color: "#475569",
+                  fontSize: "0.9rem",
+                  lineHeight: "1.8",
+                }}
+              >
+                <li>
+                  <Link to="/batch-testing" style={{ color: "var(--primary)" }}>
+                    View batch testing information
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/shipping" style={{ color: "var(--primary)" }}>
+                    Shipping information
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/faq" style={{ color: "var(--primary)" }}>
+                    Research peptide FAQ
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/peptide-calculator"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    Peptide calculator
+                  </Link>
+                </li>
+              </ul>
+            </section>
+          </div>
 
           {/* Trust Badges */}
           <div
@@ -1405,28 +1498,30 @@ export default function Product() {
               <Truck size={20} color="#0d9488" />
               <span>Same-day Shipping</span>
             </div>
-            {!isAccessory && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  fontSize: "0.9rem",
-                  color: "#b91c1c",
-                }}
-              >
-                <AlertTriangle size={20} color="#b91c1c" />
-                <span>Research Only</span>
-              </div>
-            )}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "0.9rem",
+                color: "#b91c1c",
+              }}
+            >
+              <AlertTriangle size={20} color="#b91c1c" />
+              <span>Research Only</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* RELATED PRODUCTS */}
       {relatedProducts.length > 0 && (
-        <div style={{ marginTop: "60px" }}>
-          <h3
+        <section
+          aria-labelledby="related-products"
+          style={{ marginTop: "60px" }}
+        >
+          <h2
+            id="related-products"
             style={{
               margin: "0 0 24px 0",
               color: "#0f172a",
@@ -1435,7 +1530,7 @@ export default function Product() {
             }}
           >
             Frequently Researched Together
-          </h3>
+          </h2>
           <div
             style={{
               display: "grid",
@@ -1444,7 +1539,7 @@ export default function Product() {
             }}
           >
             {relatedProducts.map((related) => (
-              <div
+              <article
                 key={related.id}
                 style={{
                   background: "white",
@@ -1478,7 +1573,7 @@ export default function Product() {
                         related.image_url ||
                         "https://via.placeholder.com/300"
                       }
-                      alt={related.name}
+                      alt={`${related.name} research compound`}
                       loading="lazy"
                       style={{
                         maxWidth: "100%",
@@ -1498,7 +1593,7 @@ export default function Product() {
                       lineHeight: "1.4",
                     }}
                   >
-                    {related.name}
+                    <h3>{related.name}</h3>
                   </Link>
                   <p
                     style={{
@@ -1526,10 +1621,10 @@ export default function Product() {
                 >
                   Add to Cart
                 </button>
-              </div>
+              </article>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );
