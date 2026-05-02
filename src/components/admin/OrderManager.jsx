@@ -77,6 +77,7 @@ export default function OrderManager() {
     });
   };
 
+  // --- 🚨 UPDATED TAB COUNTERS ---
   const tabCounts = useMemo(() => {
     const counts = {
       pending: 0,
@@ -85,6 +86,7 @@ export default function OrderManager() {
       shipped: 0,
       cancelled: 0,
       has_preorder: 0,
+      no_preorder: 0, // NEW COUNTER
       has_notes: 0,
       all: orders.length,
     };
@@ -116,12 +118,16 @@ export default function OrderManager() {
               ? JSON.parse(order.items)
               : order.items;
         }
-        if (
-          items.some(
-            (item) => item.is_preorder === true || item.is_preorder === "true",
-          )
-        ) {
+
+        const containsPreorder = items.some(
+          (item) => item.is_preorder === true || item.is_preorder === "true",
+        );
+
+        if (containsPreorder) {
           counts.has_preorder++;
+        } else if (order.status === "paid" || order.status === "processing") {
+          // 🚨 IF fully paid AND no preorders, it is ready to ship
+          counts.no_preorder++;
         }
       } catch (e) {}
     });
@@ -129,6 +135,7 @@ export default function OrderManager() {
     return counts;
   }, [orders]);
 
+  // --- 🚨 UPDATED FILTER ENGINE ---
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const s = search.toLowerCase();
@@ -166,6 +173,27 @@ export default function OrderManager() {
         } catch (e) {
           matchesStatus = false;
         }
+      }
+      // 🚨 NEW FILTER LOGIC
+      else if (statusFilter === "no_preorder") {
+        try {
+          let items = [];
+          if (order.items) {
+            items =
+              typeof order.items === "string"
+                ? JSON.parse(order.items)
+                : order.items;
+          }
+          const hasPreorder = items.some(
+            (item) => item.is_preorder === true || item.is_preorder === "true",
+          );
+
+          matchesStatus =
+            (order.status === "paid" || order.status === "processing") &&
+            !hasPreorder;
+        } catch (e) {
+          matchesStatus = false;
+        }
       } else {
         matchesStatus = order.status === statusFilter;
       }
@@ -174,12 +202,11 @@ export default function OrderManager() {
     });
   }, [orders, search, statusFilter]);
 
-  // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
   const processedOrders = useMemo(() => {
     let grouped = [];
 
-    if (statusFilter === "paid") {
-      // 1. Group by Email if PAID
+    // Apply fusing to "paid" AND our new "no_preorder" tab
+    if (statusFilter === "paid" || statusFilter === "no_preorder") {
       const emailMap = {};
       filteredOrders.forEach((o) => {
         const email = (o.customer_email || `unknown-${o.id}`).toLowerCase();
@@ -191,7 +218,6 @@ export default function OrderManager() {
         if (group.length === 1) {
           grouped.push(group[0]);
         } else {
-          // Sort oldest first so we use the original address
           group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           const oldest = group[0];
           const hasExpress = group.some(
@@ -205,22 +231,21 @@ export default function OrderManager() {
           grouped.push({
             isFused: true,
             id: `FUSED-${oldest.id.slice(0, 5)}`,
-            real_ids: group.map((o) => o.id), // Array of actual Supabase IDs
+            real_ids: group.map((o) => o.id),
             customer_name: oldest.customer_name,
             customer_email: oldest.customer_email,
-            shipping_address: oldest.shipping_address, // Uses oldest address
+            shipping_address: oldest.shipping_address,
             shipping_method: hasExpress ? "express" : "standard",
             total_amount: totalAmt,
             status: oldest.status,
             created_at: oldest.created_at,
-            orders: group, // Store original orders for the expanded UI demarcation
+            orders: group,
           });
         }
       });
     } else if (
       ["label_created", "shipped", "delivered"].includes(statusFilter)
     ) {
-      // 2. Group by Tracking Number in Post-Paid Tabs
       const trackMap = {};
       const noTrack = [];
 
@@ -265,11 +290,9 @@ export default function OrderManager() {
       });
       grouped = [...grouped, ...noTrack];
     } else {
-      // 3. Pending/Cancelled/All - No Grouping
       grouped = filteredOrders;
     }
 
-    // Re-sort the final fused array by date descending
     grouped.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return grouped;
   }, [filteredOrders, statusFilter]);
@@ -296,7 +319,6 @@ export default function OrderManager() {
   }, [orders]);
 
   const handleBulkExport = () => {
-    // We pass the visually processed/fused orders to the CSV so labels print cleanly!
     if (processedOrders.length === 0) return showToast("No orders to export");
     downloadAusPostCSV(processedOrders);
     showToast(`Exported ${processedOrders.length} orders`);
@@ -362,6 +384,13 @@ export default function OrderManager() {
             label="Approved (Paid)"
             color="#16a34a"
             count={tabCounts.paid}
+          />
+          {/* 🚨 NEW TAB ADDED HERE */}
+          <FilterTab
+            id="no_preorder"
+            label="Ready to Ship (In Stock)"
+            color="#2563eb"
+            count={tabCounts.no_preorder}
           />
           <FilterTab
             id="label_created"
