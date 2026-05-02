@@ -77,7 +77,6 @@ export default function OrderManager() {
     });
   };
 
-  // --- 🚨 UPDATED TAB COUNTERS ---
   const tabCounts = useMemo(() => {
     const counts = {
       pending: 0,
@@ -86,7 +85,7 @@ export default function OrderManager() {
       shipped: 0,
       cancelled: 0,
       has_preorder: 0,
-      no_preorder: 0, // NEW COUNTER
+      no_preorder: 0, // 🚨 NEW COUNTER
       has_notes: 0,
       all: orders.length,
     };
@@ -135,7 +134,6 @@ export default function OrderManager() {
     return counts;
   }, [orders]);
 
-  // --- 🚨 UPDATED FILTER ENGINE ---
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const s = search.toLowerCase();
@@ -202,11 +200,13 @@ export default function OrderManager() {
     });
   }, [orders, search, statusFilter]);
 
+  // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
   const processedOrders = useMemo(() => {
     let grouped = [];
 
     // Apply fusing to "paid" AND our new "no_preorder" tab
     if (statusFilter === "paid" || statusFilter === "no_preorder") {
+      // 1. Group by Email if PAID
       const emailMap = {};
       filteredOrders.forEach((o) => {
         const email = (o.customer_email || `unknown-${o.id}`).toLowerCase();
@@ -218,6 +218,7 @@ export default function OrderManager() {
         if (group.length === 1) {
           grouped.push(group[0]);
         } else {
+          // Sort oldest first so we use the original address
           group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           const oldest = group[0];
           const hasExpress = group.some(
@@ -231,21 +232,22 @@ export default function OrderManager() {
           grouped.push({
             isFused: true,
             id: `FUSED-${oldest.id.slice(0, 5)}`,
-            real_ids: group.map((o) => o.id),
+            real_ids: group.map((o) => o.id), // Array of actual Supabase IDs
             customer_name: oldest.customer_name,
             customer_email: oldest.customer_email,
-            shipping_address: oldest.shipping_address,
+            shipping_address: oldest.shipping_address, // Uses oldest address
             shipping_method: hasExpress ? "express" : "standard",
             total_amount: totalAmt,
             status: oldest.status,
             created_at: oldest.created_at,
-            orders: group,
+            orders: group, // Store original orders for the expanded UI demarcation
           });
         }
       });
     } else if (
       ["label_created", "shipped", "delivered"].includes(statusFilter)
     ) {
+      // 2. Group by Tracking Number in Post-Paid Tabs
       const trackMap = {};
       const noTrack = [];
 
@@ -290,9 +292,11 @@ export default function OrderManager() {
       });
       grouped = [...grouped, ...noTrack];
     } else {
+      // 3. Pending/Cancelled/All - No Grouping
       grouped = filteredOrders;
     }
 
+    // Re-sort the final fused array by date descending
     grouped.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return grouped;
   }, [filteredOrders, statusFilter]);
