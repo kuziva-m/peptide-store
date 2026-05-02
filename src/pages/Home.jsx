@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
 import SEO from "../components/SEO";
+import { organizationSchema, websiteSchema } from "../seo/schema"; // 🚨 NEW SCHEMA IMPORTS
 import {
   Truck,
   Shield,
@@ -78,10 +79,12 @@ export default function Home() {
 
   return (
     <div className="home-page">
+      {/* 🚨 NEW AUDIT-COMPLIANT SEO BLOCK */}
       <SEO
-        title="Home"
-        description="Australia's #1 source for premium peptides. Lab-tested BPC-157, Melanotan 2, GHK-Cu and more. 99% purity guaranteed with fast express shipping from Melbourne."
-        url="https://melbournepeptides.com.au/"
+        path="/"
+        title="Melbourne Peptides | Research Peptides in Australia | Batch-Tested"
+        description="Australian supplier of research peptides with batch documentation, calculator tools, FAQs, and fast domestic dispatch. Research use only."
+        schema={[organizationSchema(), websiteSchema()]}
       />
 
       <section className="hero-banner-wrapper">
@@ -102,6 +105,7 @@ export default function Home() {
             }}
           />
           <div className="hero-overlay-actions">
+            {/* 🚨 UPDATED SINGLE H1 TAG */}
             <h1
               style={{
                 position: "absolute",
@@ -114,7 +118,7 @@ export default function Home() {
                 border: "0",
               }}
             >
-              Melbourne Peptides - Premium Peptides Australia
+              Research Peptides in Australia
             </h1>
 
             <Link to="/shop" className="hero-cta-btn">
@@ -127,7 +131,7 @@ export default function Home() {
       <section className="section-container">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Popular Peptides</h2>
+            <h2 className="section-title">Popular Research Peptides</h2>
             <Link to="/shop" className="view-all-link">
               View All <ArrowRight size={16} />
             </Link>
@@ -153,14 +157,14 @@ export default function Home() {
                 <Beaker size={32} />
               </div>
               <h3>Peptides</h3>
-              <p>Pure compounds</p>
+              <p>Pure research compounds</p>
             </Link>
             <Link to="/shop?category=Peptide Blends" className="cat-card">
               <div className="cat-icon">
                 <Shield size={32} />
               </div>
               <h3>Peptide Blends</h3>
-              <p>Pre-mixed stacks</p>
+              <p>Pre-mixed research stacks</p>
             </Link>
 
             <Link to="/shop?category=Accessories" className="cat-card">
@@ -182,8 +186,8 @@ export default function Home() {
           <div className="support-text">
             <h2>Need guidance? Let's hop on a call.</h2>
             <p>
-              Once you receive your peptides, we are happy to schedule a video
-              call to answer your questions and help you get started.
+              Once you receive your research compounds, we are happy to schedule
+              a video call to answer your questions and help you get started.
             </p>
           </div>
           <Link to="/contact" className="support-action-btn">

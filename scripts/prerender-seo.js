@@ -896,54 +896,137 @@ function writeRouteHtml(routes) {
   }
 }
 
-function buildSitemap(routes) {
-  const lastmod = new Date().toISOString().split("T")[0];
-  const lines = routes
-    .filter((route) => route.indexable)
-    .map((route) => {
-      const priority =
-        route.path === "/"
-          ? "1.0"
-          : route.path === "/shop"
-            ? "0.9"
-            : route.path.startsWith("/peptide-calculator/")
-              ? "0.8"
-              : route.path.startsWith("/product/")
-                ? "0.6"
-                : route.path.startsWith("/") &&
-                    route.path.split("/").length === 2
-                  ? "0.85"
-                  : "0.7";
-      const changefreq = route.path.startsWith("/product/")
-        ? "weekly"
-        : "monthly";
-      return `  <url>\n    <loc>${escapeXml(route.canonical)}</loc>\n    <lastmod>${escapeXml((route.lastmod || lastmod).split("T")[0])}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
-    })
-    .join("\n");
+// --- NEW AUDIT-COMPLIANT SITEMAP LOGIC ---
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lines}\n</urlset>\n`;
+function buildSitemapXml(urls) {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
+function buildSitemapIndexXml(sitemaps) {
+  const lines = sitemaps
+    .map(
+      (s) =>
+        `  <sitemap>\n    <loc>${SITE.baseUrl}/${s}</loc>\n    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>\n  </sitemap>`,
+    )
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lines}\n</sitemapindex>\n`;
+}
+
+function formatUrlNode(route) {
+  const lastmod = new Date().toISOString().split("T")[0];
+  const priority =
+    route.path === "/"
+      ? "1.0"
+      : route.path === "/shop"
+        ? "0.9"
+        : route.path.startsWith("/peptide-calculator/")
+          ? "0.8"
+          : route.path.startsWith("/product/")
+            ? "0.6"
+            : route.path.startsWith("/") && route.path.split("/").length === 2
+              ? "0.85"
+              : "0.7";
+  const changefreq = route.path.startsWith("/product/") ? "weekly" : "monthly";
+  return `  <url>\n    <loc>${escapeXml(route.canonical)}</loc>\n    <lastmod>${escapeXml((route.lastmod || lastmod).split("T")[0])}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
 }
 
 function buildRobotsTxt() {
-  return `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nDisallow: /creator-studio\nDisallow: /landing\nDisallow: /success\nDisallow: /track\nDisallow: /write-review\n\nSitemap: ${SITE.baseUrl}/sitemap.xml\n`;
+  return `User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /checkout
+Disallow: /success
+Disallow: /track
+Disallow: /write-review
+Disallow: /landing
+Disallow: /creator-studio
+Disallow: /account
+Disallow: /cart
+Disallow: /search
+
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /*?page=
+
+Sitemap: ${SITE.baseUrl}/sitemap_index.xml
+`;
 }
 
 function writeCrawlAssets(
   routes,
   { writePublic = true, writeDist = true } = {},
 ) {
-  const sitemap = buildSitemap(routes);
+  const indexableRoutes = routes.filter((route) => route.indexable);
+
+  // Split routes per the audit
+  const productNodes = indexableRoutes
+    .filter((r) => r.path.startsWith("/product/"))
+    .map(formatUrlNode)
+    .join("\n");
+  const guideNodes = indexableRoutes
+    .filter(
+      (r) =>
+        !r.path.startsWith("/product/") &&
+        !r.path.startsWith("/peptide-calculator") &&
+        r.path !== "/" &&
+        r.path !== "/shop" &&
+        r.path !== "/faq" &&
+        r.path !== "/shipping" &&
+        r.path !== "/contact" &&
+        r.path !== "/about" &&
+        r.path !== "/batch-testing" &&
+        r.path !== "/research-policy" &&
+        r.path !== "/privacy" &&
+        r.path !== "/terms",
+    )
+    .map(formatUrlNode)
+    .join("\n");
+  const staticNodes = indexableRoutes
+    .filter(
+      (r) =>
+        r.path === "/" ||
+        r.path === "/shop" ||
+        r.path === "/faq" ||
+        r.path === "/shipping" ||
+        r.path === "/contact" ||
+        r.path === "/about" ||
+        r.path === "/batch-testing" ||
+        r.path === "/research-policy" ||
+        r.path === "/privacy" ||
+        r.path === "/terms" ||
+        r.path.startsWith("/peptide-calculator"),
+    )
+    .map(formatUrlNode)
+    .join("\n");
+
+  const sitemapProducts = buildSitemapXml(productNodes);
+  const sitemapGuides = buildSitemapXml(guideNodes);
+  const sitemapPages = buildSitemapXml(staticNodes);
+  const sitemapIndex = buildSitemapIndexXml([
+    "sitemap-pages.xml",
+    "sitemap-products.xml",
+    "sitemap-guides.xml",
+  ]);
+
   const robotsTxt = buildRobotsTxt();
 
-  if (writePublic) {
-    fs.writeFileSync(path.join(repoRoot, "public", "sitemap.xml"), sitemap);
-    fs.writeFileSync(path.join(repoRoot, "public", "robots.txt"), robotsTxt);
-  }
+  const writeFiles = (targetDir) => {
+    fs.writeFileSync(
+      path.join(targetDir, "sitemap-products.xml"),
+      sitemapProducts,
+    );
+    fs.writeFileSync(path.join(targetDir, "sitemap-guides.xml"), sitemapGuides);
+    fs.writeFileSync(path.join(targetDir, "sitemap-pages.xml"), sitemapPages);
+    fs.writeFileSync(path.join(targetDir, "sitemap_index.xml"), sitemapIndex);
+    fs.writeFileSync(path.join(targetDir, "robots.txt"), robotsTxt);
 
-  if (writeDist) {
-    fs.writeFileSync(path.join(repoRoot, "dist", "sitemap.xml"), sitemap);
-    fs.writeFileSync(path.join(repoRoot, "dist", "robots.txt"), robotsTxt);
-  }
+    // Also write a standard sitemap.xml just in case anything hardcoded looks for it
+    fs.writeFileSync(path.join(targetDir, "sitemap.xml"), sitemapIndex);
+  };
+
+  if (writePublic) writeFiles(path.join(repoRoot, "public"));
+  if (writeDist) writeFiles(path.join(repoRoot, "dist"));
 }
 
 export async function generateSeoAssets({

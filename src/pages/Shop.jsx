@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom"; // 🚨 ADDED LINK
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
 import SEO from "../components/SEO";
+import { breadcrumbSchema } from "../seo/schema"; // 🚨 NEW SCHEMA IMPORT
 import {
   LayoutGrid,
   FlaskConical,
@@ -154,99 +155,171 @@ export default function Shop({ searchQuery }) {
 
   return (
     <div className="page-wrapper">
+      {/* 🚨 NEW AUDIT-COMPLIANT SEO BLOCK */}
       <SEO
-        title="Shop Peptides Australia | HPLC Tested 99% Purity"
-        description="Browse our full catalog of research peptides including BPC-157, Semaglutide, and customized blends. All compounds are HPLC verified for identity and purity. Fast Australia-wide dispatch."
-        url="https://melbournepeptides.com.au/shop"
+        path="/shop"
+        title="Shop Peptides Australia | HPLC Tested 99% Purity | Melbourne Peptides"
+        description="Browse Melbourne Peptides' catalog of research peptides, blends, and accessories with a self-referencing canonical shop URL."
+        schema={[
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Shop", path: "/shop" },
+          ]),
+          {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: "Research Peptide Catalog",
+            url: `https://melbournepeptides.com.au/shop`,
+          },
+        ]}
       />
 
       <div className="container" style={{ padding: "40px 24px" }}>
-        <h1
+        {/* 🚨 NEW CRAWLABLE BREADCRUMBS */}
+        <nav
+          aria-label="Breadcrumb"
           style={{
-            textAlign: "center",
-            marginBottom: "10px",
-            color: "var(--medical-navy)",
-          }}
-        >
-          Research Peptide Catalog
-        </h1>
-
-        <div
-          style={{
-            textAlign: "center",
-            maxWidth: "800px",
-            margin: "0 auto 40px",
+            marginBottom: "20px",
+            fontSize: "0.9rem",
             color: "var(--text-muted)",
-            lineHeight: "1.6",
           }}
         >
-          <p>
-            Welcome to the Melbourne Peptides laboratory supply shop. We provide
-            the highest-grade research compounds for scientific investigation.
-            Each vial in our catalog undergoes stringent HPLC testing to ensure
-            a minimum purity of 99%. Explore our peptides, optimized blends, and
-            essential research accessories.
-          </p>
-        </div>
+          <Link
+            to="/"
+            style={{ color: "var(--primary)", textDecoration: "none" }}
+          >
+            Home
+          </Link>{" "}
+          / <span>Shop</span>
+        </nav>
 
-        <div className="category-tabs-container">
-          <div className="category-tabs">
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.name)}
-                className={`tab-btn ${activeCategory === cat.name ? "active" : ""}`}
-              >
-                <span className="tab-icon">{cat.icon}</span>
-                <span className="tab-text">{cat.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <header>
+          {/* 🚨 SINGLE H1 TAG */}
+          <h1
+            style={{
+              textAlign: "center",
+              marginBottom: "10px",
+              color: "var(--medical-navy)",
+            }}
+          >
+            Shop Research Peptides
+          </h1>
 
-        {loading ? (
-          <div className="products-grid">
-            {[1, 2, 3, 4].map((n) => (
-              <ProductCard key={n} loading={true} />
-            ))}
+          <div
+            style={{
+              textAlign: "center",
+              maxWidth: "800px",
+              margin: "0 auto 40px",
+              color: "var(--text-muted)",
+              lineHeight: "1.6",
+            }}
+          >
+            <p>
+              Welcome to the Melbourne Peptides laboratory supply shop. We
+              provide the highest-grade research compounds for scientific
+              investigation. Each vial in our catalog undergoes stringent HPLC
+              testing to ensure a minimum purity of 99%. Explore our peptides,
+              optimized blends, and essential research accessories.
+            </p>
           </div>
-        ) : (
-          <div className="content-grid">
-            {filteredGroupedProducts.length === 0 ? (
-              <div
-                className="empty-state"
-                style={{ textAlign: "center", padding: "40px" }}
-              >
-                <p>No products found matching your criteria.</p>
-              </div>
-            ) : (
-              filteredGroupedProducts.map(([category, items]) => (
-                <section
-                  key={category}
-                  className="category-section"
-                  style={{ marginBottom: "40px" }}
+        </header>
+
+        <section aria-labelledby="shop-categories">
+          {/* 🚨 ADDED HIDDEN H2 FOR ACCESSIBILITY / SEO STRUCTURE */}
+          <h2
+            id="shop-categories"
+            style={{
+              position: "absolute",
+              width: "1px",
+              height: "1px",
+              padding: "0",
+              overflow: "hidden",
+              clip: "rect(0,0,0,0)",
+              whiteSpace: "nowrap",
+              border: "0",
+            }}
+          >
+            Research Categories
+          </h2>
+          <div className="category-tabs-container">
+            <div className="category-tabs">
+              {categories.map((cat) => (
+                <button
+                  key={cat.name}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className={`tab-btn ${activeCategory === cat.name ? "active" : ""}`}
                 >
-                  <h2
-                    className="category-title"
-                    style={{
-                      color: "var(--primary)",
-                      borderBottom: "1px solid var(--border)",
-                      paddingBottom: "10px",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    {category}
-                  </h2>
-                  <div className="products-grid">
-                    {items.map((product) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
-                </section>
-              ))
-            )}
+                  <span className="tab-icon">{cat.icon}</span>
+                  <span className="tab-text">{cat.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+        </section>
+
+        <section aria-labelledby="product-list">
+          {/* 🚨 ADDED HIDDEN H2 FOR ACCESSIBILITY / SEO STRUCTURE */}
+          <h2
+            id="product-list"
+            style={{
+              position: "absolute",
+              width: "1px",
+              height: "1px",
+              padding: "0",
+              overflow: "hidden",
+              clip: "rect(0,0,0,0)",
+              whiteSpace: "nowrap",
+              border: "0",
+            }}
+          >
+            Available Research Products
+          </h2>
+          {loading ? (
+            <div className="products-grid">
+              {[1, 2, 3, 4].map((n) => (
+                <ProductCard key={n} loading={true} />
+              ))}
+            </div>
+          ) : (
+            <div className="content-grid">
+              {filteredGroupedProducts.length === 0 ? (
+                <div
+                  className="empty-state"
+                  style={{ textAlign: "center", padding: "40px" }}
+                >
+                  <p>No products found matching your criteria.</p>
+                </div>
+              ) : (
+                filteredGroupedProducts.map(([category, items]) => (
+                  <div
+                    key={category}
+                    className="category-section"
+                    style={{ marginBottom: "40px" }}
+                  >
+                    {/* 🚨 CHANGED TO H3 TO MAINTAIN HIERARCHY UNDER THE HIDDEN H2 */}
+                    <h3
+                      className="category-title"
+                      style={{
+                        color: "var(--primary)",
+                        borderBottom: "1px solid var(--border)",
+                        paddingBottom: "10px",
+                        marginBottom: "20px",
+                        fontSize: "1.5rem",
+                      }}
+                    >
+                      {category}
+                    </h3>
+                    <div className="products-grid">
+                      {items.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </section>
       </div>
 
       <style>{`
