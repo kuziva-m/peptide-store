@@ -15,6 +15,9 @@ export default function OrderManager() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [notification, setNotification] = useState(null);
 
+  // 🚨 NEW: Universal Toggle State for Pre-orders
+  const [hidePreorders, setHidePreorders] = useState(false);
+
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     title: "",
@@ -85,7 +88,6 @@ export default function OrderManager() {
       shipped: 0,
       cancelled: 0,
       has_preorder: 0,
-      no_preorder: 0, // 🚨 NEW COUNTER
       has_notes: 0,
       all: orders.length,
     };
@@ -117,16 +119,12 @@ export default function OrderManager() {
               ? JSON.parse(order.items)
               : order.items;
         }
-
-        const containsPreorder = items.some(
-          (item) => item.is_preorder === true || item.is_preorder === "true",
-        );
-
-        if (containsPreorder) {
+        if (
+          items.some(
+            (item) => item.is_preorder === true || item.is_preorder === "true",
+          )
+        ) {
           counts.has_preorder++;
-        } else if (order.status === "paid" || order.status === "processing") {
-          // 🚨 IF fully paid AND no preorders, it is ready to ship
-          counts.no_preorder++;
         }
       } catch (e) {}
     });
@@ -143,6 +141,26 @@ export default function OrderManager() {
         order.customer_name?.toLowerCase().includes(s) ||
         order.tracking_number?.toLowerCase().includes(s);
 
+      // 🚨 Pre-Order Calculation extracted so we can use it for the toggle
+      let hasPreorder = false;
+      try {
+        let items = [];
+        if (order.items) {
+          items =
+            typeof order.items === "string"
+              ? JSON.parse(order.items)
+              : order.items;
+        }
+        hasPreorder = items.some(
+          (item) => item.is_preorder === true || item.is_preorder === "true",
+        );
+      } catch (e) {}
+
+      // 🚨 If the Universal Toggle is ON and the order has a pre-order, banish it!
+      if (hidePreorders && hasPreorder) {
+        return false;
+      }
+
       let matchesStatus = false;
 
       if (statusFilter === "all") matchesStatus = true;
@@ -157,55 +175,21 @@ export default function OrderManager() {
       } else if (statusFilter === "has_notes") {
         matchesStatus = order.notes && order.notes.trim().length > 0;
       } else if (statusFilter === "has_preorder") {
-        try {
-          let items = [];
-          if (order.items) {
-            items =
-              typeof order.items === "string"
-                ? JSON.parse(order.items)
-                : order.items;
-          }
-          matchesStatus = items.some(
-            (item) => item.is_preorder === true || item.is_preorder === "true",
-          );
-        } catch (e) {
-          matchesStatus = false;
-        }
-      }
-      // 🚨 NEW FILTER LOGIC
-      else if (statusFilter === "no_preorder") {
-        try {
-          let items = [];
-          if (order.items) {
-            items =
-              typeof order.items === "string"
-                ? JSON.parse(order.items)
-                : order.items;
-          }
-          const hasPreorder = items.some(
-            (item) => item.is_preorder === true || item.is_preorder === "true",
-          );
-
-          matchesStatus =
-            (order.status === "paid" || order.status === "processing") &&
-            !hasPreorder;
-        } catch (e) {
-          matchesStatus = false;
-        }
+        // If the toggle is somehow on while viewing this tab, it will naturally render 0
+        matchesStatus = hasPreorder;
       } else {
         matchesStatus = order.status === statusFilter;
       }
 
       return matchesSearch && matchesStatus;
     });
-  }, [orders, search, statusFilter]);
+  }, [orders, search, statusFilter, hidePreorders]); // Added hidePreorders to dependency array
 
   // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
   const processedOrders = useMemo(() => {
     let grouped = [];
 
-    // Apply fusing to "paid" AND our new "no_preorder" tab
-    if (statusFilter === "paid" || statusFilter === "no_preorder") {
+    if (statusFilter === "paid") {
       // 1. Group by Email if PAID
       const emailMap = {};
       filteredOrders.forEach((o) => {
@@ -389,13 +373,6 @@ export default function OrderManager() {
             color="#16a34a"
             count={tabCounts.paid}
           />
-          {/* 🚨 NEW TAB ADDED HERE */}
-          <FilterTab
-            id="no_preorder"
-            label="Ready to Ship (In Stock)"
-            color="#2563eb"
-            count={tabCounts.no_preorder}
-          />
           <FilterTab
             id="label_created"
             label="Label Created"
@@ -421,6 +398,33 @@ export default function OrderManager() {
             count={tabCounts.has_notes}
           />
           <FilterTab id="all" label="All" count={tabCounts.all} />
+
+          {/* 🚨 THE UNIVERSAL PRE-ORDER KILL SWITCH BUTTON */}
+          <button
+            onClick={() => setHidePreorders(!hidePreorders)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: "2px solid",
+              background: hidePreorders ? "#000000" : "#ef4444",
+              color: hidePreorders ? "#ef4444" : "#ffffff",
+              borderColor: hidePreorders ? "#000000" : "#ef4444",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontWeight: "900",
+              letterSpacing: "0.5px",
+              cursor: "pointer",
+              marginLeft: "10px",
+              transition: "all 0.2s ease-in-out",
+              // The aggressive red/white/black style styling
+              textShadow: hidePreorders
+                ? "-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff"
+                : "none",
+            }}
+          >
+            {hidePreorders ? "PRE-ORDERS HIDDEN" : "Hide Pre-orders"}
+          </button>
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
