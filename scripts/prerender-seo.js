@@ -870,7 +870,15 @@ function loadPrerenderTemplate(distDir) {
     builtHeadClose,
   );
 
-  return `${sourceTemplate.slice(0, sourceStyleClose + "</style>".length)}${builtHeadAssets}${sourceTemplate.slice(sourceHeadClose)}`;
+  let finalTemplate = `${sourceTemplate.slice(0, sourceStyleClose + "</style>".length)}${builtHeadAssets}${sourceTemplate.slice(sourceHeadClose)}`;
+
+  // 🚨 FIX: Remove the Vite development script from the production template 🚨
+  finalTemplate = finalTemplate.replace(
+    /<script type="module" src="\/src\/main\.jsx"><\/script>/g,
+    "",
+  );
+
+  return finalTemplate;
 }
 
 function writeRouteHtml(routes) {
