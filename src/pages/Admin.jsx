@@ -15,11 +15,12 @@ import {
   Settings,
   Menu,
   X,
-  Mail, // Kept for Inbox
+  Mail,
   Home,
   Star,
   Globe,
-  Ticket, // NEW: Imported Ticket icon for Vouchers
+  Ticket,
+  BarChart,
 } from "lucide-react";
 
 // Components
@@ -33,12 +34,13 @@ import DiscountManager from "../components/admin/DiscountManager";
 import SettingsManager from "../components/admin/SettingsManager";
 import CreatorManager from "../components/admin/CreatorManager";
 import SeoLandingManager from "../components/admin/SeoLandingManager";
-import VoucherManager from "../components/admin/VoucherManager"; // NEW: Import the Voucher Manager
+import VoucherManager from "../components/admin/VoucherManager";
+import AnalysisBoard from "../components/admin/analysis/AnalysisBoard"; // 🚨 Updated to point to new folder structure
 
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState("orders"); // 🚨 Changed default tab back to orders
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,11 +73,12 @@ export default function Admin() {
   const handleLogout = () => supabase.auth.signOut();
 
   const PRIMARY_MENU = [
+    { id: "analysis", label: "Analysis Board", icon: BarChart }, // Analysis is to the left of Orders
     { id: "orders", label: "Orders", icon: ShoppingBag },
     { id: "products", label: "Inventory", icon: Package },
     { id: "creators", label: "Creators", icon: Star },
     { id: "discounts", label: "Codes", icon: Tag },
-    { id: "vouchers", label: "Vouchers", icon: Ticket }, // 🚨 NEW: Added Vouchers right next to Codes
+    { id: "vouchers", label: "Vouchers", icon: Ticket },
     { id: "subscribers", label: "Users", icon: Users },
     { id: "inquiries", label: "Inbox", icon: Mail },
   ];
@@ -283,14 +286,14 @@ export default function Admin() {
       {/* MAIN CONTENT */}
       <main style={styles.mainContent}>
         <div style={styles.contentCard}>
+          {activeTab === "analysis" && <AnalysisBoard />}
           {activeTab === "orders" && <OrderManager />}
           {activeTab === "creators" && <CreatorManager />}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}
           {activeTab === "products" && <ProductManager />}
           {activeTab === "discounts" && <DiscountManager />}
-          {activeTab === "vouchers" && <VoucherManager />}{" "}
-          {/* 🚨 NEW: Render Voucher Manager */}
+          {activeTab === "vouchers" && <VoucherManager />}
           {activeTab === "reviews" && <ReviewManager />}
           {activeTab === "content" && <ContentEditor />}
           {activeTab === "seo_pages" && <SeoLandingManager />}
