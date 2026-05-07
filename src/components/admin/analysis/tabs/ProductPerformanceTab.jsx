@@ -27,6 +27,7 @@ import {
   EyeOff,
   Clock,
   AlertTriangle,
+  DollarSign,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -265,7 +266,7 @@ export default function ProductPerformanceTab({
     // Apply strict requested sorting rules (Never sort by date/newest by default)
     const sortBy = viewControls.sortBy || "revenue_desc";
     const sortDir = viewControls.sortDirection || "desc";
-    const dirMult = sortDir === "desc" ? 1 : -1; // Note: For standard high-to-low logic
+    const dirMult = sortDir === "desc" ? 1 : -1;
 
     table.sort((a, b) => {
       if (sortBy === "revenue_desc") return (b._revenue - a._revenue) * dirMult;
