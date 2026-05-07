@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Calendar,
   DollarSign,
+  Truck, // Added Truck icon for the badge
 } from "lucide-react";
 
 export default function VoucherManager() {
@@ -22,6 +23,7 @@ export default function VoucherManager() {
     code: "",
     amount: "",
     notes: "",
+    includesFreeShipping: false, // New state for free shipping
   });
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function VoucherManager() {
   };
 
   const generateRandomCode = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed I, O, 0, 1 to prevent reading confusion
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let result = "CREDIT-";
     for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -66,6 +68,7 @@ export default function VoucherManager() {
         initial_balance: amount,
         current_balance: amount,
         notes: newVoucher.notes,
+        includes_free_shipping: newVoucher.includesFreeShipping, // Saving the new flag
       },
     ]);
 
@@ -78,7 +81,13 @@ export default function VoucherManager() {
       }
     } else {
       showToast("Voucher created successfully!");
-      setNewVoucher({ code: "", amount: "", notes: "" });
+      // Reset form including the checkbox
+      setNewVoucher({
+        code: "",
+        amount: "",
+        notes: "",
+        includesFreeShipping: false,
+      });
       fetchVouchers();
     }
   };
@@ -269,6 +278,39 @@ export default function VoucherManager() {
             />
           </div>
 
+          {/* NEW FREE SHIPPING CHECKBOX */}
+          <div
+            style={{
+              gridColumn: "span 2",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              background: "#f8fafc",
+              padding: "12px",
+              borderRadius: "8px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <input
+              type="checkbox"
+              id="freeShipping"
+              checked={newVoucher.includesFreeShipping}
+              onChange={(e) =>
+                setNewVoucher({
+                  ...newVoucher,
+                  includesFreeShipping: e.target.checked,
+                })
+              }
+              style={{ width: "18px", height: "18px", cursor: "pointer" }}
+            />
+            <label
+              htmlFor="freeShipping"
+              style={{ ...s.label, cursor: "pointer", margin: 0 }}
+            >
+              Include Free Shipping with this voucher
+            </label>
+          </div>
+
           <div
             style={{
               gridColumn: "span 2",
@@ -325,16 +367,43 @@ export default function VoucherManager() {
                   return (
                     <tr key={v.id} style={{ opacity: isDead ? 0.6 : 1 }}>
                       <td style={s.tableCell}>
-                        <strong
+                        <div
                           style={{
-                            background: "#f1f5f9",
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            letterSpacing: "1px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            gap: "6px",
                           }}
                         >
-                          {v.code}
-                        </strong>
+                          <strong
+                            style={{
+                              background: "#f1f5f9",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              letterSpacing: "1px",
+                            }}
+                          >
+                            {v.code}
+                          </strong>
+                          {/* NEW FREE SHIPPING BADGE */}
+                          {v.includes_free_shipping && (
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                background: "#dcfce7",
+                                color: "#166534",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontSize: "0.7rem",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              <Truck size={10} /> + FREE SHIPPING
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td style={s.tableCell}>
                         <div
