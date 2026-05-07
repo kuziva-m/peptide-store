@@ -191,10 +191,7 @@ export default function ExecutiveOverviewTab({
 
   return (
     <div className="tab-content">
-      <DataAvailabilityPanel 
-        dataAvailability={dataAvailability} 
-        schemaRecommendations={schemaRecommendations} 
-      />
+    
 
       {/* 1. SALES HEALTH */}
       <SectionHeader title="Sales & Revenue Health" description="Core top-line financial performance." />
