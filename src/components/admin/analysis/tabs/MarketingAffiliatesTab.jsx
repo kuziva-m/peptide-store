@@ -416,10 +416,7 @@ export default function MarketingAffiliatesTab({
 
   return (
     <div className="tab-content">
-      <DataAvailabilityPanel
-        dataAvailability={marketingDataAvailability}
-        schemaRecommendations={marketingSchemaRecommendations}
-      />
+      
 
       <SectionHeader
         title="Traffic, Acquisition & Retention"

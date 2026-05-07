@@ -444,10 +444,7 @@ export default function CatalogPreordersTab({
 
   return (
     <div className="tab-content">
-      <DataAvailabilityPanel
-        dataAvailability={inventoryDataAvailability}
-        schemaRecommendations={inventorySchemaRecommendations}
-      />
+      
 
       <SectionHeader
         title="Catalog & Operational Inventory"

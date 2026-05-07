@@ -431,10 +431,7 @@ export default function CoaComplianceTab({
 
   return (
     <div className="tab-content">
-      <DataAvailabilityPanel
-        dataAvailability={complianceDataAvailability}
-        schemaRecommendations={complianceSchemaRecommendations}
-      />
+   
 
       <SectionHeader
         title="Compliance & Trust Signals"

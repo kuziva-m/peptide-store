@@ -433,10 +433,7 @@ export default function CrmSupportTab({
 
   return (
     <div className="tab-content">
-      <DataAvailabilityPanel
-        dataAvailability={crmDataAvailability}
-        schemaRecommendations={crmSchemaRecommendations}
-      />
+      
 
       <SectionHeader
         title="Retention, Loyalty & Support"
