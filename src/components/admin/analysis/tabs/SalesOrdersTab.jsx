@@ -40,6 +40,7 @@ import {
   Tag,
   Truck,
   RefreshCcw,
+  Activity,
 } from "lucide-react";
 import {
   ResponsiveContainer,
