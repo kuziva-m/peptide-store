@@ -53,24 +53,26 @@ export default function Checkout() {
         cart,
         totals: {
           total: cartTotal,
-          shipping: 0,
-          shippingMethod: "Calculated by Tagada",
-          discountUsed: null,
+          shipping: defaultShippingCost,
+          shippingMethod:
+            defaultShippingCost === 0 ? "Free Shipping" : "Standard",
         },
         customer: { email },
       };
 
+      // 🚨 CHANGED: Now calling the Paytree Edge Function
       const { data, error: functionError } = await supabase.functions.invoke(
-        "create-tagada-session",
+        "create-paytree-session",
         { body: payload },
       );
 
       if (functionError) throw new Error(functionError.message);
 
       if (data?.url) {
+        // Redirect the customer to Paytree's secure checkout URL
         window.location.href = data.url;
       } else {
-        throw new Error("Could not retrieve payment link.");
+        throw new Error("Could not retrieve secure payment link.");
       }
     } catch (err) {
       console.error("Checkout Error:", err);
@@ -96,7 +98,6 @@ export default function Checkout() {
 
   return (
     <>
-      {/* Inject responsive styles */}
       <style>{`
         .checkout-wrapper {
           max-width: 1000px;

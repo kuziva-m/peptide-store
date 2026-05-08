@@ -19,14 +19,11 @@ export default function Checkout() {
   const { cart, cartTotal } = useCart();
   const navigate = useNavigate();
 
-  // --- STABILIZED ORDER ID ---
-  const [orderId] = useState(() => {
-    const existingId = sessionStorage.getItem("active_checkout_id");
-    if (existingId) return existingId;
-    const newId = crypto.randomUUID();
-    sessionStorage.setItem("active_checkout_id", newId);
-    return newId;
-  });
+  // --- 🚨 FIXED: STABILIZED ORDER ID 🚨 ---
+  // We use React's initializer function to generate a fresh UUID once per checkout visit.
+  // This keeps the ID perfectly stable while they type or upload files,
+  // but prevents duplicate key errors if they come back to place a 2nd order!
+  const [orderId] = useState(() => crypto.randomUUID());
 
   const shortRef = orderId.slice(0, 8).toUpperCase();
 
@@ -51,7 +48,7 @@ export default function Checkout() {
 
   const [shippingMethod, setShippingMethod] = useState("standard");
 
-  // --- 🚨 UPDATED DISCOUNT & VOUCHER STATE 🚨 ---
+  // --- DISCOUNT & VOUCHER STATE ---
   const [discountCode, setDiscountCode] = useState("");
   const [appliedCodeType, setAppliedCodeType] = useState(null); // 'promo' | 'voucher' | null
 
@@ -167,7 +164,7 @@ export default function Checkout() {
     setTimeout(() => setCopied(""), 2000);
   };
 
-  // --- 🚨 UPDATED "SMART" DISCOUNT VERIFIER 🚨 ---
+  // --- "SMART" DISCOUNT VERIFIER ---
   const handleApplyDiscount = async () => {
     setDiscountError("");
     setDiscountSuccess("");
@@ -276,7 +273,7 @@ export default function Checkout() {
     setDiscountError("");
   };
 
-  // --- 🚨 UPDATED CART MATH (HANDLES PROMOS & VOUCHERS) 🚨 ---
+  // --- CART MATH (HANDLES PROMOS & VOUCHERS) ---
   // 1. Calculate Base Shipping
   const isStandardFree = cartTotal >= 150 || promoFreeShipping;
   const isExpressFree = cartTotal >= 250 || promoFreeShipping;
@@ -388,7 +385,7 @@ export default function Checkout() {
         receiptUrl = publicUrlData.publicUrl;
       }
 
-      // --- 🚨 CRITICAL: DEDUCT VOUCHER BALANCE 🚨 ---
+      // --- CRITICAL: DEDUCT VOUCHER BALANCE ---
       if (appliedCodeType === "voucher" && voucherData) {
         const newBalance =
           Number(voucherData.current_balance) - voucherDeduction;
@@ -803,6 +800,20 @@ export default function Checkout() {
                     {isExpressFree ? "Free (Orders over $250)" : "$14.99"}
                   </span>
                 </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "16px",
+                  paddingTop: "16px",
+                  borderTop: "1px solid #cbd5e1",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: shippingColor,
+                  textAlign: "center",
+                }}
+              >
+                {shippingMessage}
               </div>
             </div>
 
