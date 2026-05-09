@@ -204,6 +204,11 @@ export default function Checkout() {
         setDiscountSuccess(
           `Store Credit Applied! Balance: $${Number(voucher.current_balance).toFixed(2)}`,
         );
+
+        // If voucher includes free shipping, apply it
+        if (voucher.includes_free_shipping) {
+          setPromoFreeShipping(true);
+        }
         return;
       }
 
@@ -273,20 +278,33 @@ export default function Checkout() {
     setDiscountError("");
   };
 
-  // --- CART MATH (HANDLES PROMOS & VOUCHERS) ---
+  // --- 🚨 FIXED: CART MATH WITH SHIPPING COLORS 🚨 ---
   // 1. Calculate Base Shipping
   const isStandardFree = cartTotal >= 150 || promoFreeShipping;
   const isExpressFree = cartTotal >= 250 || promoFreeShipping;
 
   let shippingCost = 0;
   let shippingLabel = "Free";
+  let shippingMessage = "";
+  let shippingColor = "#d97706";
 
   if (shippingMethod === "express") {
     shippingCost = isExpressFree ? 0 : 14.99;
     shippingLabel = isExpressFree ? "Free" : "$14.99";
+    shippingMessage = isExpressFree
+      ? "Free Express Shipping!"
+      : "Express Shipping Selected";
+    shippingColor = isExpressFree ? "#16a34a" : "#475569";
   } else {
     shippingCost = isStandardFree ? 0 : 9.99;
     shippingLabel = isStandardFree ? "Free" : "$9.99";
+    if (isStandardFree) {
+      shippingMessage = "Free Standard Shipping!";
+      shippingColor = "#16a34a";
+    } else {
+      shippingMessage = `Add $${(150 - cartTotal).toFixed(2)} more to unlock Free Shipping.`;
+      shippingColor = "#d97706";
+    }
   }
 
   // 2. Calculate Subtotal with Promo (if any)
