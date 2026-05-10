@@ -96,6 +96,41 @@ export default function Checkout() {
   // =========================================================================
   // 📮 ADDRESSFINDER (AUSPOST) AUTOCOMPLETE INJECTION
   // =========================================================================
+
+  // Helper to intelligently combine unit and street lines
+  const buildStreetAddress = (fullAddress, metaData) => {
+    // 1. Prefer the pre-combined line if AddressFinder provides it
+    if (metaData.address_line_combined) {
+      return metaData.address_line_combined;
+    }
+
+    const line1 = metaData.address_line_1 || "";
+    const line2 = metaData.address_line_2 || "";
+
+    // 2. If both exist (e.g. Unit 6 AND 119 Highlander Dr), combine them
+    if (line1 && line2) {
+      return `${line1}, ${line2}`;
+    }
+
+    // 3. If only one exists (Standard house), use it
+    if (line1) return line1;
+    if (line2) return line2;
+
+    // 4. Absolute Fallback: Strip suburb/state/postcode from the full string
+    if (fullAddress) {
+      let fallback = fullAddress;
+      if (metaData.locality_name)
+        fallback = fallback.replace(metaData.locality_name, "");
+      if (metaData.state_territory)
+        fallback = fallback.replace(metaData.state_territory, "");
+      if (metaData.postcode) fallback = fallback.replace(metaData.postcode, "");
+      // Clean up leftover commas and spaces
+      return fallback.replace(/,\s*$/, "").replace(/,/g, "").trim();
+    }
+
+    return "";
+  };
+
   useEffect(() => {
     if (document.getElementById("addressfinder-script")) return;
 
@@ -119,9 +154,14 @@ export default function Checkout() {
       );
 
       widget.on("address:select", (fullAddress, metaData) => {
+        // Temporary logging so you can inspect the exact payload in the console
+        console.log("AddressFinder selected:", { fullAddress, metaData });
+
+        const formattedStreet = buildStreetAddress(fullAddress, metaData);
+
         setFormData((prev) => ({
           ...prev,
-          line1: metaData.address_line_1 || fullAddress,
+          line1: formattedStreet || fullAddress,
           city: metaData.locality_name || prev.city,
           state: metaData.state_territory || prev.state,
           postcode: metaData.postcode || prev.postcode,
