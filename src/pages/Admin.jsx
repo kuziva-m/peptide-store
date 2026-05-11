@@ -55,6 +55,29 @@ const SECONDARY_MENU = [
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
+const withTimeout = (promise, timeoutMs = 10000, label = "Request") => {
+  const timerApi = typeof window !== "undefined" ? window : globalThis;
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = timerApi.setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    timerApi.clearTimeout(timeoutId);
+  });
+};
+
+const safeSignOut = async () => {
+  try {
+    await withTimeout(supabase.auth.signOut(), 5000, "Sign out");
+  } catch (error) {
+    console.error("Sign out failed:", error);
+  }
+};
+
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -75,33 +98,52 @@ export default function Admin() {
 
       if (showLoader) setLoading(true);
 
-      if (!currentSession?.user) {
-        setSession(null);
-        setIsAdmin(false);
-        if (!keepError) setAuthError("");
-        setLoading(false);
-        return false;
-      }
+      try {
+        if (!currentSession?.user) {
+          setSession(null);
+          setIsAdmin(false);
+          if (!keepError) setAuthError("");
+          return false;
+        }
 
-      const { data, error } = await supabase.rpc("is_admin");
+        const { data, error } = await withTimeout(
+          supabase.rpc("is_admin"),
+          10000,
+          "Admin access check",
+        );
 
-      if (error || data !== true) {
-        await supabase.auth.signOut();
+        if (error || data !== true) {
+          await safeSignOut();
+
+          setSession(null);
+          setIsAdmin(false);
+          setAuthError(
+            error?.message ||
+              "Access denied. This account is not authorised for admin access.",
+          );
+
+          return false;
+        }
+
+        setSession(currentSession);
+        setIsAdmin(true);
+        setAuthError("");
+        return true;
+      } catch (error) {
+        console.error("Admin verification failed:", error);
+
+        await safeSignOut();
 
         setSession(null);
         setIsAdmin(false);
         setAuthError(
-          "Access denied. This account is not authorised for admin access.",
+          "Could not verify admin access. Please refresh and sign in again.",
         );
-        setLoading(false);
-        return false;
-      }
 
-      setSession(currentSession);
-      setIsAdmin(true);
-      setAuthError("");
-      setLoading(false);
-      return true;
+        return false;
+      } finally {
+        setLoading(false);
+      }
     },
     [],
   );
@@ -110,28 +152,49 @@ export default function Admin() {
     let mounted = true;
 
     const loadSession = async () => {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+      setLoading(true);
 
-      if (!mounted) return;
+      try {
+        const {
+          data: { session: currentSession },
+        } = await withTimeout(
+          supabase.auth.getSession(),
+          10000,
+          "Session check",
+        );
 
-      await verifyAdminAccess(currentSession, {
-        showLoader: true,
-      });
+        if (!mounted) return;
+
+        await verifyAdminAccess(currentSession, {
+          showLoader: false,
+        });
+      } catch (error) {
+        console.error("Initial session load failed:", error);
+
+        if (!mounted) return;
+
+        setSession(null);
+        setIsAdmin(false);
+        setAuthError("Session check failed. Please sign in again.");
+        setLoading(false);
+      }
     };
 
     loadSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!mounted) return;
 
-      await verifyAdminAccess(currentSession, {
-        showLoader: false,
-        keepError: true,
-      });
+      window.setTimeout(() => {
+        if (!mounted) return;
+
+        verifyAdminAccess(currentSession, {
+          showLoader: false,
+          keepError: true,
+        });
+      }, 0);
     });
 
     return () => {
@@ -146,29 +209,41 @@ export default function Admin() {
     setAuthLoading(true);
     setAuthError("");
 
-    const cleanEmail = email.trim().toLowerCase();
+    try {
+      const cleanEmail = email.trim().toLowerCase();
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password,
-    });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        }),
+        10000,
+        "Sign in",
+      );
 
-    setPassword("");
-    setAuthLoading(false);
+      setPassword("");
 
-    if (error) {
-      setAuthError("Invalid email or password.");
-      return;
+      if (error) {
+        setAuthError("Invalid email or password.");
+        return;
+      }
+
+      await verifyAdminAccess(data.session, {
+        showLoader: true,
+        keepError: true,
+      });
+    } catch (error) {
+      console.error("Login failed:", error);
+      setAuthError("Login failed. Please refresh and try again.");
+    } finally {
+      setAuthLoading(false);
     }
-
-    await verifyAdminAccess(data.session, {
-      showLoader: true,
-      keepError: true,
-    });
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    setLoading(true);
+
+    await safeSignOut();
 
     setSession(null);
     setIsAdmin(false);
@@ -176,6 +251,7 @@ export default function Admin() {
     setPassword("");
     setAuthError("");
     setMobileMenuOpen(false);
+    setLoading(false);
   };
 
   if (loading) {
