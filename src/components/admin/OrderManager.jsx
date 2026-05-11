@@ -15,7 +15,7 @@ export default function OrderManager() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [notification, setNotification] = useState(null);
 
-  // 🚨 NEW: Universal Toggle State for Pre-orders
+  // Universal Toggle State for Pre-orders
   const [hidePreorders, setHidePreorders] = useState(false);
 
   const [modalConfig, setModalConfig] = useState({
@@ -141,7 +141,7 @@ export default function OrderManager() {
         order.customer_name?.toLowerCase().includes(s) ||
         order.tracking_number?.toLowerCase().includes(s);
 
-      // 🚨 Pre-Order Calculation extracted so we can use it for the toggle
+      // Pre-Order Calculation extracted so we can use it for the toggle
       let hasPreorder = false;
       try {
         let items = [];
@@ -156,7 +156,7 @@ export default function OrderManager() {
         );
       } catch (e) {}
 
-      // 🚨 If the Universal Toggle is ON and the order has a pre-order, banish it!
+      // If the Universal Toggle is ON and the order has a pre-order, banish it!
       if (hidePreorders && hasPreorder) {
         return false;
       }
@@ -175,7 +175,6 @@ export default function OrderManager() {
       } else if (statusFilter === "has_notes") {
         matchesStatus = order.notes && order.notes.trim().length > 0;
       } else if (statusFilter === "has_preorder") {
-        // If the toggle is somehow on while viewing this tab, it will naturally render 0
         matchesStatus = hasPreorder;
       } else {
         matchesStatus = order.status === statusFilter;
@@ -185,9 +184,15 @@ export default function OrderManager() {
     });
   }, [orders, search, statusFilter, hidePreorders]);
 
-  // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
+  // 🚨 FIXED: BULLETPROOF UI-LEVEL GROUPING ENGINE
   const processedOrders = useMemo(() => {
     let grouped = [];
+
+    const safeSortByDateAsc = (a, b) => {
+      const timeA = new Date(a.created_at).getTime() || 0;
+      const timeB = new Date(b.created_at).getTime() || 0;
+      return timeA - timeB;
+    };
 
     if (statusFilter === "paid") {
       // 1. Group by Email if PAID
@@ -202,32 +207,26 @@ export default function OrderManager() {
         if (group.length === 1) {
           grouped.push(group[0]);
         } else {
-          // 🚨 FIXED: Safari Date Bug - Using string comparison instead of new Date()
-          group.sort((a, b) =>
-            String(a.created_at).localeCompare(String(b.created_at)),
-          );
-
-          const oldest = group[0];
-          const hasExpress = group.some(
+          // Clone the array to prevent mutating shared state
+          const sortedGroup = [...group].sort(safeSortByDateAsc);
+          const oldest = sortedGroup[0];
+          const hasExpress = sortedGroup.some(
             (o) => String(o.shipping_method).toLowerCase() === "express",
           );
-          const totalAmt = group.reduce(
+          const totalAmt = sortedGroup.reduce(
             (sum, o) => sum + Number(o.total_amount || 0),
             0,
           );
 
+          // 🚨 We spread (...oldest) to guarantee every native property (items, notes, etc) is present!
           grouped.push({
+            ...oldest,
             isFused: true,
-            id: `FUSED-${String(oldest.id).slice(0, 5)}`,
-            real_ids: group.map((o) => o.id), // Array of actual Supabase IDs
-            customer_name: oldest.customer_name,
-            customer_email: oldest.customer_email,
-            shipping_address: oldest.shipping_address, // Uses oldest address
+            id: `FUSED-${oldest.id}`, // Guaranteed unique
+            real_ids: sortedGroup.map((o) => o.id),
             shipping_method: hasExpress ? "express" : "standard",
             total_amount: totalAmt,
-            status: oldest.status,
-            created_at: oldest.created_at,
-            orders: group, // Store original orders for the expanded UI demarcation
+            orders: sortedGroup,
           });
         }
       });
@@ -249,35 +248,27 @@ export default function OrderManager() {
       });
 
       Object.values(trackMap).forEach((group) => {
-        if (group.length === 1) grouped.push(group[0]);
-        else {
-          // 🚨 FIXED: Safari Date Bug - Using string comparison
-          group.sort((a, b) =>
-            String(a.created_at).localeCompare(String(b.created_at)),
-          );
-
-          const oldest = group[0];
-          const hasExpress = group.some(
+        if (group.length === 1) {
+          grouped.push(group[0]);
+        } else {
+          const sortedGroup = [...group].sort(safeSortByDateAsc);
+          const oldest = sortedGroup[0];
+          const hasExpress = sortedGroup.some(
             (o) => String(o.shipping_method).toLowerCase() === "express",
           );
-          const totalAmt = group.reduce(
+          const totalAmt = sortedGroup.reduce(
             (sum, o) => sum + Number(o.total_amount || 0),
             0,
           );
 
           grouped.push({
+            ...oldest,
             isFused: true,
-            id: `TRK-${String(oldest.tracking_number).slice(-5)}`,
-            real_ids: group.map((o) => o.id),
-            customer_name: oldest.customer_name,
-            customer_email: oldest.customer_email,
-            shipping_address: oldest.shipping_address,
+            id: `TRK-FUSED-${oldest.id}`,
+            real_ids: sortedGroup.map((o) => o.id),
             shipping_method: hasExpress ? "express" : "standard",
-            tracking_number: oldest.tracking_number,
             total_amount: totalAmt,
-            status: oldest.status,
-            created_at: oldest.created_at,
-            orders: group,
+            orders: sortedGroup,
           });
         }
       });
@@ -287,10 +278,12 @@ export default function OrderManager() {
       grouped = filteredOrders;
     }
 
-    // 🚨 FIXED: Safari Date Bug - Using string comparison for final sort
-    grouped.sort((a, b) =>
-      String(b.created_at).localeCompare(String(a.created_at)),
-    );
+    // Re-sort the final array globally by date descending
+    grouped.sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime() || 0;
+      const timeB = new Date(b.created_at).getTime() || 0;
+      return timeB - timeA;
+    });
 
     return grouped;
   }, [filteredOrders, statusFilter]);
