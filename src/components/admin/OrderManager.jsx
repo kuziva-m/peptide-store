@@ -183,7 +183,7 @@ export default function OrderManager() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [orders, search, statusFilter, hidePreorders]); // Added hidePreorders to dependency array
+  }, [orders, search, statusFilter, hidePreorders]);
 
   // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
   const processedOrders = useMemo(() => {
@@ -202,11 +202,14 @@ export default function OrderManager() {
         if (group.length === 1) {
           grouped.push(group[0]);
         } else {
-          // Sort oldest first so we use the original address
-          group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          // 🚨 FIXED: Safari Date Bug - Using string comparison instead of new Date()
+          group.sort((a, b) =>
+            String(a.created_at).localeCompare(String(b.created_at)),
+          );
+
           const oldest = group[0];
           const hasExpress = group.some(
-            (o) => o.shipping_method?.toLowerCase() === "express",
+            (o) => String(o.shipping_method).toLowerCase() === "express",
           );
           const totalAmt = group.reduce(
             (sum, o) => sum + Number(o.total_amount || 0),
@@ -215,7 +218,7 @@ export default function OrderManager() {
 
           grouped.push({
             isFused: true,
-            id: `FUSED-${oldest.id.slice(0, 5)}`,
+            id: `FUSED-${String(oldest.id).slice(0, 5)}`,
             real_ids: group.map((o) => o.id), // Array of actual Supabase IDs
             customer_name: oldest.customer_name,
             customer_email: oldest.customer_email,
@@ -248,10 +251,14 @@ export default function OrderManager() {
       Object.values(trackMap).forEach((group) => {
         if (group.length === 1) grouped.push(group[0]);
         else {
-          group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          // 🚨 FIXED: Safari Date Bug - Using string comparison
+          group.sort((a, b) =>
+            String(a.created_at).localeCompare(String(b.created_at)),
+          );
+
           const oldest = group[0];
           const hasExpress = group.some(
-            (o) => o.shipping_method?.toLowerCase() === "express",
+            (o) => String(o.shipping_method).toLowerCase() === "express",
           );
           const totalAmt = group.reduce(
             (sum, o) => sum + Number(o.total_amount || 0),
@@ -260,7 +267,7 @@ export default function OrderManager() {
 
           grouped.push({
             isFused: true,
-            id: `TRK-${oldest.tracking_number.slice(-5)}`,
+            id: `TRK-${String(oldest.tracking_number).slice(-5)}`,
             real_ids: group.map((o) => o.id),
             customer_name: oldest.customer_name,
             customer_email: oldest.customer_email,
@@ -280,8 +287,11 @@ export default function OrderManager() {
       grouped = filteredOrders;
     }
 
-    // Re-sort the final fused array by date descending
-    grouped.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // 🚨 FIXED: Safari Date Bug - Using string comparison for final sort
+    grouped.sort((a, b) =>
+      String(b.created_at).localeCompare(String(a.created_at)),
+    );
+
     return grouped;
   }, [filteredOrders, statusFilter]);
 
@@ -417,7 +427,6 @@ export default function OrderManager() {
               cursor: "pointer",
               marginLeft: "10px",
               transition: "all 0.2s ease-in-out",
-              // The aggressive red/white/black style styling
               textShadow: hidePreorders
                 ? "-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff"
                 : "none",
