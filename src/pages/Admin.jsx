@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import {
@@ -35,77 +35,167 @@ import SettingsManager from "../components/admin/SettingsManager";
 import CreatorManager from "../components/admin/CreatorManager";
 import SeoLandingManager from "../components/admin/SeoLandingManager";
 import VoucherManager from "../components/admin/VoucherManager";
-import AnalysisBoard from "../components/admin/analysis/AnalysisBoard"; // 🚨 Updated to point to new folder structure
+import AnalysisBoard from "../components/admin/analysis/AnalysisBoard";
+
+const PRIMARY_MENU = [
+  { id: "analysis", label: "Analysis Board", icon: BarChart },
+  { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "products", label: "Inventory", icon: Package },
+  { id: "creators", label: "Creators", icon: Star },
+  { id: "discounts", label: "Codes", icon: Tag },
+  { id: "vouchers", label: "Vouchers", icon: Ticket },
+  { id: "subscribers", label: "Users", icon: Users },
+  { id: "inquiries", label: "Inbox", icon: Mail },
+];
+
+const SECONDARY_MENU = [
+  { id: "reviews", label: "Reviews", icon: MessageSquare },
+  { id: "content", label: "Content", icon: FileText },
+  { id: "seo_pages", label: "SEO Pages", icon: Globe },
+  { id: "settings", label: "Settings", icon: Settings },
+];
 
 export default function Admin() {
   const [session, setSession] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("orders"); // 🚨 Changed default tab back to orders
+
+  const [activeTab, setActiveTab] = useState("orders");
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+
+  const verifyAdminAccess = useCallback(
+    async (currentSession, options = {}) => {
+      const { showLoader = false, keepError = false } = options;
+
+      if (showLoader) setLoading(true);
+
+      if (!currentSession?.user) {
+        setSession(null);
+        setIsAdmin(false);
+        if (!keepError) setAuthError("");
+        setLoading(false);
+        return false;
+      }
+
+      const { data, error } = await supabase.rpc("is_admin");
+
+      if (error || data !== true) {
+        await supabase.auth.signOut();
+
+        setSession(null);
+        setIsAdmin(false);
+        setAuthError(
+          "Access denied. This account is not authorised for admin access.",
+        );
+        setLoading(false);
+        return false;
+      }
+
+      setSession(currentSession);
+      setIsAdmin(true);
+      setAuthError("");
+      setLoading(false);
+      return true;
+    },
+    [],
+  );
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    let mounted = true;
+
+    const loadSession = async () => {
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      await verifyAdminAccess(currentSession, {
+        showLoader: true,
+      });
+    };
+
+    loadSession();
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+      if (!mounted) return;
+
+      await verifyAdminAccess(currentSession, {
+        showLoader: false,
+        keepError: true,
+      });
     });
-    return () => subscription.unsubscribe();
-  }, []);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [verifyAdminAccess]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
     setAuthLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
+    setAuthError("");
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
       password,
     });
+
+    setPassword("");
     setAuthLoading(false);
-    if (error) alert(error.message);
+
+    if (error) {
+      setAuthError("Invalid email or password.");
+      return;
+    }
+
+    await verifyAdminAccess(data.session, {
+      showLoader: true,
+      keepError: true,
+    });
   };
 
-  const handleLogout = () => supabase.auth.signOut();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
 
-  const PRIMARY_MENU = [
-    { id: "analysis", label: "Analysis Board", icon: BarChart }, // Analysis is to the left of Orders
-    { id: "orders", label: "Orders", icon: ShoppingBag },
-    { id: "products", label: "Inventory", icon: Package },
-    { id: "creators", label: "Creators", icon: Star },
-    { id: "discounts", label: "Codes", icon: Tag },
-    { id: "vouchers", label: "Vouchers", icon: Ticket },
-    { id: "subscribers", label: "Users", icon: Users },
-    { id: "inquiries", label: "Inbox", icon: Mail },
-  ];
+    setSession(null);
+    setIsAdmin(false);
+    setEmail("");
+    setPassword("");
+    setAuthError("");
+    setMobileMenuOpen(false);
+  };
 
-  const SECONDARY_MENU = [
-    { id: "reviews", label: "Reviews", icon: MessageSquare },
-    { id: "content", label: "Content", icon: FileText },
-    { id: "seo_pages", label: "SEO Pages", icon: Globe },
-    { id: "settings", label: "Settings", icon: Settings },
-  ];
-
-  if (loading)
+  if (loading) {
     return (
       <div style={styles.centerScreen}>
         <Atom size={48} className="spin-anim" color="var(--primary)" />
       </div>
     );
+  }
 
-  if (!session) {
+  if (!session || !isAdmin) {
     return (
       <div style={styles.loginContainer}>
-        <div style={styles.loginBanner}>
+        <div className="admin-login-banner" style={styles.loginBanner}>
           <div style={styles.bannerOverlay}>
             <div style={styles.logoArea}>
               <Atom size={40} color="white" className="spin-anim" />
               <h1 style={{ color: "white", margin: 0 }}>Melbourne Peptides</h1>
             </div>
+
             <div style={styles.bannerText}>
               <h2
                 style={{
@@ -116,18 +206,25 @@ export default function Admin() {
               >
                 Admin Portal
               </h2>
-              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "1.1rem" }}>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.8)",
+                  fontSize: "1.1rem",
+                }}
+              >
                 Manage orders, inventory, and customer inquiries securely.
               </p>
             </div>
           </div>
+
           <img
             src="/hero-banner.jpg"
             alt="Lab Background"
             style={styles.bannerImage}
           />
         </div>
-        <div style={styles.loginFormWrapper}>
+
+        <div className="login-form-wrapper" style={styles.loginFormWrapper}>
           <div style={styles.loginCard}>
             <div style={styles.formHeader}>
               <div style={styles.iconCircle}>
@@ -138,32 +235,64 @@ export default function Admin() {
                 Please enter your details to sign in.
               </p>
             </div>
-            <form onSubmit={handleLogin} style={styles.form}>
+
+            {authError && <div style={styles.errorBox}>{authError}</div>}
+
+            <form
+              onSubmit={handleLogin}
+              style={styles.form}
+              autoComplete="off"
+              noValidate={false}
+            >
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Email Address</label>
+                <label style={styles.label} htmlFor="admin-email">
+                  Email Address
+                </label>
                 <input
+                  id="admin-email"
+                  name="admin_email_field"
                   type="email"
                   required
-                  placeholder="admin@melbournepeptides.com"
+                  placeholder=""
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={styles.input}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  inputMode="email"
                 />
               </div>
+
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Password</label>
+                <label style={styles.label} htmlFor="admin-password">
+                  Password
+                </label>
                 <input
+                  id="admin-password"
+                  name="admin_password_field"
                   type="password"
                   required
-                  placeholder="••••••••"
+                  placeholder=""
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={styles.input}
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                 />
               </div>
+
               <button
+                type="submit"
                 disabled={authLoading}
-                style={{ ...styles.submitBtn, opacity: authLoading ? 0.7 : 1 }}
+                style={{
+                  ...styles.submitBtn,
+                  opacity: authLoading ? 0.7 : 1,
+                  cursor: authLoading ? "not-allowed" : "pointer",
+                }}
               >
                 {authLoading ? (
                   "Signing In..."
@@ -175,6 +304,7 @@ export default function Admin() {
               </button>
             </form>
           </div>
+
           <div style={styles.footer}>
             &copy; {new Date().getFullYear()} Melbourne Peptides. Secure System.
           </div>
@@ -186,7 +316,6 @@ export default function Admin() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
       <nav style={styles.navbar}>
-        {/* ROW 1: Branding & Secondary Actions */}
         <div style={styles.topRow}>
           <div style={styles.logoSection}>
             <Atom size={24} color="white" className="spin-anim" />
@@ -194,7 +323,6 @@ export default function Admin() {
           </div>
 
           <div style={styles.rightSection}>
-            {/* Secondary Menu (Top Right) */}
             <div
               className="hide-mobile"
               style={{ display: "flex", gap: "4px", marginRight: "16px" }}
@@ -202,6 +330,7 @@ export default function Admin() {
               {SECONDARY_MENU.map((item) => (
                 <button
                   key={item.id}
+                  type="button"
                   onClick={() => setActiveTab(item.id)}
                   style={{
                     ...styles.navLinkSmall,
@@ -216,7 +345,9 @@ export default function Admin() {
             <Link to="/" style={styles.homeBtn}>
               <Home size={16} /> <span className="hide-mobile">Site</span>
             </Link>
+
             <button
+              type="button"
               onClick={handleLogout}
               className="logout-btn"
               style={styles.logoutBtnNav}
@@ -224,10 +355,13 @@ export default function Admin() {
             >
               <LogOut size={18} />
             </button>
+
             <button
+              type="button"
               className="mobile-menu-btn"
-              onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
               style={styles.mobileToggle}
+              aria-label="Toggle admin menu"
             >
               {isMobileMenuOpen ? (
                 <X size={24} color="white" />
@@ -238,11 +372,11 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* ROW 2: Primary Navigation Tabs */}
         <div className="desktop-nav" style={styles.bottomRow}>
           {PRIMARY_MENU.map((item) => (
             <button
               key={item.id}
+              type="button"
               onClick={() => setActiveTab(item.id)}
               style={{
                 ...styles.navLink,
@@ -255,18 +389,20 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* Mobile Dropdown */}
         {isMobileMenuOpen && (
           <div style={styles.mobileMenu}>
             <Link to="/" style={styles.mobileNavLink}>
               <Home size={18} /> Back to Website
             </Link>
+
             <div
               style={{ borderBottom: "1px solid #334155", margin: "4px 0" }}
-            ></div>
+            />
+
             {[...PRIMARY_MENU, ...SECONDARY_MENU].map((item) => (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => {
                   setActiveTab(item.id);
                   setMobileMenuOpen(false);
@@ -283,7 +419,6 @@ export default function Admin() {
         )}
       </nav>
 
-      {/* MAIN CONTENT */}
       <main style={styles.mainContent}>
         <div style={styles.contentCard}>
           {activeTab === "analysis" && <AnalysisBoard />}
@@ -312,6 +447,7 @@ const styles = {
     alignItems: "center",
     background: "#f8fafc",
   },
+
   navbar: {
     background: "#0f172a",
     color: "white",
@@ -351,9 +487,10 @@ const styles = {
     fontWeight: "bold",
     fontSize: "1.2rem",
   },
-  navTitle: { letterSpacing: "0.5px" },
+  navTitle: {
+    letterSpacing: "0.5px",
+  },
 
-  // Primary Tabs
   navLink: {
     display: "flex",
     alignItems: "center",
@@ -377,7 +514,6 @@ const styles = {
     background: "rgba(255,255,255,0.03)",
   },
 
-  // Secondary Tabs (Top Right)
   navLinkSmall: {
     background: "transparent",
     border: "none",
@@ -389,9 +525,16 @@ const styles = {
     borderRadius: "6px",
     transition: "all 0.2s",
   },
-  navLinkActiveSmall: { color: "white", background: "#1e293b" },
+  navLinkActiveSmall: {
+    color: "white",
+    background: "#1e293b",
+  },
 
-  rightSection: { display: "flex", alignItems: "center", gap: "12px" },
+  rightSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
   homeBtn: {
     display: "flex",
     alignItems: "center",
@@ -460,7 +603,12 @@ const styles = {
     color: "white",
     fontWeight: "600",
   },
-  mainContent: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
+
+  mainContent: {
+    padding: "24px",
+    maxWidth: "1400px",
+    margin: "0 auto",
+  },
   contentCard: {
     background: "transparent",
     borderRadius: "0",
@@ -470,15 +618,17 @@ const styles = {
     overflow: "visible",
   },
 
-  // Login Styles
-  loginContainer: { display: "flex", minHeight: "100vh", background: "#fff" },
+  loginContainer: {
+    display: "flex",
+    minHeight: "100vh",
+    background: "#fff",
+  },
   loginBanner: {
     flex: 1,
     position: "relative",
     display: "none",
     flexDirection: "column",
     justifyContent: "space-between",
-    "@media (min-width: 768px)": { display: "flex" },
   },
   bannerImage: {
     position: "absolute",
@@ -498,8 +648,14 @@ const styles = {
     justifyContent: "space-between",
     zIndex: 1,
   },
-  logoArea: { display: "flex", alignItems: "center", gap: "16px" },
-  bannerText: { maxWidth: "500px" },
+  logoArea: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  bannerText: {
+    maxWidth: "500px",
+  },
   loginFormWrapper: {
     flex: "0 0 100%",
     maxWidth: "100%",
@@ -510,8 +666,14 @@ const styles = {
     alignItems: "center",
     background: "#fff",
   },
-  loginCard: { width: "100%", maxWidth: "400px" },
-  formHeader: { marginBottom: "32px", textAlign: "center" },
+  loginCard: {
+    width: "100%",
+    maxWidth: "400px",
+  },
+  formHeader: {
+    marginBottom: "32px",
+    textAlign: "center",
+  },
   iconCircle: {
     width: "50px",
     height: "50px",
@@ -522,9 +684,21 @@ const styles = {
     justifyContent: "center",
     margin: "0 auto 20px",
   },
-  form: { display: "flex", flexDirection: "column", gap: "20px" },
-  inputGroup: { display: "flex", flexDirection: "column", gap: "8px" },
-  label: { fontSize: "0.9rem", fontWeight: "600", color: "#0f172a" },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+  },
+  inputGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  label: {
+    fontSize: "0.9rem",
+    fontWeight: "600",
+    color: "#0f172a",
+  },
   input: {
     padding: "12px 16px",
     borderRadius: "8px",
@@ -532,6 +706,7 @@ const styles = {
     fontSize: "1rem",
     transition: "border-color 0.2s",
     outline: "none",
+    background: "white",
   },
   submitBtn: {
     display: "flex",
@@ -548,6 +723,16 @@ const styles = {
     cursor: "pointer",
     transition: "background 0.2s",
   },
+  errorBox: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "12px 14px",
+    borderRadius: "8px",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    marginBottom: "16px",
+    border: "1px solid #fecaca",
+  },
   footer: {
     marginTop: "40px",
     fontSize: "0.85rem",
@@ -556,21 +741,71 @@ const styles = {
   },
 };
 
-// CSS Injection
-const styleTag = document.createElement("style");
-styleTag.innerHTML = `
-  @media (min-width: 1024px) {
-    .login-form-wrapper { flex: 0 0 500px !important; border-left: 1px solid #f1f5f9; }
-    .mobile-menu-btn { display: none !important; }
+// CSS Injection - protected from duplicate injection during Vite hot reloads
+const ADMIN_STYLE_TAG_ID = "melbourne-peptides-admin-styles";
+
+if (typeof document !== "undefined") {
+  const existingStyleTag = document.getElementById(ADMIN_STYLE_TAG_ID);
+
+  if (!existingStyleTag) {
+    const styleTag = document.createElement("style");
+    styleTag.id = ADMIN_STYLE_TAG_ID;
+    styleTag.innerHTML = `
+      @media (min-width: 1024px) {
+        .admin-login-banner {
+          display: flex !important;
+        }
+
+        .login-form-wrapper {
+          flex: 0 0 500px !important;
+          max-width: 500px !important;
+          border-left: 1px solid #f1f5f9;
+        }
+
+        .mobile-menu-btn {
+          display: none !important;
+        }
+      }
+
+      @media (max-width: 1024px) {
+        .desktop-nav {
+          display: none !important;
+        }
+
+        .mobile-menu-btn {
+          display: block !important;
+        }
+
+        .logout-text {
+          display: none;
+        }
+
+        .logout-btn {
+          padding: 8px !important;
+        }
+
+        .hide-mobile {
+          display: none !important;
+        }
+
+        main {
+          padding: 16px !important;
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+
+    document.head.appendChild(styleTag);
   }
-  @media (max-width: 1024px) {
-    .desktop-nav { display: none !important; }
-    .mobile-menu-btn { display: block !important; }
-    .logout-text { display: none; }
-    .logout-btn { padding: 8px !important; }
-    .hide-mobile { display: none !important; }
-    main { padding: 16px !important; }
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-`;
-document.head.appendChild(styleTag);
+}
