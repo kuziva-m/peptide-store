@@ -191,12 +191,12 @@ export default function Admin() {
       <div style={styles.loginContainer}>
         <div className="admin-login-banner" style={styles.loginBanner}>
           <div style={styles.bannerOverlay}>
-            <div style={styles.logoArea}>
+            <div className="admin-login-logo-area" style={styles.logoArea}>
               <Atom size={40} color="white" className="spin-anim" />
               <h1 style={{ color: "white", margin: 0 }}>Melbourne Peptides</h1>
             </div>
 
-            <div style={styles.bannerText}>
+            <div className="admin-login-banner-text" style={styles.bannerText}>
               <h2
                 style={{
                   color: "white",
@@ -225,7 +225,7 @@ export default function Admin() {
         </div>
 
         <div className="login-form-wrapper" style={styles.loginFormWrapper}>
-          <div style={styles.loginCard}>
+          <div className="admin-login-card" style={styles.loginCard}>
             <div style={styles.formHeader}>
               <div style={styles.iconCircle}>
                 <Lock size={24} color="var(--primary)" />
@@ -305,7 +305,7 @@ export default function Admin() {
             </form>
           </div>
 
-          <div style={styles.footer}>
+          <div className="admin-login-footer" style={styles.footer}>
             &copy; {new Date().getFullYear()} Melbourne Peptides. Secure System.
           </div>
         </div>
@@ -621,14 +621,19 @@ const styles = {
   loginContainer: {
     display: "flex",
     minHeight: "100vh",
-    background: "#fff",
+    background: "#0f172a",
+    position: "relative",
+    overflow: "hidden",
   },
   loginBanner: {
     flex: 1,
-    position: "relative",
-    display: "none",
+    position: "absolute",
+    inset: 0,
+    display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    minHeight: "100vh",
+    overflow: "hidden",
   },
   bannerImage: {
     position: "absolute",
@@ -636,13 +641,14 @@ const styles = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
+    objectPosition: "center",
   },
   bannerOverlay: {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(to bottom, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8))",
-    padding: "60px",
+      "linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.88) 42%, rgba(15, 23, 42, 0.96) 100%)",
+    padding: "28px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
@@ -657,27 +663,37 @@ const styles = {
     maxWidth: "500px",
   },
   loginFormWrapper: {
-    flex: "0 0 100%",
-    maxWidth: "100%",
-    padding: "40px",
+    position: "relative",
+    zIndex: 3,
+    flex: "1 1 auto",
+    width: "100%",
+    minHeight: "100vh",
+    padding: "24px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    background: "#fff",
+    background: "transparent",
   },
   loginCard: {
     width: "100%",
-    maxWidth: "400px",
+    maxWidth: "420px",
+    background: "rgba(255, 255, 255, 0.94)",
+    border: "1px solid rgba(255, 255, 255, 0.72)",
+    borderRadius: "22px",
+    padding: "28px",
+    boxShadow:
+      "0 28px 80px rgba(2, 6, 23, 0.42), inset 0 1px 0 rgba(255,255,255,0.65)",
+    backdropFilter: "blur(18px)",
   },
   formHeader: {
-    marginBottom: "32px",
+    marginBottom: "28px",
     textAlign: "center",
   },
   iconCircle: {
     width: "50px",
     height: "50px",
-    borderRadius: "12px",
+    borderRadius: "14px",
     background: "rgba(70, 53, 222, 0.1)",
     display: "flex",
     alignItems: "center",
@@ -696,15 +712,15 @@ const styles = {
   },
   label: {
     fontSize: "0.9rem",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#0f172a",
   },
   input: {
-    padding: "12px 16px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
+    padding: "13px 16px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
     fontSize: "1rem",
-    transition: "border-color 0.2s",
+    transition: "border-color 0.2s, box-shadow 0.2s",
     outline: "none",
     background: "white",
   },
@@ -717,27 +733,29 @@ const styles = {
     background: "var(--primary)",
     color: "white",
     border: "none",
-    borderRadius: "8px",
-    fontWeight: "600",
+    borderRadius: "10px",
+    fontWeight: "700",
     fontSize: "1rem",
     cursor: "pointer",
     transition: "background 0.2s",
+    boxShadow: "0 12px 24px rgba(70, 53, 222, 0.24)",
   },
   errorBox: {
     background: "#fee2e2",
     color: "#991b1b",
     padding: "12px 14px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     fontSize: "0.9rem",
     fontWeight: 600,
     marginBottom: "16px",
     border: "1px solid #fecaca",
   },
   footer: {
-    marginTop: "40px",
+    marginTop: "28px",
     fontSize: "0.85rem",
-    color: "#94a3b8",
+    color: "rgba(255,255,255,0.72)",
     textAlign: "center",
+    textShadow: "0 1px 2px rgba(0,0,0,0.28)",
   },
 };
 
@@ -745,67 +763,211 @@ const styles = {
 const ADMIN_STYLE_TAG_ID = "melbourne-peptides-admin-styles";
 
 if (typeof document !== "undefined") {
-  const existingStyleTag = document.getElementById(ADMIN_STYLE_TAG_ID);
+  let styleTag = document.getElementById(ADMIN_STYLE_TAG_ID);
 
-  if (!existingStyleTag) {
-    const styleTag = document.createElement("style");
+  if (!styleTag) {
+    styleTag = document.createElement("style");
     styleTag.id = ADMIN_STYLE_TAG_ID;
-    styleTag.innerHTML = `
-      @media (min-width: 1024px) {
-        .admin-login-banner {
-          display: flex !important;
-        }
-
-        .login-form-wrapper {
-          flex: 0 0 500px !important;
-          max-width: 500px !important;
-          border-left: 1px solid #f1f5f9;
-        }
-
-        .mobile-menu-btn {
-          display: none !important;
-        }
-      }
-
-      @media (max-width: 1024px) {
-        .desktop-nav {
-          display: none !important;
-        }
-
-        .mobile-menu-btn {
-          display: block !important;
-        }
-
-        .logout-text {
-          display: none;
-        }
-
-        .logout-btn {
-          padding: 8px !important;
-        }
-
-        .hide-mobile {
-          display: none !important;
-        }
-
-        main {
-          padding: 16px !important;
-        }
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    `;
-
     document.head.appendChild(styleTag);
   }
+
+  styleTag.innerHTML = `
+    @media (min-width: 1024px) {
+      .admin-login-banner {
+        position: relative !important;
+        inset: auto !important;
+        display: flex !important;
+        min-height: 100vh !important;
+      }
+
+      .login-form-wrapper {
+        flex: 0 0 500px !important;
+        max-width: 500px !important;
+        background: #ffffff !important;
+        border-left: 1px solid #f1f5f9;
+        padding: 40px !important;
+      }
+
+      .admin-login-card {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+      }
+
+      .admin-login-footer {
+        color: #94a3b8 !important;
+        text-shadow: none !important;
+      }
+
+      .mobile-menu-btn {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .desktop-nav {
+        display: none !important;
+      }
+
+      .mobile-menu-btn {
+        display: block !important;
+      }
+
+      .logout-text {
+        display: none;
+      }
+
+      .logout-btn {
+        padding: 8px !important;
+      }
+
+      .hide-mobile {
+        display: none !important;
+      }
+
+      main {
+        padding: 16px !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .admin-login-banner {
+        display: flex !important;
+        position: absolute !important;
+        inset: 0 !important;
+        min-height: 100svh !important;
+      }
+
+      .admin-login-logo-area {
+        transform: scale(0.86);
+        transform-origin: left top;
+      }
+
+      .admin-login-logo-area h1 {
+        font-size: 1.15rem !important;
+        line-height: 1.2;
+      }
+
+      .admin-login-banner-text {
+        display: block !important;
+        max-width: 320px !important;
+        margin-bottom: 22px;
+      }
+
+      .admin-login-banner-text h2 {
+        font-size: 1.55rem !important;
+        margin-bottom: 0.5rem !important;
+        letter-spacing: -0.03em;
+      }
+
+      .admin-login-banner-text p {
+        font-size: 0.92rem !important;
+        line-height: 1.45 !important;
+        color: rgba(255,255,255,0.76) !important;
+      }
+
+      .login-form-wrapper {
+        min-height: 100svh !important;
+        justify-content: flex-end !important;
+        padding: 22px !important;
+        padding-top: 96px !important;
+        padding-bottom: max(22px, env(safe-area-inset-bottom)) !important;
+      }
+
+      .admin-login-card {
+        max-width: 100% !important;
+        padding: 24px !important;
+        border-radius: 22px !important;
+        animation: mobileLoginLift 420ms ease both;
+      }
+
+      .admin-login-card h3 {
+        margin-top: 0;
+        margin-bottom: 6px;
+        font-size: 1.35rem;
+        letter-spacing: -0.02em;
+      }
+
+      .admin-login-card input {
+        min-height: 46px;
+      }
+
+      .admin-login-card button[type="submit"] {
+        min-height: 48px;
+      }
+
+      .admin-login-footer {
+        margin-top: 18px !important;
+        font-size: 0.76rem !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .admin-login-banner-text {
+        max-width: 280px !important;
+        margin-bottom: 18px;
+      }
+
+      .admin-login-banner-text h2 {
+        font-size: 1.35rem !important;
+      }
+
+      .admin-login-banner-text p {
+        font-size: 0.85rem !important;
+      }
+
+      .login-form-wrapper {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        padding-top: 88px !important;
+      }
+
+      .admin-login-card {
+        padding: 20px !important;
+        border-radius: 20px !important;
+      }
+    }
+
+    @media (max-height: 720px) and (max-width: 768px) {
+      .admin-login-logo-area {
+        display: none !important;
+      }
+
+      .admin-login-banner-text {
+        display: none !important;
+      }
+
+      .login-form-wrapper {
+        justify-content: center !important;
+        padding-top: 22px !important;
+      }
+    }
+
+    @keyframes mobileLoginLift {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
 }
