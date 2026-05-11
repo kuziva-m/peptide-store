@@ -5,6 +5,156 @@ import { styles } from "./OrderManagerStyles";
 import { OrderRow } from "./OrderRow";
 import { Search, Download, CheckCircle, AlertTriangle } from "lucide-react";
 
+const normalise = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const getShippingAddress = (order) => order?.shipping_address || {};
+
+const getPostcode = (order) => {
+  const address = getShippingAddress(order);
+  return address.postal_code || address.postcode || address.zip || "";
+};
+
+const safeParseItems = (order) => {
+  try {
+    if (Array.isArray(order?.order_items) && order.order_items.length > 0) {
+      return order.order_items;
+    }
+
+    if (!order?.items) return [];
+
+    return typeof order.items === "string"
+      ? JSON.parse(order.items)
+      : order.items;
+  } catch (error) {
+    console.error("Failed to parse order items:", error);
+    return [];
+  }
+};
+
+const orderHasPreorder = (order) => {
+  const items = safeParseItems(order);
+
+  return items.some(
+    (item) => item.is_preorder === true || item.is_preorder === "true",
+  );
+};
+
+const getDeliveryMergeKey = (order) => {
+  const address = getShippingAddress(order);
+
+  return [
+    normalise(order.customer_email),
+    normalise(order.customer_name),
+    normalise(address.phone),
+    normalise(address.line1),
+    normalise(address.line2),
+    normalise(address.city),
+    normalise(address.state),
+    normalise(getPostcode(order)),
+    normalise(address.country || "AU"),
+  ].join("|");
+};
+
+const getTrackingMergeKey = (order) => {
+  const tracking = normalise(order.tracking_number);
+  if (!tracking) return "";
+
+  // Tracking alone is not enough. If someone accidentally reuses a tracking
+  // number on different customers, this prevents unrelated orders being fused.
+  return `${tracking}|${getDeliveryMergeKey(order)}`;
+};
+
+const createFusedOrder = (group, type = "paid") => {
+  const sortedGroup = [...group].sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at),
+  );
+
+  const oldest = sortedGroup[0];
+  const realIds = sortedGroup.map((order) => order.id);
+  const shortIds = realIds.map((id) => String(id).slice(0, 8));
+
+  const hasExpress = sortedGroup.some(
+    (order) => order.shipping_method?.toLowerCase() === "express",
+  );
+
+  const totalAmount = sortedGroup.reduce(
+    (sum, order) => sum + Number(order.total_amount || 0),
+    0,
+  );
+
+  const shippingCost = sortedGroup.reduce(
+    (sum, order) => sum + Number(order.shipping_cost || 0),
+    0,
+  );
+
+  const mergedNotes = sortedGroup
+    .map((order) => order.notes?.trim())
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+
+  const discountCodes = [
+    ...new Set(
+      sortedGroup.map((order) => order.discount_code?.trim()).filter(Boolean),
+    ),
+  ];
+
+  const receiptUrls = sortedGroup
+    .map((order) => order.receipt_url)
+    .filter(Boolean);
+
+  const trackingNumbers = [
+    ...new Set(
+      sortedGroup.map((order) => order.tracking_number?.trim()).filter(Boolean),
+    ),
+  ];
+
+  const statusSet = new Set(sortedGroup.map((order) => order.status));
+  const status =
+    statusSet.size === 1
+      ? oldest.status
+      : type === "tracking"
+        ? oldest.status
+        : "paid";
+
+  const fusedPrefix = type === "tracking" ? "TRK" : "FUSED";
+
+  return {
+    isFused: true,
+    id: `${fusedPrefix}-${shortIds.join("-")}`,
+    real_ids: realIds,
+    customer_name: oldest.customer_name,
+    customer_email: oldest.customer_email,
+    shipping_address: oldest.shipping_address,
+    shipping_method: hasExpress ? "express" : "standard",
+    shipping_cost: shippingCost,
+    total_amount: totalAmount,
+    status,
+    created_at: oldest.created_at,
+    notes: mergedNotes,
+    receipt_url: receiptUrls[0] || null,
+    receipt_urls: receiptUrls,
+    discount_code: discountCodes.join(", "),
+    tracking_number: trackingNumbers[0] || "",
+    tracking_numbers: trackingNumbers,
+    orders: sortedGroup,
+  };
+};
+
+const getOrderRowKey = (order) => {
+  if (!order.isFused) return order.id;
+
+  return [
+    order.id,
+    order.status,
+    order.tracking_number || "no-tracking",
+    order.real_ids?.join("-") || "",
+  ].join("|");
+};
+
 export default function OrderManager() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +165,6 @@ export default function OrderManager() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [notification, setNotification] = useState(null);
 
-  // 🚨 NEW: Universal Toggle State for Pre-orders
   const [hidePreorders, setHidePreorders] = useState(false);
 
   const [modalConfig, setModalConfig] = useState({
@@ -32,7 +181,9 @@ export default function OrderManager() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      const activeTag = document.activeElement.tagName.toLowerCase();
+      const activeElement = document.activeElement;
+      const activeTag = activeElement?.tagName?.toLowerCase();
+
       if (
         activeTag === "input" ||
         activeTag === "textarea" ||
@@ -40,7 +191,9 @@ export default function OrderManager() {
       ) {
         return;
       }
+
       if (e.metaKey || e.ctrlKey || e.altKey || e.key.length > 1) return;
+
       if (searchInputRef.current) searchInputRef.current.focus();
     };
 
@@ -50,6 +203,7 @@ export default function OrderManager() {
 
   const fetchOrders = async () => {
     setLoading(true);
+
     const { data, error } = await supabase
       .from("orders")
       .select(
@@ -57,8 +211,13 @@ export default function OrderManager() {
       )
       .order("created_at", { ascending: false });
 
-    if (error) console.error("Error fetching orders:", error);
-    else setOrders(data || []);
+    if (error) {
+      console.error("Error fetching orders:", error);
+      setOrders([]);
+    } else {
+      setOrders(data || []);
+    }
+
     setLoading(false);
   };
 
@@ -111,60 +270,48 @@ export default function OrderManager() {
 
       if (order.notes && order.notes.trim().length > 0) counts.has_notes++;
 
-      try {
-        let items = [];
-        if (order.items) {
-          items =
-            typeof order.items === "string"
-              ? JSON.parse(order.items)
-              : order.items;
-        }
-        if (
-          items.some(
-            (item) => item.is_preorder === true || item.is_preorder === "true",
-          )
-        ) {
-          counts.has_preorder++;
-        }
-      } catch (e) {}
+      if (orderHasPreorder(order)) counts.has_preorder++;
     });
 
     return counts;
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
+    const s = search.trim().toLowerCase();
+
     return orders.filter((order) => {
-      const s = search.toLowerCase();
-      const matchesSearch =
-        order.id.toLowerCase().includes(s) ||
-        order.customer_email?.toLowerCase().includes(s) ||
-        order.customer_name?.toLowerCase().includes(s) ||
-        order.tracking_number?.toLowerCase().includes(s);
+      const address = getShippingAddress(order);
 
-      // 🚨 Pre-Order Calculation extracted so we can use it for the toggle
-      let hasPreorder = false;
-      try {
-        let items = [];
-        if (order.items) {
-          items =
-            typeof order.items === "string"
-              ? JSON.parse(order.items)
-              : order.items;
-        }
-        hasPreorder = items.some(
-          (item) => item.is_preorder === true || item.is_preorder === "true",
-        );
-      } catch (e) {}
+      const searchableText = [
+        order.id,
+        order.customer_email,
+        order.customer_name,
+        order.tracking_number,
+        order.discount_code,
+        address.phone,
+        address.line1,
+        address.line2,
+        address.city,
+        address.state,
+        getPostcode(order),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-      // 🚨 If the Universal Toggle is ON and the order has a pre-order, banish it!
+      const matchesSearch = !s || searchableText.includes(s);
+
+      const hasPreorder = orderHasPreorder(order);
+
       if (hidePreorders && hasPreorder) {
         return false;
       }
 
       let matchesStatus = false;
 
-      if (statusFilter === "all") matchesStatus = true;
-      else if (statusFilter === "pending") {
+      if (statusFilter === "all") {
+        matchesStatus = true;
+      } else if (statusFilter === "pending") {
         matchesStatus =
           order.status === "pending" ||
           order.status === "payment_reported" ||
@@ -173,9 +320,8 @@ export default function OrderManager() {
         matchesStatus =
           order.status === "paid" || order.status === "processing";
       } else if (statusFilter === "has_notes") {
-        matchesStatus = order.notes && order.notes.trim().length > 0;
+        matchesStatus = Boolean(order.notes && order.notes.trim().length > 0);
       } else if (statusFilter === "has_preorder") {
-        // If the toggle is somehow on while viewing this tab, it will naturally render 0
         matchesStatus = hasPreorder;
       } else {
         matchesStatus = order.status === statusFilter;
@@ -183,104 +329,81 @@ export default function OrderManager() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [orders, search, statusFilter, hidePreorders]); // Added hidePreorders to dependency array
+  }, [orders, search, statusFilter, hidePreorders]);
 
-  // 🚨 UI-LEVEL GROUPING ENGINE (FUSING ORDERS)
   const processedOrders = useMemo(() => {
     let grouped = [];
 
     if (statusFilter === "paid") {
-      // 1. Group by Email if PAID
-      const emailMap = {};
-      filteredOrders.forEach((o) => {
-        const email = (o.customer_email || `unknown-${o.id}`).toLowerCase();
-        if (!emailMap[email]) emailMap[email] = [];
-        emailMap[email].push(o);
+      const groupMap = {};
+
+      filteredOrders.forEach((order) => {
+        // If an order already has tracking, keep it separate in the Paid tab.
+        // This prevents an already-labelled order from being pulled into a new merge.
+        if (order.tracking_number?.trim()) {
+          grouped.push(order);
+          return;
+        }
+
+        const mergeKey = getDeliveryMergeKey(order);
+
+        // If there is not enough identity/address data, do not risk merging.
+        const address = getShippingAddress(order);
+        const hasMinimumMergeData =
+          order.customer_email &&
+          address.line1 &&
+          address.city &&
+          getPostcode(order);
+
+        if (!hasMinimumMergeData) {
+          grouped.push(order);
+          return;
+        }
+
+        if (!groupMap[mergeKey]) groupMap[mergeKey] = [];
+        groupMap[mergeKey].push(order);
       });
 
-      Object.values(emailMap).forEach((group) => {
+      Object.values(groupMap).forEach((group) => {
         if (group.length === 1) {
           grouped.push(group[0]);
-        } else {
-          // Sort oldest first so we use the original address
-          group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-          const oldest = group[0];
-          const hasExpress = group.some(
-            (o) => o.shipping_method?.toLowerCase() === "express",
-          );
-          const totalAmt = group.reduce(
-            (sum, o) => sum + Number(o.total_amount || 0),
-            0,
-          );
-
-          grouped.push({
-            isFused: true,
-            id: `FUSED-${oldest.id.slice(0, 5)}`,
-            real_ids: group.map((o) => o.id), // Array of actual Supabase IDs
-            customer_name: oldest.customer_name,
-            customer_email: oldest.customer_email,
-            shipping_address: oldest.shipping_address, // Uses oldest address
-            shipping_method: hasExpress ? "express" : "standard",
-            total_amount: totalAmt,
-            status: oldest.status,
-            created_at: oldest.created_at,
-            orders: group, // Store original orders for the expanded UI demarcation
-          });
+          return;
         }
+
+        grouped.push(createFusedOrder(group, "paid"));
       });
     } else if (
       ["label_created", "shipped", "delivered"].includes(statusFilter)
     ) {
-      // 2. Group by Tracking Number in Post-Paid Tabs
-      const trackMap = {};
+      const trackingMap = {};
       const noTrack = [];
 
-      filteredOrders.forEach((o) => {
-        const t = o.tracking_number?.trim();
-        if (t) {
-          if (!trackMap[t]) trackMap[t] = [];
-          trackMap[t].push(o);
-        } else {
-          noTrack.push(o);
+      filteredOrders.forEach((order) => {
+        const mergeKey = getTrackingMergeKey(order);
+
+        if (!mergeKey) {
+          noTrack.push(order);
+          return;
         }
+
+        if (!trackingMap[mergeKey]) trackingMap[mergeKey] = [];
+        trackingMap[mergeKey].push(order);
       });
 
-      Object.values(trackMap).forEach((group) => {
-        if (group.length === 1) grouped.push(group[0]);
-        else {
-          group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-          const oldest = group[0];
-          const hasExpress = group.some(
-            (o) => o.shipping_method?.toLowerCase() === "express",
-          );
-          const totalAmt = group.reduce(
-            (sum, o) => sum + Number(o.total_amount || 0),
-            0,
-          );
-
-          grouped.push({
-            isFused: true,
-            id: `TRK-${oldest.tracking_number.slice(-5)}`,
-            real_ids: group.map((o) => o.id),
-            customer_name: oldest.customer_name,
-            customer_email: oldest.customer_email,
-            shipping_address: oldest.shipping_address,
-            shipping_method: hasExpress ? "express" : "standard",
-            tracking_number: oldest.tracking_number,
-            total_amount: totalAmt,
-            status: oldest.status,
-            created_at: oldest.created_at,
-            orders: group,
-          });
+      Object.values(trackingMap).forEach((group) => {
+        if (group.length === 1) {
+          grouped.push(group[0]);
+          return;
         }
+
+        grouped.push(createFusedOrder(group, "tracking"));
       });
+
       grouped = [...grouped, ...noTrack];
     } else {
-      // 3. Pending/Cancelled/All - No Grouping
       grouped = filteredOrders;
     }
 
-    // Re-sort the final fused array by date descending
     grouped.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return grouped;
   }, [filteredOrders, statusFilter]);
@@ -307,15 +430,21 @@ export default function OrderManager() {
   }, [orders]);
 
   const handleBulkExport = () => {
-    if (processedOrders.length === 0) return showToast("No orders to export");
+    if (processedOrders.length === 0) {
+      showToast("No orders to export");
+      return;
+    }
+
     downloadAusPostCSV(processedOrders);
-    showToast(`Exported ${processedOrders.length} orders`);
+    showToast(`Exported ${processedOrders.length} order rows`);
   };
 
   const FilterTab = ({ id, label, color, count }) => {
     const isActive = statusFilter === id;
+
     return (
       <button
+        type="button"
         onClick={() => setStatusFilter(id)}
         style={{
           ...styles.filterBtn,
@@ -399,9 +528,9 @@ export default function OrderManager() {
           />
           <FilterTab id="all" label="All" count={tabCounts.all} />
 
-          {/* 🚨 THE UNIVERSAL PRE-ORDER KILL SWITCH BUTTON */}
           <button
-            onClick={() => setHidePreorders(!hidePreorders)}
+            type="button"
+            onClick={() => setHidePreorders((prev) => !prev)}
             style={{
               padding: "8px 16px",
               borderRadius: "8px",
@@ -417,7 +546,6 @@ export default function OrderManager() {
               cursor: "pointer",
               marginLeft: "10px",
               transition: "all 0.2s ease-in-out",
-              // The aggressive red/white/black style styling
               textShadow: hidePreorders
                 ? "-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff"
                 : "none",
@@ -428,9 +556,14 @@ export default function OrderManager() {
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button onClick={handleBulkExport} style={styles.exportBtn}>
+          <button
+            type="button"
+            onClick={handleBulkExport}
+            style={styles.exportBtn}
+          >
             <Download size={16} /> Export
           </button>
+
           <div style={styles.searchWrapper}>
             <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
             <input
@@ -452,7 +585,7 @@ export default function OrderManager() {
         ) : (
           processedOrders.map((order) => (
             <OrderRow
-              key={order.id}
+              key={getOrderRowKey(order)}
               order={order}
               onUpdate={fetchOrders}
               showToast={showToast}
@@ -467,6 +600,7 @@ export default function OrderManager() {
           <CheckCircle size={16} /> {notification}
         </div>
       )}
+
       {modalConfig.isOpen && (
         <ConfirmationModal
           config={modalConfig}
@@ -485,12 +619,15 @@ function ConfirmationModal({ config, onClose }) {
           {config.isDestructive && <AlertTriangle size={20} color="#ef4444" />}
           <h3 style={styles.modalTitle}>{config.title}</h3>
         </div>
+
         <p style={styles.modalMessage}>{config.message}</p>
+
         <div style={styles.modalActions}>
-          <button onClick={onClose} style={styles.modalCancel}>
+          <button type="button" onClick={onClose} style={styles.modalCancel}>
             Cancel
           </button>
           <button
+            type="button"
             onClick={config.onConfirm}
             style={
               config.isDestructive ? styles.modalDelete : styles.modalConfirm
