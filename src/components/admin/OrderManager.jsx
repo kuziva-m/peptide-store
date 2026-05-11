@@ -43,6 +43,62 @@ const orderHasPreorder = (order) => {
   );
 };
 
+const getItemSearchText = (item) => {
+  if (!item) return "";
+
+  const variant =
+    typeof item.variant === "object" && item.variant !== null
+      ? item.variant
+      : null;
+
+  const variantAsString = typeof item.variant === "string" ? item.variant : "";
+
+  const nestedVariant =
+    typeof item.variants === "object" && item.variants !== null
+      ? item.variants
+      : null;
+
+  const nestedProduct =
+    typeof nestedVariant?.products === "object" &&
+    nestedVariant.products !== null
+      ? nestedVariant.products
+      : null;
+
+  const searchableFields = [
+    item.product_name_snapshot,
+    item.productName,
+    item.product_name,
+    item.name,
+    item.title,
+    item.sku,
+    item.size,
+    item.size_label,
+    item.variant_name,
+    item.variantName,
+    variantAsString,
+    variant?.name,
+    variant?.title,
+    variant?.sku,
+    variant?.size,
+    variant?.size_label,
+    nestedVariant?.name,
+    nestedVariant?.title,
+    nestedVariant?.sku,
+    nestedVariant?.size,
+    nestedVariant?.size_label,
+    nestedProduct?.name,
+    nestedProduct?.title,
+    nestedProduct?.slug,
+  ];
+
+  return searchableFields.filter(Boolean).join(" ");
+};
+
+const getOrderProductSearchText = (order) => {
+  const items = safeParseItems(order);
+  return items.map(getItemSearchText).filter(Boolean).join(" ");
+};
+
 const getDeliveryMergeKey = (order) => {
   const address = getShippingAddress(order);
 
@@ -63,8 +119,6 @@ const getTrackingMergeKey = (order) => {
   const tracking = normalise(order.tracking_number);
   if (!tracking) return "";
 
-  // Tracking alone is not enough. If someone accidentally reuses a tracking
-  // number on different customers, this prevents unrelated orders being fused.
   return `${tracking}|${getDeliveryMergeKey(order)}`;
 };
 
@@ -281,6 +335,7 @@ export default function OrderManager() {
 
     return orders.filter((order) => {
       const address = getShippingAddress(order);
+      const productSearchText = getOrderProductSearchText(order);
 
       const searchableText = [
         order.id,
@@ -288,12 +343,14 @@ export default function OrderManager() {
         order.customer_name,
         order.tracking_number,
         order.discount_code,
+        order.notes,
         address.phone,
         address.line1,
         address.line2,
         address.city,
         address.state,
         getPostcode(order),
+        productSearchText,
       ]
         .filter(Boolean)
         .join(" ")
@@ -338,8 +395,6 @@ export default function OrderManager() {
       const groupMap = {};
 
       filteredOrders.forEach((order) => {
-        // If an order already has tracking, keep it separate in the Paid tab.
-        // This prevents an already-labelled order from being pulled into a new merge.
         if (order.tracking_number?.trim()) {
           grouped.push(order);
           return;
@@ -347,7 +402,6 @@ export default function OrderManager() {
 
         const mergeKey = getDeliveryMergeKey(order);
 
-        // If there is not enough identity/address data, do not risk merging.
         const address = getShippingAddress(order);
         const hasMinimumMergeData =
           order.customer_email &&
@@ -568,7 +622,7 @@ export default function OrderManager() {
             <Search size={16} color="#94a3b8" style={{ marginRight: "8px" }} />
             <input
               ref={searchInputRef}
-              placeholder="Search or scan barcode..."
+              placeholder="Search customer, tracking, product..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={styles.inputReset}
