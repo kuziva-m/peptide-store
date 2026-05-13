@@ -519,10 +519,7 @@ export default function OrderManager() {
                     title="Repeat customer"
                     aria-label="Repeat customer"
                   >
-                    <Crown size={14} strokeWidth={2.4} />
-                    <span style={repeatCustomerStyles.crownText}>
-                      Repeat customer
-                    </span>
+                    <Crown size={15} strokeWidth={2.5} />
                   </div>
                 )}
 
@@ -591,25 +588,19 @@ const repeatCustomerStyles = {
   },
   crownBadge: {
     position: "absolute",
-    top: "-9px",
+    top: "-8px",
     right: "14px",
     zIndex: 5,
     display: "inline-flex",
     alignItems: "center",
-    gap: "5px",
-    padding: "5px 9px",
+    justifyContent: "center",
+    width: "30px",
+    height: "30px",
     borderRadius: "999px",
     background: "#fef3c7",
     color: "#92400e",
     border: "1px solid #f59e0b",
     boxShadow: "0 6px 16px rgba(146, 64, 14, 0.16)",
-    fontSize: "0.72rem",
-    fontWeight: 900,
-    letterSpacing: "0.01em",
     pointerEvents: "none",
-    whiteSpace: "nowrap",
-  },
-  crownText: {
-    lineHeight: 1,
   },
 };
