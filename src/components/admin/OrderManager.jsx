@@ -3,10 +3,13 @@ import { supabase } from "../../lib/supabase";
 import { downloadAusPostCSV } from "../../utils/exportToAusPost";
 import { styles } from "./OrderManagerStyles";
 import { OrderRow } from "./OrderRow";
-import { Search, Download, CheckCircle, AlertTriangle } from "lucide-react";
-
-const PAID_MERGE_STATUSES = ["paid", "processing"];
-const TRACKING_MERGE_STATUSES = ["label_created", "shipped", "delivered"];
+import {
+  Search,
+  Download,
+  CheckCircle,
+  AlertTriangle,
+  Crown,
+} from "lucide-react";
 
 const normalise = (value) =>
   String(value || "")
@@ -126,242 +129,8 @@ const getOrderSearchText = (order) => {
     .toLowerCase();
 };
 
-const isPaidMergeStatus = (order) => PAID_MERGE_STATUSES.includes(order.status);
-
-const isTrackingMergeStatus = (order) =>
-  TRACKING_MERGE_STATUSES.includes(order.status);
-
-const hasMinimumMergeData = (order) => {
-  const address = getShippingAddress(order);
-
-  return Boolean(
-    order.customer_email && address.line1 && address.city && getPostcode(order),
-  );
-};
-
-const getDeliveryMergeKey = (order) => {
-  const address = getShippingAddress(order);
-
-  return [
-    normalise(order.customer_email),
-    normalise(order.customer_name),
-    normalise(address.phone),
-    normalise(address.line1),
-    normalise(address.line2),
-    normalise(address.city),
-    normalise(address.state),
-    normalise(getPostcode(order)),
-    normalise(address.country || "AU"),
-  ].join("|");
-};
-
-const getCustomerKey = (order) => normalise(order.customer_email);
-
-const getTrackingMergeKey = (order) => {
-  const tracking = normalise(order.tracking_number);
-  if (!tracking) return "";
-
-  return `${tracking}|${getDeliveryMergeKey(order)}`;
-};
-
-const createFusedOrder = (group, type = "paid") => {
-  const sortedGroup = [...group].sort(
-    (a, b) => new Date(a.created_at) - new Date(b.created_at),
-  );
-
-  const oldest = sortedGroup[0];
-  const realIds = sortedGroup.map((order) => order.id);
-  const shortIds = realIds.map((id) => String(id).slice(0, 8));
-
-  const hasExpress = sortedGroup.some(
-    (order) => order.shipping_method?.toLowerCase() === "express",
-  );
-
-  const totalAmount = sortedGroup.reduce(
-    (sum, order) => sum + Number(order.total_amount || 0),
-    0,
-  );
-
-  const shippingCost = sortedGroup.reduce(
-    (sum, order) => sum + Number(order.shipping_cost || 0),
-    0,
-  );
-
-  const mergedNotes = sortedGroup
-    .map((order) => order.notes?.trim())
-    .filter(Boolean)
-    .join("\n\n---\n\n");
-
-  const discountCodes = [
-    ...new Set(
-      sortedGroup.map((order) => order.discount_code?.trim()).filter(Boolean),
-    ),
-  ];
-
-  const receiptUrls = sortedGroup
-    .map((order) => order.receipt_url)
-    .filter(Boolean);
-
-  const trackingNumbers = [
-    ...new Set(
-      sortedGroup.map((order) => order.tracking_number?.trim()).filter(Boolean),
-    ),
-  ];
-
-  const statusSet = new Set(sortedGroup.map((order) => order.status));
-  const status =
-    statusSet.size === 1
-      ? oldest.status
-      : type === "tracking"
-        ? oldest.status
-        : "paid";
-
-  const fusedPrefix = type === "tracking" ? "TRK" : "FUSED";
-
-  return {
-    isFused: true,
-    id: `${fusedPrefix}-${shortIds.join("-")}`,
-    real_ids: realIds,
-    customer_name: oldest.customer_name,
-    customer_email: oldest.customer_email,
-    shipping_address: oldest.shipping_address,
-    shipping_method: hasExpress ? "express" : "standard",
-    shipping_cost: shippingCost,
-    total_amount: totalAmount,
-    status,
-    created_at: oldest.created_at,
-    notes: mergedNotes,
-    receipt_url: receiptUrls[0] || null,
-    receipt_urls: receiptUrls,
-    discount_code: discountCodes.join(", "),
-    tracking_number: trackingNumbers[0] || "",
-    tracking_numbers: trackingNumbers,
-    orders: sortedGroup,
-  };
-};
-
 const sortNewestFirst = (orders) =>
   [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-const buildPaidMergedOrders = (sourceOrders, fusedOnly = false) => {
-  const grouped = [];
-  const groupMap = {};
-
-  sourceOrders.filter(isPaidMergeStatus).forEach((order) => {
-    if (order.tracking_number?.trim()) {
-      if (!fusedOnly) grouped.push(order);
-      return;
-    }
-
-    if (!hasMinimumMergeData(order)) {
-      if (!fusedOnly) grouped.push(order);
-      return;
-    }
-
-    const mergeKey = getDeliveryMergeKey(order);
-
-    if (!groupMap[mergeKey]) groupMap[mergeKey] = [];
-    groupMap[mergeKey].push(order);
-  });
-
-  Object.values(groupMap).forEach((group) => {
-    if (group.length === 1) {
-      if (!fusedOnly) grouped.push(group[0]);
-      return;
-    }
-
-    grouped.push(createFusedOrder(group, "paid"));
-  });
-
-  return sortNewestFirst(grouped);
-};
-
-const buildTrackingMergedOrders = (sourceOrders, fusedOnly = false) => {
-  const grouped = [];
-  const noTrack = [];
-  const trackingMap = {};
-
-  sourceOrders.filter(isTrackingMergeStatus).forEach((order) => {
-    const mergeKey = getTrackingMergeKey(order);
-
-    if (!mergeKey) {
-      noTrack.push(order);
-      return;
-    }
-
-    if (!trackingMap[mergeKey]) trackingMap[mergeKey] = [];
-    trackingMap[mergeKey].push(order);
-  });
-
-  Object.values(trackingMap).forEach((group) => {
-    if (group.length === 1) {
-      if (!fusedOnly) grouped.push(group[0]);
-      return;
-    }
-
-    grouped.push(createFusedOrder(group, "tracking"));
-  });
-
-  if (!fusedOnly) grouped.push(...noTrack);
-
-  return sortNewestFirst(grouped);
-};
-
-const buildAllMergedOrders = (sourceOrders) => {
-  const paidMerged = buildPaidMergedOrders(sourceOrders, true);
-  const trackingMerged = buildTrackingMergedOrders(sourceOrders, true);
-
-  return sortNewestFirst([...paidMerged, ...trackingMerged]);
-};
-
-const getMergedRealIds = (sourceOrders) => {
-  const mergedIds = new Set();
-
-  buildAllMergedOrders(sourceOrders).forEach((fusedOrder) => {
-    fusedOrder.real_ids?.forEach((id) => mergedIds.add(id));
-  });
-
-  return mergedIds;
-};
-
-const buildSameCustomerUnmergedOrders = (sourceOrders) => {
-  const emailMap = {};
-  const mergedIds = getMergedRealIds(sourceOrders);
-
-  sourceOrders.forEach((order) => {
-    const customerKey = getCustomerKey(order);
-
-    if (!customerKey) return;
-
-    if (!emailMap[customerKey]) emailMap[customerKey] = [];
-    emailMap[customerKey].push(order);
-  });
-
-  const sameCustomerUnmerged = [];
-
-  Object.values(emailMap).forEach((group) => {
-    if (group.length < 2) return;
-
-    group.forEach((order) => {
-      if (!mergedIds.has(order.id)) {
-        sameCustomerUnmerged.push(order);
-      }
-    });
-  });
-
-  return sortNewestFirst(sameCustomerUnmerged);
-};
-
-const getOrderRowKey = (order) => {
-  if (!order.isFused) return order.id;
-
-  return [
-    order.id,
-    order.status,
-    order.tracking_number || "no-tracking",
-    order.real_ids?.join("-") || "",
-  ].join("|");
-};
 
 export default function OrderManager() {
   const [orders, setOrders] = useState([]);
@@ -447,6 +216,23 @@ export default function OrderManager() {
     });
   };
 
+  const repeatCustomerEmailSet = useMemo(() => {
+    const emailCounts = {};
+
+    orders.forEach((order) => {
+      const email = normalise(order.customer_email);
+      if (!email) return;
+
+      emailCounts[email] = (emailCounts[email] || 0) + 1;
+    });
+
+    return new Set(
+      Object.entries(emailCounts)
+        .filter(([, count]) => count > 1)
+        .map(([email]) => email),
+    );
+  }, [orders]);
+
   const countSourceOrders = useMemo(() => {
     if (!hidePreorders) return orders;
     return orders.filter((order) => !orderHasPreorder(order));
@@ -456,8 +242,6 @@ export default function OrderManager() {
     const counts = {
       pending: 0,
       paid: 0,
-      merged_orders: 0,
-      same_customer_unmerged: 0,
       label_created: 0,
       shipped: 0,
       cancelled: 0,
@@ -488,14 +272,10 @@ export default function OrderManager() {
       if (orderHasPreorder(order)) counts.has_preorder++;
     });
 
-    counts.merged_orders = buildAllMergedOrders(countSourceOrders).length;
-    counts.same_customer_unmerged =
-      buildSameCustomerUnmergedOrders(countSourceOrders).length;
-
     return counts;
   }, [countSourceOrders]);
 
-  const baseFilteredOrders = useMemo(() => {
+  const filteredOrders = useMemo(() => {
     const s = search.trim().toLowerCase();
 
     return orders.filter((order) => {
@@ -504,66 +284,43 @@ export default function OrderManager() {
 
       if (hidePreorders && hasPreorder) return false;
 
-      return matchesSearch;
-    });
-  }, [orders, search, hidePreorders]);
-
-  const filteredOrders = useMemo(() => {
-    if (
-      statusFilter === "merged_orders" ||
-      statusFilter === "same_customer_unmerged"
-    ) {
-      return baseFilteredOrders;
-    }
-
-    return baseFilteredOrders.filter((order) => {
-      const hasPreorder = orderHasPreorder(order);
-
       if (statusFilter === "all") {
-        return true;
+        return matchesSearch;
       }
 
       if (statusFilter === "pending") {
         return (
-          order.status === "pending" ||
-          order.status === "payment_reported" ||
-          order.status === "pending_contact"
+          matchesSearch &&
+          (order.status === "pending" ||
+            order.status === "payment_reported" ||
+            order.status === "pending_contact")
         );
       }
 
       if (statusFilter === "paid") {
-        return order.status === "paid" || order.status === "processing";
+        return (
+          matchesSearch &&
+          (order.status === "paid" || order.status === "processing")
+        );
       }
 
       if (statusFilter === "has_notes") {
-        return Boolean(order.notes && order.notes.trim().length > 0);
+        return (
+          matchesSearch && Boolean(order.notes && order.notes.trim().length > 0)
+        );
       }
 
       if (statusFilter === "has_preorder") {
-        return hasPreorder;
+        return matchesSearch && hasPreorder;
       }
 
-      return order.status === statusFilter;
+      return matchesSearch && order.status === statusFilter;
     });
-  }, [baseFilteredOrders, statusFilter]);
+  }, [orders, search, statusFilter, hidePreorders]);
 
   const processedOrders = useMemo(() => {
-    let processed = [];
-
-    if (statusFilter === "paid") {
-      processed = buildPaidMergedOrders(filteredOrders, false);
-    } else if (statusFilter === "merged_orders") {
-      processed = buildAllMergedOrders(filteredOrders);
-    } else if (statusFilter === "same_customer_unmerged") {
-      processed = buildSameCustomerUnmergedOrders(filteredOrders);
-    } else if (TRACKING_MERGE_STATUSES.includes(statusFilter)) {
-      processed = buildTrackingMergedOrders(filteredOrders, false);
-    } else {
-      processed = filteredOrders;
-    }
-
-    return sortNewestFirst(processed);
-  }, [filteredOrders, statusFilter]);
+    return sortNewestFirst(filteredOrders);
+  }, [filteredOrders]);
 
   const stats = useMemo(() => {
     const confirmedPaidOrders = orders.filter(
@@ -594,6 +351,11 @@ export default function OrderManager() {
 
     downloadAusPostCSV(processedOrders);
     showToast(`Exported ${processedOrders.length} order rows`);
+  };
+
+  const isRepeatCustomer = (order) => {
+    const email = normalise(order.customer_email);
+    return Boolean(email && repeatCustomerEmailSet.has(email));
   };
 
   const FilterTab = ({ id, label, color, count }) => {
@@ -658,18 +420,6 @@ export default function OrderManager() {
             label="Approved (Paid)"
             color="#16a34a"
             count={tabCounts.paid}
-          />
-          <FilterTab
-            id="merged_orders"
-            label="Merged Orders"
-            color="#0ea5e9"
-            count={tabCounts.merged_orders}
-          />
-          <FilterTab
-            id="same_customer_unmerged"
-            label="Same Customer — Not Merged"
-            color="#f97316"
-            count={tabCounts.same_customer_unmerged}
           />
           <FilterTab
             id="label_created"
@@ -752,15 +502,39 @@ export default function OrderManager() {
         ) : processedOrders.length === 0 ? (
           <div style={styles.emptyState}>No orders found.</div>
         ) : (
-          processedOrders.map((order) => (
-            <OrderRow
-              key={getOrderRowKey(order)}
-              order={order}
-              onUpdate={fetchOrders}
-              showToast={showToast}
-              promptConfirm={promptConfirm}
-            />
-          ))
+          processedOrders.map((order) => {
+            const repeatCustomer = isRepeatCustomer(order);
+
+            return (
+              <div
+                key={order.id}
+                style={repeatCustomerStyles.rowShell}
+                aria-label={
+                  repeatCustomer ? "Repeat customer order" : undefined
+                }
+              >
+                {repeatCustomer && (
+                  <div
+                    style={repeatCustomerStyles.crownBadge}
+                    title="Repeat customer"
+                    aria-label="Repeat customer"
+                  >
+                    <Crown size={14} strokeWidth={2.4} />
+                    <span style={repeatCustomerStyles.crownText}>
+                      Repeat customer
+                    </span>
+                  </div>
+                )}
+
+                <OrderRow
+                  order={order}
+                  onUpdate={fetchOrders}
+                  showToast={showToast}
+                  promptConfirm={promptConfirm}
+                />
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -809,3 +583,33 @@ function ConfirmationModal({ config, onClose }) {
     </div>
   );
 }
+
+const repeatCustomerStyles = {
+  rowShell: {
+    position: "relative",
+    width: "100%",
+  },
+  crownBadge: {
+    position: "absolute",
+    top: "-9px",
+    right: "14px",
+    zIndex: 5,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "5px 9px",
+    borderRadius: "999px",
+    background: "#fef3c7",
+    color: "#92400e",
+    border: "1px solid #f59e0b",
+    boxShadow: "0 6px 16px rgba(146, 64, 14, 0.16)",
+    fontSize: "0.72rem",
+    fontWeight: 900,
+    letterSpacing: "0.01em",
+    pointerEvents: "none",
+    whiteSpace: "nowrap",
+  },
+  crownText: {
+    lineHeight: 1,
+  },
+};
