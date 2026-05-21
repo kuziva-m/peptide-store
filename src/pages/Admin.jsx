@@ -21,6 +21,7 @@ import {
   Globe,
   Ticket,
   BarChart,
+  ShoppingCart,
 } from "lucide-react";
 
 // Components
@@ -36,10 +37,12 @@ import CreatorManager from "../components/admin/CreatorManager";
 import SeoLandingManager from "../components/admin/SeoLandingManager";
 import VoucherManager from "../components/admin/VoucherManager";
 import AnalysisBoard from "../components/admin/analysis/AnalysisBoard";
+import CustomOrderManager from "./CustomOrderManager"; // adjust path as needed
 
 const PRIMARY_MENU = [
   { id: "analysis", label: "Analysis Board", icon: BarChart },
   { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "custom_orders", label: "Manual Order", icon: ShoppingCart },
   { id: "products", label: "Inventory", icon: Package },
   { id: "creators", label: "Creators", icon: Star },
   { id: "discounts", label: "Codes", icon: Tag },
@@ -499,6 +502,7 @@ export default function Admin() {
         <div style={styles.contentCard}>
           {activeTab === "analysis" && <AnalysisBoard />}
           {activeTab === "orders" && <OrderManager />}
+          {activeTab === "custom_orders" && <CustomOrderManager />}
           {activeTab === "creators" && <CreatorManager />}
           {activeTab === "inquiries" && <InquiryManager />}
           {activeTab === "subscribers" && <SubscriberManager />}
