@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:\\\\Users\\\\Kuziv\\\\Desktop\\\\Desktop Folders\\\\Client Projects\" 2>/dev/null)",
+      "PowerShell(Get-PSDrive C | Select-Object Used, Free, @{N='UsedGB';E={[math]::Round\\($_.Used/1GB,2\\)}}, @{N='FreeGB';E={[math]::Round\\($_.Free/1GB,2\\)}})",
+      "Bash(wmic logicaldisk *)",
+      "PowerShell(npm cache clean --force 2>&1)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Kuziv\\\\Desktop\\\\Desktop Folders\\\\Client Projects\\\\aussie-store\"; npm run dev 2>&1 &)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

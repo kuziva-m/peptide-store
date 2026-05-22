@@ -129,9 +129,6 @@ const getOrderSearchText = (order) => {
     .toLowerCase();
 };
 
-const sortNewestFirst = (orders) =>
-  [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
 export default function OrderManager() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,6 +140,9 @@ export default function OrderManager() {
   const [notification, setNotification] = useState(null);
 
   const [hidePreorders, setHidePreorders] = useState(false);
+
+  // NEW: State to control sorting (defaults to recently updated for shipped tab)
+  const [sortBy, setSortBy] = useState("updated_desc");
 
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
@@ -319,8 +319,31 @@ export default function OrderManager() {
   }, [orders, search, statusFilter, hidePreorders]);
 
   const processedOrders = useMemo(() => {
-    return sortNewestFirst(filteredOrders);
-  }, [filteredOrders]);
+    let sorted = [...filteredOrders];
+
+    sorted.sort((a, b) => {
+      // Specifically for the "Shipped" tab: sort by when it was marked shipped
+      if (statusFilter === "shipped" && sortBy === "updated_desc") {
+        // Fallback to created_at just in case updated_at is null
+        const dateA = new Date(a.updated_at || a.created_at).getTime() || 0;
+        const dateB = new Date(b.updated_at || b.created_at).getTime() || 0;
+        return dateB - dateA;
+      }
+
+      if (sortBy === "created_asc") {
+        const dateA = new Date(a.created_at).getTime() || 0;
+        const dateB = new Date(b.created_at).getTime() || 0;
+        return dateA - dateB;
+      }
+
+      // Default fallback: Order Date (Newest)
+      const dateA = new Date(a.created_at).getTime() || 0;
+      const dateB = new Date(b.created_at).getTime() || 0;
+      return dateB - dateA;
+    });
+
+    return sorted;
+  }, [filteredOrders, statusFilter, sortBy]);
 
   const stats = useMemo(() => {
     const confirmedPaidOrders = orders.filter(
@@ -475,6 +498,29 @@ export default function OrderManager() {
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          {/* HADY'S CUSTOM SORT DROPDOWN (ONLY SHOWS ON SHIPPED TAB) */}
+          {statusFilter === "shipped" && (
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "#334155",
+                outline: "none",
+                cursor: "pointer",
+                background: "white",
+              }}
+            >
+              <option value="updated_desc">Recently Shipped</option>
+              <option value="created_desc">Order Date (Newest)</option>
+              <option value="created_asc">Order Date (Oldest)</option>
+            </select>
+          )}
+
           <button
             type="button"
             onClick={handleBulkExport}
